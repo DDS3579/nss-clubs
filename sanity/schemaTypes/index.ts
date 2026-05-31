@@ -5,6 +5,7 @@ import {categoryType} from './categoryType'
 import {postType} from './postType'
 import {authorType} from './authorType'
 import { teamMemberType } from "./teamMemberType";
+import { executiveTeamType } from "./executiveTeamType";
 
 export const schema = {
   types: [
@@ -13,5 +14,6 @@ export const schema = {
     postType,
     authorType,
     teamMemberType,
+    executiveTeamType,
   ],
 };
