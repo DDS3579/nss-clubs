@@ -1,6 +1,7 @@
 import { getHomepageData } from '@/sanity/lib/queries'
 import { urlFor } from '@/sanity/lib/image'
 import Image from 'next/image' // 🚨 NEW: Next.js Image Component
+import Link from 'next/link' // 🚨 NEW: Next.js Link Component
 import type { HomepageData, Stat, FeaturedEvent, FeaturedGalleryItem } from '@/sanity/lib/types'
 
 export default async function HomePage() {
@@ -51,6 +52,11 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+<Link href={`/clubs/stem`} className="block hover:opacity-80 transition">
+  {/* Your static club card UI */}
+  <button> Cluch here</button>
+</Link>
 
       {/* FEATURED EVENTS (Dynamic) */}
       <section className="max-w-5xl mx-auto py-16 px-6">
