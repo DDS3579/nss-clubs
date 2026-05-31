@@ -8,6 +8,7 @@ import { teamMemberType } from "./teamMemberType";
 import { executiveTeamType } from "./executiveTeamType";
 import { clubType } from "./clubType";
 import {eventType} from "./eventType";
+import { galleryItemType } from "./galleryItemType";
 
 export const schema = {
   types: [
@@ -19,5 +20,6 @@ export const schema = {
     executiveTeamType,
     clubType,
     eventType,
+    galleryItemType,
   ],
 };
