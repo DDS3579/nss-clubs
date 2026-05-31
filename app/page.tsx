@@ -1,8 +1,11 @@
 import { getHomepageData } from '@/sanity/lib/queries'
 import { urlFor } from '@/sanity/lib/image'
+import Image from 'next/image' // 🚨 NEW: Next.js Image Component
+import type { HomepageData, Stat, FeaturedEvent, FeaturedGalleryItem } from '@/sanity/lib/types'
 
 export default async function HomePage() {
-  const data = await getHomepageData()
+  // 🚨 NEW: Strictly typed data
+  const data: HomepageData | null = await getHomepageData()
 
   if (!data) {
     return <div className="p-10 text-center text-gray-500">No homepage data found. Please publish the Homepage document in Sanity Studio.</div>
@@ -21,10 +24,13 @@ export default async function HomePage() {
         <h2 className="text-3xl font-bold mb-6">President's Message</h2>
         <div className="flex flex-col md:flex-row gap-8 items-start">
           {data.presidentPhoto && (
-            <img 
+            <Image 
               src={urlFor(data.presidentPhoto).width(300).height(300).url()} 
-              alt="President" 
+              alt="NSS Clubs President" 
+              width={300} // Required by Next.js Image
+              height={300} // Required by Next.js Image
               className="w-48 h-48 object-cover rounded-lg shadow-md"
+              priority // Tells Next.js to load this image immediately for fast LCP (Largest Contentful Paint)
             />
           )}
           <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
@@ -36,7 +42,8 @@ export default async function HomePage() {
       {/* LEGACY STATS (Dynamic) */}
       <section className="bg-white py-16 px-6">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-          {data.legacyStats?.map((stat: any) => (
+          {/* 🚨 NEW: Typed Array Mapping */}
+          {data.legacyStats?.map((stat: Stat) => (
             <div key={stat._key} className="p-6 bg-gray-50 rounded-xl">
               <p className="text-4xl font-bold text-blue-600">{stat.value}</p>
               <p className="mt-2 text-gray-600">{stat.label}</p>
@@ -49,12 +56,14 @@ export default async function HomePage() {
       <section className="max-w-5xl mx-auto py-16 px-6">
         <h2 className="text-3xl font-bold mb-8">Featured Events</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {data.featuredEvents?.map((event: any) => (
+          {data.featuredEvents?.map((event: FeaturedEvent) => (
             <div key={event.title} className="bg-white p-6 rounded-xl shadow-sm border">
               {event.coverImage && (
-                <img 
+                <Image 
                   src={urlFor(event.coverImage).width(600).height(300).url()} 
                   alt={event.title} 
+                  width={600}
+                  height={300}
                   className="w-full h-48 object-cover rounded-md mb-4"
                 />
               )}
@@ -74,12 +83,14 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold mb-8 text-center">Gallery Showcase</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {data.featuredGallery?.map((item: any) => (
+            {data.featuredGallery?.map((item: FeaturedGalleryItem) => (
               <div key={item.title} className="relative group overflow-hidden rounded-lg">
                 {item.image && (
-                  <img 
+                  <Image 
                     src={urlFor(item.image).width(400).height(400).url()} 
                     alt={item.title} 
+                    width={400}
+                    height={400}
                     className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 )}
