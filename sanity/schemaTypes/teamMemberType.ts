@@ -49,18 +49,6 @@ export const teamMemberType = defineType({
       type: "text",
       rows: 4,
     }),
-
-    defineField({
-      name: "email",
-      title: "Email Address",
-      type: "string",
-    }),
-
-    defineField({
-      name: "linkedIn",
-      title: "LinkedIn Profile",
-      type: "url",
-    }),
   ],
 
   preview: {
