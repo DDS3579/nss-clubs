@@ -10,7 +10,7 @@ export const executiveTeamType = defineType({
       name: "year",
       title: "Academic Year",
       type: "string",
-      description: "e.g., 2025-2026",
+      description: "e.g., 2082/83",
       validation: (Rule) => Rule.required(),
     }),
     
