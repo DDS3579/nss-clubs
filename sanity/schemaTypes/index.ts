@@ -11,6 +11,7 @@ import {eventType} from "./eventType";
 import { galleryItemType } from "./galleryItemType";
 import { announcementType } from "./announcementType";
 import { popupType } from "./popupType";
+import { homepageType } from "./homepageType";
 
 export const schema = {
   types: [
@@ -25,5 +26,6 @@ export const schema = {
     galleryItemType,
     announcementType,
     popupType,
+    homepageType,
   ],
 };
