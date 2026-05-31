@@ -6,6 +6,7 @@ import {postType} from './postType'
 import {authorType} from './authorType'
 import { teamMemberType } from "./teamMemberType";
 import { executiveTeamType } from "./executiveTeamType";
+import { clubType } from "./clubType";
 
 export const schema = {
   types: [
@@ -15,5 +16,6 @@ export const schema = {
     authorType,
     teamMemberType,
     executiveTeamType,
+    clubType,
   ],
 };
