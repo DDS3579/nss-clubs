@@ -1,13 +1,8 @@
-import { type SchemaTypeDefinition } from 'sanity'
-
-import {blockContentType} from './blockContentType'
-import {categoryType} from './categoryType'
-import {postType} from './postType'
-import {authorType} from './authorType'
+import { blockContentType } from "./blockContentType"; // Keep this for future rich-text needs
 import { teamMemberType } from "./teamMemberType";
 import { executiveTeamType } from "./executiveTeamType";
 import { clubType } from "./clubType";
-import {eventType} from "./eventType";
+import { eventType } from "./eventType";
 import { galleryItemType } from "./galleryItemType";
 import { announcementType } from "./announcementType";
 import { popupType } from "./popupType";
@@ -15,10 +10,7 @@ import { homepageType } from "./homepageType";
 
 export const schema = {
   types: [
-    blockContentType,
-    categoryType,
-    postType,
-    authorType,
+    blockContentType, 
     teamMemberType,
     executiveTeamType,
     clubType,
