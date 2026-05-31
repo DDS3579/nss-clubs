@@ -36,3 +36,22 @@ export interface HomepageData {
   featuredEvents: FeaturedEvent[];
   featuredGallery: FeaturedGalleryItem[];
 }
+
+// Represents a resolved Team Member (for Club Heads/Vice Heads)
+export interface ClubHead {
+  name: string;
+  photo: SanityImage;
+  grade: string;
+}
+
+// The final shape of our Single Club query
+export interface ClubData {
+  name: string;
+  slug: { current: string };
+  description: string;
+  logo: SanityImage;
+  heroImage: SanityImage;
+  clubHeads: ClubHead[];
+  viceHeads: ClubHead[];
+  achievements: string[];
+}
