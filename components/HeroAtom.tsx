@@ -219,6 +219,17 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
       /* ── Draw ── */
       ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       orbits.forEach((o) => drawOrbit(o.rx, o.ry, o.angleDeg));
+
+      // Draw pulsing golden aura behind nucleus if hovered
+      if (hoveredSlugRef.current === 'executive-team') {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(CX, CY, 34 + Math.sin(elapsed * 0.15) * 4, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(212, 163, 115, 0.35)'; // gold highlight glow
+        ctx.fill();
+        ctx.restore();
+      }
+
       drawNucleus();
 
       const newCoords: { x: number; y: number; slug: string; name: string }[] = [];
@@ -260,13 +271,27 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
 
       electronCoordsRef.current = newCoords;
 
-      // Draw tooltip if an electron is hovered
+      // Draw tooltip if an electron or nucleus is hovered
       if (hoveredSlugRef.current) {
-        const hoveredEc = newCoords.find(ec => ec.slug === hoveredSlugRef.current);
-        if (hoveredEc) {
+        let text = "";
+        let tx = CX;
+        let ty = CY;
+
+        if (hoveredSlugRef.current === 'executive-team') {
+          text = "Executive Team";
+          tx = CX;
+          ty = CY;
+        } else {
+          const hoveredEc = newCoords.find(ec => ec.slug === hoveredSlugRef.current);
+          if (hoveredEc) {
+            text = hoveredEc.name;
+            tx = hoveredEc.x;
+            ty = hoveredEc.y;
+          }
+        }
+
+        if (text) {
           ctx.save();
-          
-          const text = hoveredEc.name;
           ctx.font = 'bold 12px sans-serif';
           const textWidth = ctx.measureText(text).width;
           
@@ -275,16 +300,16 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
           const rectW = textWidth + padX * 2;
           const rectH = 24;
           
-          const rectX = hoveredEc.x - rectW / 2;
-          const rectY = hoveredEc.y - 38; // 38px above the electron
+          const rectX = tx - rectW / 2;
+          const rectY = ty - 42; // 42px above the node
           
           // Draw a soft shadow for the tooltip
           ctx.shadowColor = 'rgba(0, 10, 40, 0.18)';
           ctx.shadowBlur = 8;
           ctx.shadowOffsetY = 4;
           
-          // Tooltip container
-          ctx.fillStyle = '#011f5b'; // primary color
+          // Tooltip container - gold color for executive team, blue for others
+          ctx.fillStyle = hoveredSlugRef.current === 'executive-team' ? '#D4A373' : '#011f5b';
           ctx.beginPath();
           const radius = 6;
           ctx.roundRect ? ctx.roundRect(rectX, rectY, rectW, rectH, radius) : ctx.rect(rectX, rectY, rectW, rectH);
@@ -293,18 +318,18 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
           // Draw small triangle at bottom
           ctx.shadowColor = 'transparent';
           ctx.beginPath();
-          ctx.moveTo(hoveredEc.x - 6, rectY + rectH);
-          ctx.lineTo(hoveredEc.x + 6, rectY + rectH);
-          ctx.lineTo(hoveredEc.x, rectY + rectH + 5);
+          ctx.moveTo(tx - 6, rectY + rectH);
+          ctx.lineTo(tx + 6, rectY + rectH);
+          ctx.lineTo(tx, rectY + rectH + 5);
           ctx.closePath();
-          ctx.fillStyle = '#011f5b';
+          ctx.fillStyle = hoveredSlugRef.current === 'executive-team' ? '#D4A373' : '#011f5b';
           ctx.fill();
           
-          // Tooltip text
-          ctx.fillStyle = '#ffffff';
+          // Tooltip text - dark navy text for gold tooltip, white text for blue tooltip
+          ctx.fillStyle = hoveredSlugRef.current === 'executive-team' ? '#011f5b' : '#ffffff';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(text, hoveredEc.x, rectY + rectH / 2);
+          ctx.fillText(text, tx, rectY + rectH / 2);
           
           ctx.restore();
         }
@@ -328,13 +353,22 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
       let hoveredSlug: string | null = null;
       let minDistance = 24;
 
-      for (const ec of electronCoordsRef.current) {
-        const dx = x - ec.x;
-        const dy = y - ec.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < minDistance) {
-          hoveredSlug = ec.slug;
-          break;
+      // 1. First check if hovering the nucleus at (CX, CY)
+      const ndx = x - CX;
+      const ndy = y - CY;
+      const ndist = Math.sqrt(ndx * ndx + ndy * ndy);
+      if (ndist < 30) {
+        hoveredSlug = 'executive-team';
+      } else {
+        // 2. Otherwise check the 6 electrons
+        for (const ec of electronCoordsRef.current) {
+          const dx = x - ec.x;
+          const dy = y - ec.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < minDistance) {
+            hoveredSlug = ec.slug;
+            break;
+          }
         }
       }
 
@@ -364,13 +398,22 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
       let clickedSlug: string | null = null;
       let minDistance = 24;
 
-      for (const ec of electronCoordsRef.current) {
-        const dx = x - ec.x;
-        const dy = y - ec.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < minDistance) {
-          clickedSlug = ec.slug;
-          break;
+      // 1. First check if clicked the nucleus at (CX, CY)
+      const ndx = x - CX;
+      const ndy = y - CY;
+      const ndist = Math.sqrt(ndx * ndx + ndy * ndy);
+      if (ndist < 30) {
+        clickedSlug = 'executive-team';
+      } else {
+        // 2. Otherwise check the 6 electrons
+        for (const ec of electronCoordsRef.current) {
+          const dx = x - ec.x;
+          const dy = y - ec.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < minDistance) {
+            clickedSlug = ec.slug;
+            break;
+          }
         }
       }
 

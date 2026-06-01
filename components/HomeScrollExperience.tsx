@@ -47,6 +47,13 @@ const CLUBS_DETAILS = [
     tagline: "Make a positive impact on society through volunteering, empathy, and social work.",
     color: "#0d9488", // Teal
   },
+  {
+    slug: "executive-team",
+    name: "Executive Team",
+    tagline: "Meet the visionary leaders, advisors, and coordinators steering the NSS Clubs towards excellence and impact.",
+    color: "#D4A373", // Gold
+    isSpecial: true,
+  },
 ];
 
 /* ─── helpers ─── */
@@ -116,12 +123,12 @@ export default function HomeScrollExperience() {
     };
   }, []);
 
-  /* ── Electron Click and Hover Handlers ── */
+  /* ── Electron & Nucleus Click Handler ── */
   const handleElectronClick = useCallback((slug: string) => {
     if (phaseRef.current === "hero") {
       // Trigger transition down first
       startTransition("forward");
-      // And automatically select the club right as we finish the scroll
+      // And automatically select the node right as we finish the scroll
       setTimeout(() => {
         setSelectedClub(slug);
       }, TRANSITION_MS);
@@ -392,7 +399,7 @@ export default function HomeScrollExperience() {
                 <span className="block text-accent">Clubs.</span>
               </h2>
               <p className="mt-4 font-body text-slate-400 text-sm font-medium animate-pulse">
-                Click any electron node to explore
+                Click any electron node or the nucleus to explore
               </p>
             </div>
 
@@ -401,6 +408,55 @@ export default function HomeScrollExperience() {
               const isActive = selectedClub === club.slug;
               if (!isActive) return null; // Unmount to trigger full mounting animation timeline fresh!
 
+              // Special Golden Card for Executive Team (Nucleus)
+              if (club.isSpecial) {
+                return (
+                  <div
+                    key={club.slug}
+                    className="animate-slide-in-card relative flex flex-col items-start text-left p-8 sm:p-10 rounded-3xl bg-accent border border-white/20 w-full max-w-lg overflow-hidden shadow-[0_0_60px_-10px_rgba(212,163,115,0.45)]"
+                  >
+                    {/* Internal Prestigious Gold Glow Light */}
+                    <div
+                      className="absolute -top-24 -left-24 w-48 h-48 rounded-full blur-[80px] pointer-events-none opacity-50 bg-white"
+                    />
+
+                    {/* Badge connection tag */}
+                    <span
+                      className="animate-fade-in-delayed inline-block px-3 py-1 text-xs font-bold rounded-full uppercase tracking-widest mb-6 border border-primary/20 text-primary/60"
+                    >
+                      Core System Nucleus
+                    </span>
+
+                    {/* Display Text: [Executive Team] (Flickers in) */}
+                    <h3 className="animate-flicker-in font-display text-4xl sm:text-5xl font-black text-primary mb-4 tracking-tight">
+                      {club.name}
+                    </h3>
+
+                    {/* Description Text */}
+                    <p className="animate-fade-in-delayed font-body text-slate-800 text-base sm:text-lg leading-relaxed mb-8 font-medium">
+                      {club.tagline}
+                    </p>
+
+                    {/* CTA buttons */}
+                    <div className="animate-fade-in-delayed flex flex-col sm:flex-row gap-4 w-full">
+                      <Link
+                        href="#executive-team"
+                        className="inline-flex items-center justify-center bg-primary hover:bg-primary/95 text-white text-base font-semibold tracking-wide px-8 py-3.5 rounded-button transition-all duration-300 active:scale-95 shadow-lg shadow-primary/20 font-body"
+                      >
+                        Meet the Team
+                      </Link>
+                      <button
+                        onClick={() => setSelectedClub(null)}
+                        className="inline-flex items-center justify-center bg-transparent text-primary/80 hover:text-primary hover:bg-primary/5 text-base font-semibold px-8 py-3.5 rounded-button border border-primary/20 transition-all duration-300 active:scale-95 font-body"
+                      >
+                        Back to All
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Standard Club Cards
               return (
                 <div
                   key={club.slug}
@@ -415,24 +471,24 @@ export default function HomeScrollExperience() {
                     style={{ backgroundColor: club.color }}
                   />
 
-                  {/* Badge connection tag (Loads slowly with fade-in) */}
+                  {/* Badge connection tag */}
                   <span
                     className="animate-fade-in-delayed inline-block px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-widest mb-6 border border-white/20 text-white/50"
                   >
                     Active Node Connection
                   </span>
 
-                  {/* Display Text: [Name of the club] (Apears slowly with a flickering effect) */}
+                  {/* Display Text: [Name of the club] */}
                   <h3 className="animate-flicker-in font-display text-4xl sm:text-5xl font-black text-white mb-4 tracking-tight">
                     {club.name}
                   </h3>
 
-                  {/* Description Text (Loads slowly after flickering text is fully loaded) */}
+                  {/* Description Text */}
                   <p className="animate-fade-in-delayed font-body text-slate-200/90 text-base sm:text-lg leading-relaxed mb-8">
                     {club.tagline}
                   </p>
 
-                  {/* CTA button & Back control (Loads slowly after flickering text is fully loaded) */}
+                  {/* CTA button & Back control */}
                   <div className="animate-fade-in-delayed flex flex-col sm:flex-row gap-4 w-full">
                     <Link
                       href={`/clubs/${club.slug}`}
