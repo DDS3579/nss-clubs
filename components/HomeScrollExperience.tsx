@@ -304,6 +304,54 @@ export default function HomeScrollExperience() {
 
   return (
     <div className="home-scroll-experience bg-bg">
+      {/* ═══ CSS ANIMATIONS ═══ */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes flicker-in {
+          0% { opacity: 0; }
+          10% { opacity: 0.4; }
+          15% { opacity: 0.1; }
+          25% { opacity: 0.85; }
+          35% { opacity: 0.2; }
+          50% { opacity: 0.95; }
+          60% { opacity: 0.45; }
+          70% { opacity: 0.8; }
+          80% { opacity: 0.6; }
+          90% { opacity: 0.9; }
+          100% { opacity: 1; }
+        }
+        @keyframes fade-in-up {
+          0% {
+            opacity: 0;
+            transform: translateY(16px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes slide-in-card {
+          0% {
+            opacity: 0;
+            transform: translateX(-80px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-flicker-in {
+          animation: flicker-in 1.4s ease-out forwards;
+        }
+        .animate-fade-in-delayed {
+          opacity: 0;
+          animation: fade-in-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation-delay: 1.4s;
+        }
+        .animate-slide-in-card {
+          animation: slide-in-card 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}} />
+
       {/* ═══ HERO ═══ */}
       <div className="[&_.hero-atom-origin]:invisible">
         <Hero />
@@ -331,12 +379,12 @@ export default function HomeScrollExperience() {
                 : "translate-y-10 opacity-0"
             }`}
           >
-            {/* 1. Default Heading - Fades out when a club is selected */}
+            {/* 1. Default Heading - Fades out slowly and moves to the right when a club is selected */}
             <div
-              className={`flex flex-col items-center justify-center text-center transition-all duration-500 ease-in-out ${
+              className={`flex flex-col items-center justify-center text-center transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) ${
                 selectedClub
-                  ? "opacity-0 scale-95 pointer-events-none absolute"
-                  : "opacity-100 scale-100"
+                  ? "opacity-0 translate-x-[80px] pointer-events-none absolute"
+                  : "opacity-100 translate-x-0"
               }`}
             >
               <h2 className="font-display text-[clamp(3.5rem,11vw,8.5rem)] font-black leading-[0.88] text-primary">
@@ -348,47 +396,53 @@ export default function HomeScrollExperience() {
               </p>
             </div>
 
-            {/* 2. Selected Club Details - Fades in dynamically */}
+            {/* 2. Selected Club Details - Slides in, background is bg-primary, flickering text, delayed content */}
             {CLUBS_DETAILS.map((club) => {
               const isActive = selectedClub === club.slug;
+              if (!isActive) return null; // Unmount to trigger full mounting animation timeline fresh!
+
               return (
                 <div
                   key={club.slug}
-                  className={`flex flex-col items-center text-center p-6 sm:p-8 rounded-2xl bg-slate-50/70 border border-slate-100/80 shadow-md max-w-md transition-all duration-500 ease-in-out ${
-                    isActive
-                      ? "opacity-100 scale-100 relative z-10"
-                      : "opacity-0 scale-95 pointer-events-none absolute"
-                  }`}
+                  className="animate-slide-in-card relative flex flex-col items-start text-left p-8 sm:p-10 rounded-3xl bg-primary border border-white/10 w-full max-w-lg overflow-hidden"
+                  style={{
+                    boxShadow: `0 0 50px -10px ${club.color}35`
+                  }}
                 >
+                  {/* Subtle Top-Left Ambient Orb Glow inside the primary background */}
+                  <div
+                    className="absolute -top-24 -left-24 w-48 h-48 rounded-full blur-[80px] pointer-events-none opacity-40"
+                    style={{ backgroundColor: club.color }}
+                  />
+
+                  {/* Badge connection tag (Loads slowly with fade-in) */}
                   <span
-                    className="inline-block px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider mb-4"
-                    style={{
-                      backgroundColor: `${club.color}15`,
-                      color: club.color,
-                    }}
+                    className="animate-fade-in-delayed inline-block px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-widest mb-6 border border-white/20 text-white/50"
                   >
                     Active Node Connection
                   </span>
 
-                  <h3 className="font-display text-4xl sm:text-5xl font-black text-primary mb-3">
+                  {/* Display Text: [Name of the club] (Apears slowly with a flickering effect) */}
+                  <h3 className="animate-flicker-in font-display text-4xl sm:text-5xl font-black text-white mb-4 tracking-tight">
                     {club.name}
                   </h3>
 
-                  <p className="font-body text-slate-600 text-base leading-relaxed mb-6">
+                  {/* Description Text (Loads slowly after flickering text is fully loaded) */}
+                  <p className="animate-fade-in-delayed font-body text-slate-200/90 text-base sm:text-lg leading-relaxed mb-8">
                     {club.tagline}
                   </p>
 
-                  <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+                  {/* CTA button & Back control (Loads slowly after flickering text is fully loaded) */}
+                  <div className="animate-fade-in-delayed flex flex-col sm:flex-row gap-4 w-full">
                     <Link
                       href={`/clubs/${club.slug}`}
-                      className="inline-flex items-center justify-center text-white text-sm font-semibold tracking-wide px-6 py-3 rounded-button transition-all duration-300 active:scale-95 shadow-md shadow-primary/20 hover:shadow-lg"
-                      style={{ backgroundColor: club.color }}
+                      className="inline-flex items-center justify-center bg-white hover:bg-slate-100 text-primary text-base font-semibold tracking-wide px-8 py-3.5 rounded-button transition-all duration-300 active:scale-95 shadow-lg shadow-white/5 font-body"
                     >
-                      Explore Club →
+                      Explore Club
                     </Link>
                     <button
                       onClick={() => setSelectedClub(null)}
-                      className="inline-flex items-center justify-center bg-white text-slate-500 hover:text-slate-700 text-sm font-semibold px-6 py-3 rounded-button border border-slate-200 transition-all duration-300 active:scale-95 hover:bg-slate-50"
+                      className="inline-flex items-center justify-center bg-transparent text-white/80 hover:text-white hover:bg-white/10 text-base font-semibold px-8 py-3.5 rounded-button border border-white/20 transition-all duration-300 active:scale-95 font-body"
                     >
                       Back to All
                     </button>
