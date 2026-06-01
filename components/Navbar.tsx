@@ -39,8 +39,8 @@ export default function Navbar() {
       <header
         className={`sticky top-0 z-50 w-full bg-white transition-all duration-300 ${
           isScrolled
-            ? "h-16 shadow-md border-b border-gray-100"
-            : "h-20 border-b border-gray-100"
+            ? "h-16 shadow-md"
+            : "h-20"
         }`}
       >
         <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6 lg:px-8">
