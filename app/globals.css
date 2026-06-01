@@ -1,15 +1,33 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* NSS Design System Mappings */
+  --color-primary: var(--color-primary);
+  --color-accent: var(--color-accent);
+  --color-text: var(--color-text);
+  --color-bg: var(--color-bg);
+  
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  
+  --radius-button: var(--radius-button);
+  --radius-card: var(--radius-card);
+  --radius-card-lg: var(--radius-card-lg);
+  
+  --transition-fast: var(--transition-fast);
+  --transition-base: var(--transition-base);
+  --transition-slow: var(--transition-slow);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #1A365D; /* Set to design system default text color */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +40,6 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
 }
+
