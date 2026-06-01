@@ -3,6 +3,7 @@ import { urlFor } from '@/sanity/lib/image'
 import Image from 'next/image' // 🚨 NEW: Next.js Image Component
 import Link from 'next/link' // 🚨 NEW: Next.js Link Component
 import type { HomepageData, Stat, FeaturedEvent, FeaturedGalleryItem } from '@/sanity/lib/types'
+import Hero from '@/components/Hero'
 
 export default async function HomePage() {
   // 🚨 NEW: Strictly typed data
@@ -14,7 +15,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-bg">
-
+      <Hero />
     </main>
   )
 }
