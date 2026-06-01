@@ -1,233 +1,434 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import Hero from "./Hero";
-import HeroToClubAnimation from "./HeroToClubAnimation";
+import HeroAtom from "./HeroAtom";
 
-const AUTO_SCROLL_COOLDOWN_MS = 950;
-const ACTIVATION_RATIO = 0.48;
+/* ─── constants ─── */
+const HEADER_H = 64;
+const TRANSITION_MS = 1600; // duration of the section-to-section transition
+const CANVAS_INTRINSIC = 640;
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
+const CLUBS_DETAILS = [
+  {
+    slug: "stem",
+    name: "STEM Club",
+    tagline: "Innovate, build, and explore the frontiers of science, coding, and technology.",
+    color: "#0284c7", // Sky blue
+  },
+  {
+    slug: "sports",
+    name: "Sports Club",
+    tagline: "Unleash your athletic potential, embrace teamwork, and chase victory.",
+    color: "#f59e0b", // Amber
+  },
+  {
+    slug: "literature",
+    name: "Literature Club",
+    tagline: "Celebrate the power of words, creative writing, poetry, and deep debates.",
+    color: "#10b981", // Emerald
+  },
+  {
+    slug: "arts",
+    name: "Arts & Craft Club",
+    tagline: "Express yourself visually through beautiful paintings, sketches, and manual crafts.",
+    color: "#f43f5e", // Rose
+  },
+  {
+    slug: "entertainment",
+    name: "Entertainment Club",
+    tagline: "Bring joy, music, dance, and theater to the main stage of NSS.",
+    color: "#8b5cf6", // Violet
+  },
+  {
+    slug: "social",
+    name: "Social Club",
+    tagline: "Make a positive impact on society through volunteering, empathy, and social work.",
+    color: "#0d9488", // Teal
+  },
+];
+
+/* ─── helpers ─── */
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+function clamp01(v: number) {
+  return Math.min(1, Math.max(0, v));
+}
+function easeInOutQuart(t: number) {
+  return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+}
+
+/** Find the .hero-atom-origin that has layout (not display:none). */
+function getLayoutElement(selector: string): HTMLElement | null {
+  const els = document.querySelectorAll<HTMLElement>(selector);
+  for (const el of els) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return el;
+  }
+  return null;
+}
+
+type Phase = "hero" | "animating" | "clubs";
+
+interface AnimState {
+  direction: "forward" | "reverse";
+  startTime: number;
+  scrollStart: number;
+  scrollEnd: number;
 }
 
 export default function HomeScrollExperience() {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const heroRef = useRef<HTMLDivElement>(null);
-  const clubsRef = useRef<HTMLElement>(null);
-  const isAutoScrollingRef = useRef(false);
-  const touchStartYRef = useRef<number | null>(null);
-  const scrollFrameRef = useRef<number | null>(null);
+  /* ── refs ── */
+  const clubsAnchorRef = useRef<HTMLDivElement>(null);
+  const floatingRef = useRef<HTMLDivElement>(null);
+  const canvasWrapRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef(0);
+  const phaseRef = useRef<Phase>("hero");
+  const animRef = useRef<AnimState | null>(null);
+  const atomProgressRef = useRef(0);
+  const touchStartRef = useRef<number | null>(null);
+  const prevShowTextRef = useRef(false);
+  const initializedRef = useRef(false);
 
-  const [clubsActive, setClubsActive] = useState(false);
-  const [clubsSettled, setClubsSettled] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [clubsTextVisible, setClubsTextVisible] = useState(false);
+  const [selectedClub, setSelectedClub] = useState<string | null>(null);
 
+  /* ── Trigger a section-snap transition ── */
+  const startTransition = useCallback((direction: "forward" | "reverse") => {
+    if (phaseRef.current === "animating") return;
+    if (direction === "forward" && phaseRef.current !== "hero") return;
+    if (direction === "reverse" && phaseRef.current !== "clubs") return;
+
+    const clubsSection = document.getElementById("clubs");
+    if (!clubsSection) return;
+
+    const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
+    const scrollTarget = clubsAbsTop - HEADER_H;
+
+    phaseRef.current = "animating";
+    animRef.current = {
+      direction,
+      startTime: performance.now(),
+      scrollStart: window.scrollY,
+      scrollEnd: direction === "forward" ? scrollTarget : 0,
+    };
+  }, []);
+
+  /* ── Electron Click and Hover Handlers ── */
+  const handleElectronClick = useCallback((slug: string) => {
+    if (phaseRef.current === "hero") {
+      // Trigger transition down first
+      startTransition("forward");
+      // And automatically select the club right as we finish the scroll
+      setTimeout(() => {
+        setSelectedClub(slug);
+      }, TRANSITION_MS);
+    } else if (phaseRef.current === "clubs") {
+      setSelectedClub(slug);
+    }
+  }, [startTransition]);
+
+  /* ── Main animation loop ── */
   useEffect(() => {
-    const clubs = clubsRef.current;
-    if (!clubs) return;
+    const tick = (now: number) => {
+      const heroAnchor = getLayoutElement(".hero-atom-origin");
+      const clubsAnchor = clubsAnchorRef.current;
+      const floating = floatingRef.current;
+      const canvasWrap = canvasWrapRef.current;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const isFocused = entry.isIntersecting && entry.intersectionRatio >= ACTIVATION_RATIO;
-        setClubsActive(isFocused);
+      if (!heroAnchor || !clubsAnchor || !floating || !canvasWrap) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
 
-        if (!isFocused) {
-          setClubsSettled(false);
+      /* ── Initialize phase from scroll position on first frame ── */
+      if (!initializedRef.current) {
+        initializedRef.current = true;
+        const clubsSection = document.getElementById("clubs");
+        if (clubsSection) {
+          const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
+          if (window.scrollY >= clubsAbsTop - HEADER_H - 50) {
+            phaseRef.current = "clubs";
+            atomProgressRef.current = 1;
+            prevShowTextRef.current = true;
+            setClubsTextVisible(true);
+          }
         }
-      },
-      { threshold: [0, 0.25, ACTIVATION_RATIO, 0.7, 1] },
-    );
+        floating.style.opacity = "1";
+      }
 
-    observer.observe(clubs);
+      /* ── Compute position‑t and atom progress ── */
+      let posT = 0;
 
-    return () => observer.disconnect();
+      if (phaseRef.current === "hero") {
+        posT = 0;
+        atomProgressRef.current = 0;
+      } else if (phaseRef.current === "clubs") {
+        posT = 1;
+        atomProgressRef.current = 1;
+      } else if (phaseRef.current === "animating" && animRef.current) {
+        const anim = animRef.current;
+        const elapsed = now - anim.startTime;
+        const rawT = clamp01(elapsed / TRANSITION_MS);
+        const easedT = easeInOutQuart(rawT);
+
+        if (anim.direction === "forward") {
+          posT = easedT;
+          atomProgressRef.current = easedT;
+        } else {
+          posT = 1 - easedT;
+          atomProgressRef.current = 1 - easedT;
+        }
+
+        // Programmatic scroll
+        window.scrollTo(0, lerp(anim.scrollStart, anim.scrollEnd, easedT));
+
+        // Finished?
+        if (rawT >= 1) {
+          const finalPhase: Phase = anim.direction === "forward" ? "clubs" : "hero";
+          phaseRef.current = finalPhase;
+          animRef.current = null;
+        }
+      }
+
+      /* ── Interpolate atom position between hero & clubs anchors ── */
+      const heroRect = heroAnchor.getBoundingClientRect();
+      const clubsRect = clubsAnchor.getBoundingClientRect();
+
+      const fromCx = heroRect.left + heroRect.width / 2;
+      const fromCy = heroRect.top + heroRect.height / 2;
+      const toCx = clubsRect.left + clubsRect.width / 2;
+      const toCy = clubsRect.top + clubsRect.height / 2;
+
+      const cx = lerp(fromCx, toCx, posT);
+      const cy = lerp(fromCy, toCy, posT);
+      const size = lerp(heroRect.width, clubsRect.width, posT);
+
+      floating.style.transform =
+        `translate(${cx - CANVAS_INTRINSIC / 2}px, ${cy - CANVAS_INTRINSIC / 2}px)`;
+      canvasWrap.style.transform = `scale(${size / CANVAS_INTRINSIC})`;
+
+      /* ── Clubs text visibility ── */
+      const showText = posT > 0.55;
+      if (showText !== prevShowTextRef.current) {
+        prevShowTextRef.current = showText;
+        setClubsTextVisible(showText);
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
+  /* ── Wheel & touch handlers for section-snap ── */
   useEffect(() => {
-    const updateProgress = () => {
-      scrollFrameRef.current = null;
+    const handleWheel = (e: WheelEvent) => {
+      if (phaseRef.current === "animating") {
+        e.preventDefault();
+        return;
+      }
 
-      const clubs = clubsRef.current;
-      if (!clubs) return;
+      // Hero → Clubs
+      if (e.deltaY > 0 && phaseRef.current === "hero") {
+        e.preventDefault();
+        if (Math.abs(e.deltaY) >= 10) startTransition("forward");
+        return;
+      }
 
-      const rect = clubs.getBoundingClientRect();
-      const viewportHeight = window.innerHeight || 1;
-      const progress = clamp(1 - rect.top / viewportHeight, 0, 1);
-
-      setScrollProgress(progress);
+      // Clubs → Hero (only if at clubs section top)
+      if (e.deltaY < 0 && phaseRef.current === "clubs") {
+        const clubsSection = document.getElementById("clubs");
+        if (clubsSection) {
+          const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
+          const clubsScrollY = clubsAbsTop - HEADER_H;
+          if (window.scrollY <= clubsScrollY + 15) {
+            e.preventDefault();
+            if (Math.abs(e.deltaY) >= 10) startTransition("reverse");
+          }
+        }
+      }
     };
 
-    const requestProgress = () => {
-      if (scrollFrameRef.current !== null) return;
-      scrollFrameRef.current = window.requestAnimationFrame(updateProgress);
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartRef.current = e.touches[0]?.clientY ?? null;
     };
 
-    updateProgress();
-    window.addEventListener("scroll", requestProgress, { passive: true });
-    window.addEventListener("resize", requestProgress);
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartRef.current === null) return;
+      const deltaY = touchStartRef.current - (e.touches[0]?.clientY ?? 0);
+
+      if (phaseRef.current === "animating") {
+        e.preventDefault();
+        return;
+      }
+
+      if (deltaY > 0 && phaseRef.current === "hero") {
+        e.preventDefault();
+        if (Math.abs(deltaY) >= 20) {
+          startTransition("forward");
+          touchStartRef.current = null;
+        }
+      } else if (deltaY < 0 && phaseRef.current === "clubs") {
+        const clubsSection = document.getElementById("clubs");
+        if (clubsSection) {
+          const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
+          const clubsScrollY = clubsAbsTop - HEADER_H;
+          if (window.scrollY <= clubsScrollY + 15) {
+            e.preventDefault();
+            if (Math.abs(deltaY) >= 20) {
+              startTransition("reverse");
+              touchStartRef.current = null;
+            }
+          }
+        }
+      }
+    };
+
+    const opts: AddEventListenerOptions = { capture: true, passive: false };
+    window.addEventListener("wheel", handleWheel, opts);
+    window.addEventListener("mousewheel", handleWheel as EventListener, opts);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, opts);
 
     return () => {
-      window.removeEventListener("scroll", requestProgress);
-      window.removeEventListener("resize", requestProgress);
-
-      if (scrollFrameRef.current !== null) {
-        window.cancelAnimationFrame(scrollFrameRef.current);
-      }
+      window.removeEventListener("wheel", handleWheel, opts);
+      window.removeEventListener("mousewheel", handleWheel as EventListener, opts);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove, opts);
     };
-  }, []);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    const scrollToClubs = () => {
-      const clubs = clubsRef.current;
-      if (!clubs || isAutoScrollingRef.current) return;
-
-      isAutoScrollingRef.current = true;
-      setClubsActive(true);
-      clubs.scrollIntoView({ behavior: "smooth", block: "start" });
-
-      window.setTimeout(() => {
-        isAutoScrollingRef.current = false;
-      }, AUTO_SCROLL_COOLDOWN_MS);
-    };
-
-    const scrollToHero = () => {
-      const hero = heroRef.current;
-      if (!hero || isAutoScrollingRef.current) return;
-
-      isAutoScrollingRef.current = true;
-      setClubsActive(false);
-      hero.scrollIntoView({ behavior: "smooth", block: "start" });
-
-      window.setTimeout(() => {
-        isAutoScrollingRef.current = false;
-      }, AUTO_SCROLL_COOLDOWN_MS);
-    };
-
-    const handleWheel = (event: WheelEvent) => {
-      if (Math.abs(event.deltaY) < 16 || isAutoScrollingRef.current) return;
-
-      const hero = heroRef.current;
-      const clubs = clubsRef.current;
-      if (!hero || !clubs) return;
-
-      const heroRect = hero.getBoundingClientRect();
-      const clubsRect = clubs.getBoundingClientRect();
-      const viewportHeight = window.innerHeight || 1;
-
-      const heroIsDominant = heroRect.bottom > viewportHeight * 0.42;
-      const clubsIsAtTop = clubsRect.top < viewportHeight * 0.2 && clubsRect.top > -viewportHeight * 0.4;
-
-      if (event.deltaY > 0 && heroIsDominant) {
-        event.preventDefault();
-        scrollToClubs();
-      }
-
-      if (event.deltaY < 0 && clubsIsAtTop) {
-        event.preventDefault();
-        scrollToHero();
-      }
-    };
-
-    const handleTouchStart = (event: TouchEvent) => {
-      touchStartYRef.current = event.touches[0]?.clientY ?? null;
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      const touchStartY = touchStartYRef.current;
-      if (touchStartY === null || isAutoScrollingRef.current) return;
-
-      const currentY = event.touches[0]?.clientY;
-      if (typeof currentY !== "number") return;
-
-      const deltaY = touchStartY - currentY;
-      if (Math.abs(deltaY) < 36) return;
-
-      const hero = heroRef.current;
-      const clubs = clubsRef.current;
-      if (!hero || !clubs) return;
-
-      const heroRect = hero.getBoundingClientRect();
-      const clubsRect = clubs.getBoundingClientRect();
-      const viewportHeight = window.innerHeight || 1;
-
-      if (deltaY > 0 && heroRect.bottom > viewportHeight * 0.42) {
-        event.preventDefault();
-        touchStartYRef.current = null;
-        scrollToClubs();
-      }
-
-      if (deltaY < 0 && clubsRect.top < viewportHeight * 0.2 && clubsRect.top > -viewportHeight * 0.4) {
-        event.preventDefault();
-        touchStartYRef.current = null;
-        scrollToHero();
-      }
-    };
-
-    root.addEventListener("wheel", handleWheel, { passive: false });
-    root.addEventListener("touchstart", handleTouchStart, { passive: true });
-    root.addEventListener("touchmove", handleTouchMove, { passive: false });
-
-    return () => {
-      root.removeEventListener("wheel", handleWheel);
-      root.removeEventListener("touchstart", handleTouchStart);
-      root.removeEventListener("touchmove", handleTouchMove);
-    };
-  }, []);
-
-  const atomParallax = (1 - scrollProgress) * 42;
-  const copyParallax = (1 - scrollProgress) * -28;
-  const copyOpacity = clamp(scrollProgress * 1.7, 0, 1);
+  }, [startTransition]);
 
   return (
-    <div ref={rootRef} className="bg-bg">
-      <div ref={heroRef} className="snap-start">
+    <div className="home-scroll-experience bg-bg">
+      {/* ═══ HERO ═══ */}
+      <div className="[&_.hero-atom-origin]:invisible">
         <Hero />
       </div>
 
+      {/* ═══ CLUBS SECTION ═══ */}
       <section
-        ref={clubsRef}
         id="clubs"
-        className="relative isolate flex min-h-[calc(100svh-4rem)] snap-start scroll-mt-16 overflow-hidden bg-white px-6 py-12 sm:px-8 lg:px-10"
+        className="relative flex min-h-[calc(100svh-4rem)] scroll-mt-16 overflow-hidden bg-white px-6 py-12 sm:px-8 lg:px-10"
       >
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_45%,rgba(2,59,142,0.09),transparent_28%),radial-gradient(circle_at_78%_52%,rgba(212,163,115,0.13),transparent_30%)]" />
-        <div className="absolute left-1/2 top-8 -z-10 h-px w-[min(78rem,86vw)] -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
-
         <div className="mx-auto grid w-full max-w-7xl grid-rows-[1fr_auto] items-center gap-8 lg:grid-cols-2 lg:grid-rows-1 lg:gap-10">
-          <div
-            className="flex min-h-[42svh] items-center justify-center lg:min-h-0"
-            style={{
-              transform: `translate3d(0, ${atomParallax}px, 0)`,
-              transition: clubsSettled ? "transform 500ms ease" : undefined,
-            }}
-          >
-            <div className="relative flex aspect-square w-[min(78vw,25rem)] items-center justify-center sm:w-[30rem] lg:w-[34rem]">
-              <div className="absolute inset-8 rounded-full border border-primary/10 bg-white/30 shadow-[0_24px_80px_rgba(26,54,93,0.08)]" />
-              <HeroToClubAnimation
-                active={clubsActive}
-                onComplete={() => setClubsSettled(true)}
-                className="relative w-full"
-              />
-            </div>
+          {/* Left column – sizing placeholder for atom */}
+          <div className="flex min-h-[42svh] items-center justify-center lg:min-h-0">
+            <div
+              ref={clubsAnchorRef}
+              className="relative flex aspect-square w-[min(78vw,25rem)] items-center justify-center sm:w-[30rem] lg:w-[34rem]"
+            />
           </div>
 
+          {/* Right column – dynamic interactive area */}
           <div
-            className="flex min-h-[34svh] items-center justify-center text-center lg:min-h-0"
-            style={{
-              opacity: copyOpacity,
-              transform: `translate3d(0, ${copyParallax}px, 0)`,
-            }}
+            className={`relative flex min-h-[34svh] items-center justify-center lg:min-h-0 transition-all duration-700 ease-out ${
+              clubsTextVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }`}
           >
-            <h2 className="font-display text-[clamp(3.5rem,11vw,8.5rem)] font-black leading-[0.88] text-primary">
-              Our
-              <span className="block text-accent">Clubs.</span>
-            </h2>
+            {/* 1. Default Heading - Fades out when a club is selected */}
+            <div
+              className={`flex flex-col items-center justify-center text-center transition-all duration-500 ease-in-out ${
+                selectedClub
+                  ? "opacity-0 scale-95 pointer-events-none absolute"
+                  : "opacity-100 scale-100"
+              }`}
+            >
+              <h2 className="font-display text-[clamp(3.5rem,11vw,8.5rem)] font-black leading-[0.88] text-primary">
+                Our
+                <span className="block text-accent">Clubs.</span>
+              </h2>
+              <p className="mt-4 font-body text-slate-400 text-sm font-medium animate-pulse">
+                Click any electron node to explore
+              </p>
+            </div>
+
+            {/* 2. Selected Club Details - Fades in dynamically */}
+            {CLUBS_DETAILS.map((club) => {
+              const isActive = selectedClub === club.slug;
+              return (
+                <div
+                  key={club.slug}
+                  className={`flex flex-col items-center text-center p-6 sm:p-8 rounded-2xl bg-slate-50/70 border border-slate-100/80 shadow-md max-w-md transition-all duration-500 ease-in-out ${
+                    isActive
+                      ? "opacity-100 scale-100 relative z-10"
+                      : "opacity-0 scale-95 pointer-events-none absolute"
+                  }`}
+                >
+                  <span
+                    className="inline-block px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider mb-4"
+                    style={{
+                      backgroundColor: `${club.color}15`,
+                      color: club.color,
+                    }}
+                  >
+                    Active Node Connection
+                  </span>
+
+                  <h3 className="font-display text-4xl sm:text-5xl font-black text-primary mb-3">
+                    {club.name}
+                  </h3>
+
+                  <p className="font-body text-slate-600 text-base leading-relaxed mb-6">
+                    {club.tagline}
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+                    <Link
+                      href={`/clubs/${club.slug}`}
+                      className="inline-flex items-center justify-center text-white text-sm font-semibold tracking-wide px-6 py-3 rounded-button transition-all duration-300 active:scale-95 shadow-md shadow-primary/20 hover:shadow-lg"
+                      style={{ backgroundColor: club.color }}
+                    >
+                      Explore Club →
+                    </Link>
+                    <button
+                      onClick={() => setSelectedClub(null)}
+                      className="inline-flex items-center justify-center bg-white text-slate-500 hover:text-slate-700 text-sm font-semibold px-6 py-3 rounded-button border border-slate-200 transition-all duration-300 active:scale-95 hover:bg-slate-50"
+                    >
+                      Back to All
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
+
+      {/* ═══ SINGLE FLOATING ATOM ═══ */}
+      <div
+        ref={floatingRef}
+        className="fixed top-0 left-0 z-50 pointer-events-none"
+        style={{
+          width: CANVAS_INTRINSIC,
+          height: CANVAS_INTRINSIC,
+          willChange: "transform",
+          opacity: 0,
+        }}
+      >
+        <div
+          ref={canvasWrapRef}
+          className="origin-center"
+          style={{ width: CANVAS_INTRINSIC, height: CANVAS_INTRINSIC, willChange: "transform" }}
+        >
+          {/* pointer-events-auto so listeners on canvas work! */}
+          <div className="pointer-events-auto">
+            <HeroAtom
+              progressRef={atomProgressRef}
+              onElectronClick={handleElectronClick}
+            />
+          </div>
+        </div>
+      </div>
+
+      <span className="sr-only" aria-live="polite">
+        {phaseRef.current === "animating" ? "Moving between sections" : ""}
+      </span>
     </div>
   );
 }

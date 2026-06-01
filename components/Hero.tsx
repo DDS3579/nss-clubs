@@ -1,26 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import HeroAtom from "./HeroAtom";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden bg-white pt-6 pb-12 sm:pt-4 sm:pb-16 lg:-mt-8 lg:pb-20">
+    <section className="relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden bg-white pt-6 pb-12 sm:pt-4 sm:pb-16 lg:min-h-[calc(100svh-4rem)] lg:-mt-8 lg:pb-20">
       {/* Background radial highlights */}
       <div className="absolute top-1/4 left-1/10 w-72 h-72 rounded-full bg-primary/5 blur-3xl -z-10 pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/10 w-96 h-96 rounded-full bg-accent/5 blur-3xl -z-10 pointer-events-none" />
 
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-6 lg:px-8">
 
         {/* ── MOBILE LAYOUT: centered single column ── */}
         <div className="flex flex-col items-center text-center gap-5 lg:hidden">
 
           {/* Atom */}
-          <div className="relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10 transition-all duration-500">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-[0.5] sm:scale-[0.65] origin-center transition-all duration-500">
-              <HeroAtom />
-            </div>
-          </div>
+          <div className="hero-atom-origin relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
 
           {/* Heading */}
           <h1 className="font-display font-black leading-[0.92] tracking-tight text-text w-full">
@@ -100,11 +95,7 @@ export default function Hero() {
 
           {/* Column 2: HeroAtom */}
           <div className="lg:col-span-6 flex items-center justify-center w-full">
-            <div className="relative w-[640px] h-[640px] flex items-center justify-center overflow-hidden transition-all duration-500 rounded-full bg-slate-50/10">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-[1.25] origin-center transition-all duration-500">
-                <HeroAtom />
-              </div>
-            </div>
+            <div className="hero-atom-origin relative w-[640px] h-[640px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
           </div>
 
         </div>
