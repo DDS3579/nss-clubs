@@ -8,21 +8,21 @@
   --font-mono: var(--font-geist-mono);
   
   /* NSS Design System Mappings */
-  --color-primary: var(--color-primary);
-  --color-accent: var(--color-accent);
-  --color-text: var(--color-text);
-  --color-bg: var(--color-bg);
+  --color-primary: #023B8E;
+  --color-accent: #D4A373;
+  --color-text: #1A365D;
+  --color-bg: #ffffff;
   
-  --font-display: var(--font-display);
-  --font-body: var(--font-body);
+  --font-display: Satoshi, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   
-  --radius-button: var(--radius-button);
-  --radius-card: var(--radius-card);
-  --radius-card-lg: var(--radius-card-lg);
+  --radius-button: 12px;
+  --radius-card: 18px;
+  --radius-card-lg: 24px;
   
-  --transition-fast: var(--transition-fast);
-  --transition-base: var(--transition-base);
-  --transition-slow: var(--transition-slow);
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
 }
 
 :root {

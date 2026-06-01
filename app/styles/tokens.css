@@ -59,12 +59,15 @@ p {
 }
 
 a {
-  color: var(--color-primary);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
-a:hover {
+a:not([class*="text-"]) {
+  color: var(--color-primary);
+}
+
+a:not([class*="text-"]):hover {
   color: var(--color-accent);
 }
 
