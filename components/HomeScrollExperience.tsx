@@ -263,6 +263,16 @@ export default function HomeScrollExperience() {
   const [selectedClub, setSelectedClub] = useState<string | null>(null);
   const [cardRevealVisible, setCardRevealVisible] = useState(false);
 
+  const cardWrapperRef = useRef<HTMLDivElement>(null);
+  const [projectorCoords, setProjectorCoords] = useState<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    x3: number;
+    y3: number;
+  } | null>(null);
+
   /* ── Trigger a section-snap transition ── */
   const startTransition = useCallback((direction: "forward" | "reverse") => {
     if (phaseRef.current === "animating") return;
@@ -366,6 +376,41 @@ export default function HomeScrollExperience() {
       clubsScale,
     };
   }, [selectedClub]);
+
+  /* ── Holographic Projector Coordinate Updater ── */
+  const updateProjectorCoords = useCallback(() => {
+    if (!selectedClub || !cardWrapperRef.current) {
+      setProjectorCoords(null);
+      return;
+    }
+    const cardRect = cardWrapperRef.current.getBoundingClientRect();
+    const x1 = window.innerWidth * 0.18;
+    const y1 = window.innerHeight * 0.5;
+    // Anchor projector beam to top-left and bottom-left of the card
+    const x2 = cardRect.left;
+    const y2 = cardRect.top;
+    const x3 = cardRect.left;
+    const y3 = cardRect.bottom;
+    setProjectorCoords({ x1, y1, x2, y2, x3, y3 });
+  }, [selectedClub]);
+
+  useEffect(() => {
+    if (cardRevealVisible) {
+      const timer = setTimeout(() => {
+        updateProjectorCoords();
+      }, 50);
+
+      window.addEventListener("resize", updateProjectorCoords);
+      window.addEventListener("scroll", updateProjectorCoords);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("resize", updateProjectorCoords);
+        window.removeEventListener("scroll", updateProjectorCoords);
+      };
+    } else {
+      setProjectorCoords(null);
+    }
+  }, [cardRevealVisible, updateProjectorCoords]);
 
   /* ── Main animation loop ── */
   useEffect(() => {
@@ -792,6 +837,34 @@ export default function HomeScrollExperience() {
             inset 0 -1.5px 1px rgba(0, 0, 0, 0.3),
             0 12px 28px -4px rgba(0, 0, 0, 0.25);
         }
+
+        @keyframes projector-flicker {
+          0%, 100% { opacity: 0.85; }
+          5% { opacity: 0.70; }
+          10% { opacity: 0.90; }
+          17% { opacity: 0.75; }
+          25% { opacity: 0.95; }
+          30% { opacity: 0.80; }
+          45% { opacity: 0.98; }
+          55% { opacity: 0.82; }
+          68% { opacity: 0.90; }
+          75% { opacity: 0.78; }
+          85% { opacity: 0.95; }
+          92% { opacity: 0.85; }
+        }
+        .projector-beam {
+          animation: projector-flicker 4s ease-in-out infinite;
+          mix-blend-mode: screen;
+          transform-origin: left center;
+          transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes edge-glow {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 1; }
+        }
+        .projector-edge-line {
+          animation: edge-glow 2s ease-in-out infinite;
+        }
       `}} />
 
       {/* ═══ HERO ═══ */}
@@ -842,6 +915,7 @@ export default function HomeScrollExperience() {
 
             {/* 2. Selected Club Details - Premium Credit Card Aesthetic (Spacious & Clean Layout) */}
             <div
+              ref={cardWrapperRef}
               className={`transition-all duration-500 ease-out ${
                 cardRevealVisible
                   ? "opacity-100 translate-x-0 scale-100"
@@ -1056,6 +1130,46 @@ export default function HomeScrollExperience() {
           </div>
         </div>
       </div>
+
+      {/* ═══ PROJECTOR BEAM EFFECT ═══ */}
+      {projectorCoords && cardRevealVisible && (() => {
+        const activeClubData = CLUBS_DETAILS.find((c) => c.slug === selectedClub);
+        const connectorColor = activeClubData ? activeClubData.color : "#D4A373";
+        return (
+          <svg
+            className="fixed top-0 left-0 w-full h-full pointer-events-none z-40 transition-opacity duration-700 ease-out animate-flicker-in"
+            style={{ opacity: cardRevealVisible ? 1 : 0 }}
+          >
+            <defs>
+              <linearGradient id="projector-beam-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={connectorColor} stopOpacity="0.22" />
+                <stop offset="40%" stopColor={connectorColor} stopOpacity="0.08" />
+                <stop offset="100%" stopColor={connectorColor} stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            {/* Holographic Light Cone */}
+            <polygon
+              points={`${projectorCoords.x1},${projectorCoords.y1} ${projectorCoords.x2},${projectorCoords.y2} ${projectorCoords.x3},${projectorCoords.y3}`}
+              fill="url(#projector-beam-grad)"
+              className="projector-beam"
+            />
+            {/* Glowing Laser Border at the Card Edge */}
+            <line
+              x1={projectorCoords.x2}
+              y1={projectorCoords.y2}
+              x2={projectorCoords.x3}
+              y2={projectorCoords.y3}
+              stroke={connectorColor}
+              strokeWidth="2"
+              className="projector-edge-line"
+              opacity="0.85"
+            />
+            {/* Glowing origin circle at the electron / nucleus */}
+            <circle cx={projectorCoords.x1} cy={projectorCoords.y1} r="5" fill={connectorColor} opacity="0.9" />
+            <circle cx={projectorCoords.x1} cy={projectorCoords.y1} r="10" stroke={connectorColor} strokeWidth="1" fill="none" className="animate-ping" style={{ transformOrigin: `${projectorCoords.x1}px ${projectorCoords.y1}px` }} />
+          </svg>
+        );
+      })()}
 
       <span className="sr-only" aria-live="polite">
         {phaseRef.current === "animating" ? "Moving between sections" : ""}
