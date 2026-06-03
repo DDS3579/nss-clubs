@@ -816,6 +816,8 @@ export default function HomeScrollExperience() {
           {/* Right column – dynamic interactive area */}
           <div
             className={`relative flex min-h-[34svh] items-center justify-center lg:min-h-0 transition-all duration-700 ease-out ${
+              selectedClub ? "z-[60]" : "z-10"
+            } ${
               clubsTextVisible
                 ? "translate-y-0 opacity-100"
                 : "translate-y-10 opacity-0"

@@ -251,33 +251,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, rotationOffsetRef, nuc
         ctx.restore();
       }
 
-      // Draw pulsing golden aura behind nucleus — show if hovered OR separating
-      if (hoveredSlugRef.current === 'executive-team' || sep > 0.001) {
-        ctx.save();
-        // Intensify glow as separation increases
-        const baseRadius = 34 + Math.sin(elapsed * 0.15) * 4;
-        const sepRadius = baseRadius + sep * 22;
-        const baseAlpha = hoveredSlugRef.current === 'executive-team' ? 0.35 : 0;
-        const glowAlpha = Math.max(baseAlpha, sep * 0.5);
-
-        // Outer glow ring
-        if (sep > 0.01) {
-          const outerGlow = ctx.createRadialGradient(CX, CY, sepRadius * 0.5, CX, CY, sepRadius * 1.8);
-          outerGlow.addColorStop(0, `rgba(255, 215, 100, ${sep * 0.15})`);
-          outerGlow.addColorStop(0.5, `rgba(212, 163, 115, ${sep * 0.08})`);
-          outerGlow.addColorStop(1, 'rgba(212, 163, 115, 0)');
-          ctx.beginPath();
-          ctx.arc(CX, CY, sepRadius * 1.8, 0, 2 * Math.PI);
-          ctx.fillStyle = outerGlow;
-          ctx.fill();
-        }
-
-        ctx.beginPath();
-        ctx.arc(CX, CY, sepRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = `rgba(212, 163, 115, ${glowAlpha})`;
-        ctx.fill();
-        ctx.restore();
-      }
 
       drawNucleus();
 
