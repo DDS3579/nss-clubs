@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NSS Club Website
 
-## Getting Started
+## 🗄️ Backend Architecture (Sanity CMS)
 
-First, run the development server:
+The backend is powered by **Sanity.io**, operating as a fully headless, relational Content Lake. The Sanity Studio is mounted locally within the Next.js App Router at `/studio`.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### ⚙️ Core Backend Rules
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **API Versioning**: The Sanity client is pinned to a static UTC date (e.g., 2026-05-31) inside `sanity/env.ts`. Never use dynamic dates (like `new Date()`), as this prevents sudden breaking changes when Sanity updates their API.
+- **Query Testing**: The Vision Plugin is enabled in the Studio navigation bar. Use it to test GROQ queries, verify reference resolution (`->`), and inspect raw JSON payloads before writing frontend fetch logic.
+- **Image Pipeline**: Sanity stores images as asset references. They are transformed on-the-fly and served via `cdn.sanity.io` using the `urlFor()` helper located in `sanity/lib/image.ts`.
+- **Singleton Pattern**: The homepage schema is structured as a Singleton (locked to `_id == "homepage"` via the Structure Tool) to prevent duplicate global configurations.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🧩 Schema Topology (8 Document Types)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The Content Lake is strictly relational. References (`type: 'reference'`) are used heavily to prevent data duplication.
 
-## Learn More
+- **homepage**: Global settings (President's message, Legacy Stats, Featured Events/Gallery).
+- **teamMember**: Base directory of people (Name, Photo, Bio, Grade).
+- **executiveTeam**: Maps specific roles (President, Secretary) to teamMember references by Academic Year.
+- **club**: The 6 core institutions. Includes auto-generated slug for dynamic routing, and arrays of teamMember references for Club Heads.
+- **event**: Datetime-driven events linked to specific clubs via references.
+- **galleryItem**: Centralized media library. Images are tagged to clubs and/or events via cross-references.
+- **announcement**: Standard text notices with `isActive` toggles and `expiryDate` (date only).
+- **popup**: Marketing modals with CTA links, restricted by `startDate` and `expiryDate` (datetime).
 
-To learn more about Next.js, take a look at the following resources:
+### 🔄 Data Fetching Pipeline
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Queries**: All GROQ queries are centralized in `sanity/lib/queries.ts`.
+- **Types**: Strict TypeScript interfaces mapping the Sanity schemas live in `sanity/lib/types.ts`.
+- **Execution**: Data is fetched exclusively via React Server Components (async/await) using the `next-sanity` client. Client-side fetching (`useEffect`) is strictly prohibited unless building interactive widgets (like live countdown timers).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
