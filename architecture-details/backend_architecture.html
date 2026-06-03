@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NSS Clubs Architecture Flowchart</title>
+<style>
+  :root {
+    --bg: #0B1120;
+    --card-bg: #111827;
+    --card-border: #1E293B;
+    --text-main: #F8FAFC;
+    --text-muted: #94A3B8;
+    --accent-blue: #38BDF8;
+    --accent-purple: #818CF8;
+    --accent-green: #10B981;
+    --accent-orange: #F59E0B;
+    --accent-pink: #F472B6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text-main);
+    padding: 40px 20px;
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    margin-bottom: 30px;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  /* Phase Containers */
+  .phase {
+    width: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+  }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 12px;
+  }
+
+  .phase-number {
+    background: var(--accent-blue);
+    color: var(--bg);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  .phase-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .phase-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  /* Grid Layouts */
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  /* Nodes (The Boxes) */
+  .node {
+    background: #0F172A;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+  }
+
+  .node:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-blue);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.1);
+  }
+
+  .node h3 {
+    font-size: 15px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .node p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .node ul {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding-left: 16px;
+    margin-top: 4px;
+  }
+
+  /* Badges */
+  .badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-singleton { background: rgba(129, 140, 248, 0.2); color: var(--accent-purple); }
+  .badge-ref { background: rgba(56, 189, 248, 0.2); color: var(--accent-blue); }
+  .badge-array { background: rgba(244, 114, 182, 0.2); color: var(--accent-pink); }
+  .badge-static { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+  .badge-dynamic { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+
+  /* Connectors */
+  .connector {
+    width: 2px;
+    height: 30px;
+    background: linear-gradient(to bottom, var(--accent-blue), var(--accent-purple));
+    position: relative;
+  }
+
+  .connector::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--accent-purple);
+  }
+
+  /* Special Highlight Nodes */
+  .highlight-blue { border-left: 3px solid var(--accent-blue); }
+  .highlight-purple { border-left: 3px solid var(--accent-purple); }
+  .highlight-green { border-left: 3px solid var(--accent-green); }
+  .highlight-orange { border-left: 3px solid var(--accent-orange); }
+
+  @media (max-width: 768px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .phase-desc { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>NSS Clubs Platform Architecture</h1>
+  <p class="subtitle">Headless CMS Data Flow & Next.js App Router Integration</p>
+
+  <!-- PHASE 1: SANITY STUDIO -->
+  <div class="phase">
+    <div class="phase-header">
+      <div class="phase-number">1</div>
+      <div class="phase-title">Sanity Studio (Content Entry)</div>
+      <div class="phase-desc">8 Custom Schemas • Relational Data Model</div>
+    </div>
+
+    <div class="grid-4">
+      <div class="node highlight-purple">
+        <h3>Homepage <span class="badge badge-singleton">Singleton</span></h3>
+        <p>Global page settings. Locked to a single document ID.</p>
+        <ul>
+          <li>President Message</li>
+          <li>Legacy Stats (Objects)</li>
+          <li>Featured Events <span class="badge badge-ref">Ref</span></li>
+          <li>Gallery Showcase <span class="badge badge-ref">Ref</span></li>
+        </ul>
+      </div>
+
+      <div class="node highlight-blue">
+        <h3>Team Member</h3>
+        <p>The core directory of all students and faculty.</p>
+        <ul>
+          <li>Name, Photo, Bio</li>
+          <li>Grade, Gender</li>
+          <li>Email, LinkedIn</li>
+        </ul>
+      </div>
+
+      <div class="node highlight-blue">
+        <h3>Executive Team</h3>
+        <p>Maps roles to specific members for a given year.</p>
+        <ul>
+          <li>Academic Year</li>
+          <li>President <span class="badge badge-ref">Ref</span></li>
+          <li>Secretary, Treasurer <span class="badge badge-ref">Ref</span></li>
+        </ul>
+      </div>
+
+      <div class="node highlight-blue">
+        <h3>Club</h3>
+        <p>The 6 core institutions (STEM, Sports, etc).</p>
+        <ul>
+          <li>Slug (Auto-generated)</li>
+          <li>Logo, Hero Image</li>
+          <li>Heads <span class="badge badge-array">Array</span> <span class="badge badge-ref">Ref</span></li>
+          <li>Achievements <span class="badge badge-array">Array</span></li>
+        </ul>
+      </div>
+
+      <div class="node highlight-blue">
+        <h3>Event</h3>
+        <p>Hackathons, meets, and gatherings.</p>
+        <ul>
+          <li>Datetime Picker</li>
+          <li>Registration Link</li>
+          <li>Associated Club <span class="badge badge-ref">Ref</span></li>
+          <li>Countdown Toggle</li>
+        </ul>
+      </div>
+
+      <div class="node highlight-blue">
+        <h3>Gallery Item</h3>
+        <p>Centralized media library.</p>
+        <ul>
+          <li>Image (Hotspot enabled)</li>
+          <li>Linked Club <span class="badge badge-ref">Ref</span></li>
+          <li>Linked Event <span class="badge badge-ref">Ref</span></li>
+        </ul>
+      </div>
+
+      <div class="node highlight-orange">
+        <h3>Announcements</h3>
+        <p>Standard notices and alerts.</p>
+        <ul>
+          <li>Title, Content</li>
+          <li>Expiry Date</li>
+          <li>Active Toggle</li>
+        </ul>
+      </div>
+
+      <div class="node highlight-orange">
+        <h3>Popups</h3>
+        <p>Time-sensitive marketing modals.</p>
+        <ul>
+          <li>CTA Text & Link</li>
+          <li>Start/End Datetime</li>
+          <li>Active Toggle</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- PHASE 2: CONTENT LAKE -->
+  <div class="phase">
+    <div class="phase-header">
+      <div class="phase-number">2</div>
+      <div class="phase-title">Sanity Content Lake (The Brain)</div>
+      <div class="phase-desc">Real-time API & Image CDN</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="node highlight-purple">
+        <h3>GROQ Query Engine</h3>
+        <p>Resolves references and shapes JSON payloads.</p>
+        <ul>
+          <li><code>*[_id == "homepage"]</code></li>
+          <li><code>*[_type == "club" && slug.current == $slug]</code></li>
+          <li>Projection & Reference Resolution (<code>-></code>)</li>
+        </ul>
+      </div>
+      <div class="node highlight-purple">
+        <h3>Image Pipeline (cdn.sanity.io)</h3>
+        <p>On-the-fly image transformation.</p>
+        <ul>
+          <li>Auto WebP/AVIF conversion</li>
+          <li>Dynamic cropping & resizing</li>
+          <li>Respects Studio Hotspots</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- PHASE 3: NEXT.JS BRIDGE -->
+  <div class="phase">
+    <div class="phase-header">
+      <div class="phase-number">3</div>
+      <div class="phase-title">Next.js App Router (The Bridge)</div>
+      <div class="phase-desc">Server Components & Type Safety</div>
+    </div>
+
+    <div class="grid-4">
+      <div class="node">
+        <h3>Data Fetching</h3>
+        <p><code>sanity/lib/queries.ts</code></p>
+        <ul>
+          <li>Async Server Components</li>
+          <li><code>client.fetch()</code></li>
+          <li>Pinned API Version (<code>2026-05-31</code>)</li>
+        </ul>
+      </div>
+      <div class="node">
+        <h3>Type Safety</h3>
+        <p><code>sanity/lib/types.ts</code></p>
+        <ul>
+          <li>Strict TS Interfaces</li>
+          <li>Autocomplete support</li>
+          <li>Prevents runtime errors</li>
+        </ul>
+      </div>
+      <div class="node">
+        <h3>Image Builder</h3>
+        <p><code>sanity/lib/image.ts</code></p>
+        <ul>
+          <li><code>urlFor(image)</code></li>
+          <li>Chaining dimensions</li>
+          <li>Next.js <code>&lt;Image&gt;</code> integration</li>
+        </ul>
+      </div>
+      <div class="node">
+        <h3>Routing</h3>
+        <p>Dynamic App Router</p>
+        <ul>
+          <li><code>/clubs/[slug]</code></li>
+          <li><code>params.slug</code> extraction</li>
+          <li>404 Fallback handling</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- PHASE 4: FRONTEND UI -->
+  <div class="phase">
+    <div class="phase-header">
+      <div class="phase-number">4</div>
+      <div class="phase-title">Frontend UI (The Browser)</div>
+      <div class="phase-desc">Hybrid Rendering Strategy</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="node highlight-orange">
+        <h3>Static Content <span class="badge badge-static">Hardcoded</span></h3>
+        <p>Baked into the React components at build time. Fast, unchanging branding.</p>
+        <ul>
+          <li>Global Navbar & Footer</li>
+          <li>Homepage Hero Banner</li>
+          <li>Homepage Clubs Grid (Links to 6 routes)</li>
+          <li>CTA Sections & Contact Forms</li>
+        </ul>
+      </div>
+      <div class="node highlight-green">
+        <h3>Dynamic Content <span class="badge badge-dynamic">Fetched</span></h3>
+        <p>Pulled from Sanity at request time. Editable by the Executive Team.</p>
+        <ul>
+          <li>President's Message & Stats</li>
+          <li>Live Events & Countdowns</li>
+          <li>Individual Club Pages (<code>/clubs/stem</code>)</li>
+          <li>Active Popups & Announcements</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
