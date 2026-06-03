@@ -10,6 +10,13 @@ interface HeroAtomProps {
    * 1 = fully settled.
    */
   progressRef?: React.MutableRefObject<number>;
+  /** Global rotation offset in radians. Applied uniformly to all orbits. */
+  rotationOffsetRef?: React.MutableRefObject<number>;
+  /**
+   * Nucleus separation progress (0→1).
+   * 0 = normal atom. 1 = orbits/electrons have slid away, nucleus isolated.
+   */
+  nucleusSeparationRef?: React.MutableRefObject<number>;
   className?: string;
   onElectronClick?: (slug: string) => void;
   onElectronHover?: (slug: string | null) => void;
@@ -49,7 +56,7 @@ function shortestAngle(start: number, end: number) {
   return diff;
 }
 
-const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronClick, onElectronHover }) => {
+const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, rotationOffsetRef, nucleusSeparationRef, className, onElectronClick, onElectronHover }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const electronCoordsRef = useRef<{ x: number; y: number; slug: string; name: string }[]>([]);
@@ -62,11 +69,19 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // High-DPI canvas for crisp rendering at zoom levels
+    const DPR = 3;
+    canvas.width = CANVAS_SIZE * DPR;
+    canvas.height = CANVAS_SIZE * DPR;
+    canvas.style.width = `${CANVAS_SIZE}px`;
+    canvas.style.height = `${CANVAS_SIZE}px`;
+    ctx.scale(DPR, DPR);
+
     let animationId: number;
     let elapsed = 0;
 
     function drawOrbit(rx: number, ry: number, angleDeg: number) {
-      const a = (angleDeg * Math.PI) / 180;
+      const a = (angleDeg * Math.PI) / 180 + (rotationOffsetRef?.current ?? 0);
       ctx!.save();
       ctx!.translate(CX, CY);
       ctx!.rotate(a);
@@ -79,7 +94,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
     }
 
     function getPos(rx: number, ry: number, angleDeg: number, theta: number) {
-      const a = (angleDeg * Math.PI) / 180;
+      const a = (angleDeg * Math.PI) / 180 + (rotationOffsetRef?.current ?? 0);
       const ex = rx * Math.cos(theta);
       const ey = ry * Math.sin(theta);
       return {
@@ -203,6 +218,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
       const p = clamp01(progressRef?.current ?? 0);
       const eased = easeInOut(p);
       const settle = easeInOut(clamp01((p - 0.56) / 0.44));
+      const sep = clamp01(nucleusSeparationRef?.current ?? 0);
 
       /* ── Spin + pulse transforms on the container ── */
       if (p > 0.001) {
@@ -218,14 +234,47 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
 
       /* ── Draw ── */
       ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      // When separating, shift orbits + electrons to the right and fade them out
+      const orbitShiftX = sep * 280; // pixels to slide right
+      const orbitFade = 1 - sep;     // opacity fade
+
+      if (sep > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = orbitFade;
+        ctx.translate(orbitShiftX, 0);
+      }
+
       orbits.forEach((o) => drawOrbit(o.rx, o.ry, o.angleDeg));
 
-      // Draw pulsing golden aura behind nucleus if hovered
-      if (hoveredSlugRef.current === 'executive-team') {
+      if (sep > 0.001) {
+        ctx.restore();
+      }
+
+      // Draw pulsing golden aura behind nucleus — show if hovered OR separating
+      if (hoveredSlugRef.current === 'executive-team' || sep > 0.001) {
         ctx.save();
+        // Intensify glow as separation increases
+        const baseRadius = 34 + Math.sin(elapsed * 0.15) * 4;
+        const sepRadius = baseRadius + sep * 22;
+        const baseAlpha = hoveredSlugRef.current === 'executive-team' ? 0.35 : 0;
+        const glowAlpha = Math.max(baseAlpha, sep * 0.5);
+
+        // Outer glow ring
+        if (sep > 0.01) {
+          const outerGlow = ctx.createRadialGradient(CX, CY, sepRadius * 0.5, CX, CY, sepRadius * 1.8);
+          outerGlow.addColorStop(0, `rgba(255, 215, 100, ${sep * 0.15})`);
+          outerGlow.addColorStop(0.5, `rgba(212, 163, 115, ${sep * 0.08})`);
+          outerGlow.addColorStop(1, 'rgba(212, 163, 115, 0)');
+          ctx.beginPath();
+          ctx.arc(CX, CY, sepRadius * 1.8, 0, 2 * Math.PI);
+          ctx.fillStyle = outerGlow;
+          ctx.fill();
+        }
+
         ctx.beginPath();
-        ctx.arc(CX, CY, 34 + Math.sin(elapsed * 0.15) * 4, 0, 2 * Math.PI);
-        ctx.fillStyle = 'rgba(212, 163, 115, 0.35)'; // gold highlight glow
+        ctx.arc(CX, CY, sepRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(212, 163, 115, ${glowAlpha})`;
         ctx.fill();
         ctx.restore();
       }
@@ -233,6 +282,13 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
       drawNucleus();
 
       const newCoords: { x: number; y: number; slug: string; name: string }[] = [];
+
+      // When separating, draw electrons shifted with the orbits
+      if (sep > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = orbitFade;
+        ctx.translate(orbitShiftX, 0);
+      }
 
       orbits.forEach((o, orbitIdx) => {
         o.offsets.forEach((off, idx) => {
@@ -251,8 +307,8 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
           const map = CLUB_MAPPING.find(m => m.orbitIdx === orbitIdx && m.electronIdx === idx);
           const isHovered = map && map.slug === hoveredSlugRef.current;
 
-          if (isHovered) {
-            // Draw a beautiful outer pulsing halo
+          if (isHovered && sep < 0.01) {
+            // Draw a beautiful outer pulsing halo (only when not separating)
             ctx.save();
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, 16 + Math.sin(elapsed * 0.15) * 3, 0, 2 * Math.PI);
@@ -268,6 +324,10 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
           }
         });
       });
+
+      if (sep > 0.001) {
+        ctx.restore();
+      }
 
       electronCoordsRef.current = newCoords;
 
@@ -431,7 +491,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({ progressRef, className, onElectronC
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('click', handleClick);
     };
-  }, [progressRef, onElectronClick, onElectronHover]);
+  }, [progressRef, rotationOffsetRef, onElectronClick, onElectronHover]);
 
   return (
     <div
