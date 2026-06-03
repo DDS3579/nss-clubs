@@ -311,7 +311,7 @@ export default function HomeScrollExperience() {
 
   return (
     <div className="home-scroll-experience bg-bg">
-      {/* ═══ CSS ANIMATIONS ═══ */}
+      {/* ═══ CSS ANIMATIONS & DEBOSSED CARVED TEXT ═══ */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes flicker-in {
           0% { opacity: 0; }
@@ -356,6 +356,15 @@ export default function HomeScrollExperience() {
         }
         .animate-slide-in-card {
           animation: slide-in-card 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        /* Debossed/Carved Text Effects */
+        .text-carved-dark {
+          color: rgba(255, 255, 255, 0.9);
+          text-shadow: -1px -1px 0.5px rgba(0, 0, 0, 0.9), 1px 1px 0.5px rgba(255, 255, 255, 0.15);
+        }
+        .text-carved-light {
+          color: rgba(1, 31, 91, 0.9);
+          text-shadow: -1px -1px 0.5px rgba(0, 0, 0, 0.3), 1px 1px 0.5px rgba(255, 255, 255, 0.6);
         }
       `}} />
 
@@ -403,104 +412,83 @@ export default function HomeScrollExperience() {
               </p>
             </div>
 
-            {/* 2. Selected Club Details - Slides in, background is bg-primary, flickering text, delayed content */}
+            {/* 2. Selected Club Details - Premium Credit Card Aesthetic (Spacious & Clean Layout) */}
             {CLUBS_DETAILS.map((club) => {
               const isActive = selectedClub === club.slug;
               if (!isActive) return null; // Unmount to trigger full mounting animation timeline fresh!
 
-              // Special Golden Card for Executive Team (Nucleus)
+              // Special Luxury Golden Executive Card (Nucleus) - Simplified Clean gold background
               if (club.isSpecial) {
                 return (
                   <div
                     key={club.slug}
-                    className="animate-slide-in-card relative flex flex-col items-start text-left p-8 sm:p-10 rounded-3xl bg-accent border border-white/20 w-full max-w-lg overflow-hidden shadow-[0_0_60px_-10px_rgba(212,163,115,0.45)]"
+                    className="animate-slide-in-card relative flex flex-col justify-between p-8 sm:p-12 rounded-3xl bg-accent border border-white/20 w-full max-w-lg min-h-[380px] sm:min-h-[400px] shadow-[0_15px_35px_-5px_rgba(212,163,115,0.3)] overflow-hidden"
                   >
-                    {/* Internal Prestigious Gold Glow Light */}
-                    <div
-                      className="absolute -top-24 -left-24 w-48 h-48 rounded-full blur-[80px] pointer-events-none opacity-50 bg-white"
-                    />
+                    <div>
+                      {/* Display Text: [Executive Team] (Flickers carved in, generous spacing) */}
+                      <h3 className="animate-flicker-in text-carved-light font-display text-4xl sm:text-5xl font-black mb-8 tracking-tight">
+                        {club.name}
+                      </h3>
 
-                    {/* Badge connection tag */}
-                    <span
-                      className="animate-fade-in-delayed inline-block px-3 py-1 text-xs font-bold rounded-full uppercase tracking-widest mb-6 border border-primary/20 text-primary/60"
-                    >
-                      Core System Nucleus
-                    </span>
-
-                    {/* Display Text: [Executive Team] (Flickers in) */}
-                    <h3 className="animate-flicker-in font-display text-4xl sm:text-5xl font-black text-primary mb-4 tracking-tight">
-                      {club.name}
-                    </h3>
-
-                    {/* Description Text */}
-                    <p className="animate-fade-in-delayed font-body text-slate-800 text-base sm:text-lg leading-relaxed mb-8 font-medium">
-                      {club.tagline}
-                    </p>
+                      {/* Description Text (Spaced out, clean styling) */}
+                      <p className="animate-fade-in-delayed font-body text-slate-800 text-sm sm:text-base leading-relaxed mb-10 font-semibold">
+                        {club.tagline}
+                      </p>
+                    </div>
 
                     {/* CTA buttons */}
                     <div className="animate-fade-in-delayed flex flex-col sm:flex-row gap-4 w-full">
                       <Link
                         href="#executive-team"
-                        className="inline-flex items-center justify-center bg-primary hover:bg-primary/95 text-white text-base font-semibold tracking-wide px-8 py-3.5 rounded-button transition-all duration-300 active:scale-95 shadow-lg shadow-primary/20 font-body"
+                        className="inline-flex items-center justify-center bg-primary hover:bg-primary/95 text-white text-sm font-semibold tracking-wide px-6 py-2.5 rounded transition-all duration-300 active:scale-95 shadow-md shadow-primary/10 font-body"
                       >
                         Meet the Team
                       </Link>
                       <button
                         onClick={() => setSelectedClub(null)}
-                        className="inline-flex items-center justify-center bg-transparent text-primary/80 hover:text-primary hover:bg-primary/5 text-base font-semibold px-8 py-3.5 rounded-button border border-primary/20 transition-all duration-300 active:scale-95 font-body"
+                        className="inline-flex items-center justify-center bg-transparent text-primary/80 hover:text-primary hover:bg-primary/5 text-sm font-semibold px-6 py-2.5 rounded border border-primary/20 transition-all duration-300 active:scale-95 font-body"
                       >
-                        Back to All
+                        Back
                       </button>
                     </div>
                   </div>
                 );
               }
 
-              // Standard Club Cards
+              // Standard Club Cards - Simplified Clean primary deep navy background
               return (
                 <div
                   key={club.slug}
-                  className="animate-slide-in-card relative flex flex-col items-start text-left p-8 sm:p-10 rounded-3xl bg-primary border border-white/10 w-full max-w-lg overflow-hidden"
+                  className="animate-slide-in-card relative flex flex-col justify-between p-8 sm:p-12 rounded-3xl bg-primary border border-white/10 w-full max-w-lg min-h-[380px] sm:min-h-[400px] shadow-2xl overflow-hidden"
                   style={{
-                    boxShadow: `0 0 50px -10px ${club.color}35`
+                    boxShadow: `0 15px 35px -5px ${club.color}15`
                   }}
                 >
-                  {/* Subtle Top-Left Ambient Orb Glow inside the primary background */}
-                  <div
-                    className="absolute -top-24 -left-24 w-48 h-48 rounded-full blur-[80px] pointer-events-none opacity-40"
-                    style={{ backgroundColor: club.color }}
-                  />
+                  <div>
+                    {/* Display Text: Club Name (Flickers carved in, generous spacing) */}
+                    <h3 className="animate-flicker-in text-carved-dark font-display text-4xl sm:text-5xl font-black mb-8 tracking-tight">
+                      {club.name}
+                    </h3>
 
-                  {/* Badge connection tag */}
-                  <span
-                    className="animate-fade-in-delayed inline-block px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-widest mb-6 border border-white/20 text-white/50"
-                  >
-                    Active Node Connection
-                  </span>
-
-                  {/* Display Text: [Name of the club] */}
-                  <h3 className="animate-flicker-in font-display text-4xl sm:text-5xl font-black text-white mb-4 tracking-tight">
-                    {club.name}
-                  </h3>
-
-                  {/* Description Text */}
-                  <p className="animate-fade-in-delayed font-body text-slate-200/90 text-base sm:text-lg leading-relaxed mb-8">
-                    {club.tagline}
-                  </p>
+                    {/* Description Text (Spaced out, clean styling) */}
+                    <p className="animate-fade-in-delayed font-body text-slate-200/90 text-sm sm:text-base leading-relaxed mb-10">
+                      {club.tagline}
+                    </p>
+                  </div>
 
                   {/* CTA button & Back control */}
                   <div className="animate-fade-in-delayed flex flex-col sm:flex-row gap-4 w-full">
                     <Link
                       href={`/clubs/${club.slug}`}
-                      className="inline-flex items-center justify-center bg-white hover:bg-slate-100 text-primary text-base font-semibold tracking-wide px-8 py-3.5 rounded-button transition-all duration-300 active:scale-95 shadow-lg shadow-white/5 font-body"
+                      className="inline-flex items-center justify-center bg-white hover:bg-slate-100 text-primary text-sm font-semibold tracking-wide px-6 py-2.5 rounded transition-all duration-300 active:scale-95 shadow-lg shadow-white/5 font-body"
                     >
                       Explore Club
                     </Link>
                     <button
                       onClick={() => setSelectedClub(null)}
-                      className="inline-flex items-center justify-center bg-transparent text-white/80 hover:text-white hover:bg-white/10 text-base font-semibold px-8 py-3.5 rounded-button border border-white/20 transition-all duration-300 active:scale-95 font-body"
+                      className="inline-flex items-center justify-center bg-transparent text-white/80 hover:text-white hover:bg-white/10 text-sm font-semibold px-6 py-2.5 rounded border border-white/20 transition-all duration-300 active:scale-95 font-body"
                     >
-                      Back to All
+                      Back
                     </button>
                   </div>
                 </div>
