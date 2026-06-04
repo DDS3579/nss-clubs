@@ -17,7 +17,8 @@ const CLUBS_DETAILS = [
   {
     slug: "stem",
     name: "STEM Club",
-    tagline: "Innovate, build, and explore the frontiers of science, coding, and technology.",
+    tagline:
+      "Innovate, build, and explore the frontiers of science, coding, and technology.",
     color: "#0284c7", // Sky blue
     category: "Science & Technology",
     iconName: "Terminal",
@@ -25,13 +26,14 @@ const CLUBS_DETAILS = [
     info: [
       { label: "Members", value: "120+" },
       { label: "Meetings", value: "Weekly" },
-      { label: "Activity", value: "High" }
-    ]
+      { label: "Activity", value: "High" },
+    ],
   },
   {
     slug: "sports",
     name: "Sports Club",
-    tagline: "Unleash your athletic potential, embrace teamwork, and chase victory.",
+    tagline:
+      "Unleash your athletic potential, embrace teamwork, and chase victory.",
     color: "#f59e0b", // Amber
     category: "Athletics & Health",
     iconName: "Trophy",
@@ -39,13 +41,14 @@ const CLUBS_DETAILS = [
     info: [
       { label: "Members", value: "200+" },
       { label: "Meetings", value: "Bi-Weekly" },
-      { label: "Activity", value: "Very High" }
-    ]
+      { label: "Activity", value: "Very High" },
+    ],
   },
   {
     slug: "literature",
     name: "Literature Club",
-    tagline: "Celebrate the power of words, creative writing, poetry, and deep debates.",
+    tagline:
+      "Celebrate the power of words, creative writing, poetry, and deep debates.",
     color: "#10b981", // Emerald
     category: "Arts & Letters",
     iconName: "BookOpen",
@@ -53,13 +56,14 @@ const CLUBS_DETAILS = [
     info: [
       { label: "Members", value: "80+" },
       { label: "Meetings", value: "Weekly" },
-      { label: "Activity", value: "Active" }
-    ]
+      { label: "Activity", value: "Active" },
+    ],
   },
   {
     slug: "arts",
     name: "Arts & Craft Club",
-    tagline: "Express yourself visually through beautiful paintings, sketches, and manual crafts.",
+    tagline:
+      "Express yourself visually through beautiful paintings, sketches, and manual crafts.",
     color: "#f43f5e", // Rose
     category: "Creative & Design",
     iconName: "Palette",
@@ -67,8 +71,8 @@ const CLUBS_DETAILS = [
     info: [
       { label: "Members", value: "90+" },
       { label: "Meetings", value: "Weekly" },
-      { label: "Activity", value: "Active" }
-    ]
+      { label: "Activity", value: "Active" },
+    ],
   },
   {
     slug: "entertainment",
@@ -81,13 +85,14 @@ const CLUBS_DETAILS = [
     info: [
       { label: "Members", value: "150+" },
       { label: "Meetings", value: "Multi-Weekly" },
-      { label: "Activity", value: "Very High" }
-    ]
+      { label: "Activity", value: "Very High" },
+    ],
   },
   {
     slug: "social",
     name: "Social Club",
-    tagline: "Make a positive impact on society through volunteering, empathy, and social work.",
+    tagline:
+      "Make a positive impact on society through volunteering, empathy, and social work.",
     color: "#0d9488", // Teal
     category: "Community Service",
     iconName: "Heart",
@@ -95,13 +100,14 @@ const CLUBS_DETAILS = [
     info: [
       { label: "Members", value: "250+" },
       { label: "Meetings", value: "Monthly" },
-      { label: "Activity", value: "High" }
-    ]
+      { label: "Activity", value: "High" },
+    ],
   },
   {
     slug: "executive-team",
     name: "Executive Team",
-    tagline: "Meet the visionary leaders, advisors, and coordinators steering the NSS Clubs towards excellence and impact.",
+    tagline:
+      "Meet the visionary leaders, advisors, and coordinators steering the NSS Clubs towards excellence and impact.",
     color: "#D4A373", // Gold
     category: "Governance & Operations",
     iconName: "Shield",
@@ -110,8 +116,8 @@ const CLUBS_DETAILS = [
     info: [
       { label: "Officers", value: "15" },
       { label: "Meetings", value: "Weekly" },
-      { label: "Activity", value: "Continuous" }
-    ]
+      { label: "Activity", value: "Continuous" },
+    ],
   },
 ];
 
@@ -121,38 +127,77 @@ function ClubIcon({ name, className }: { name: string; className?: string }) {
     fill: "none",
     stroke: "currentColor",
     strokeWidth: 2.5,
-    viewBox: "0 0 24 24"
+    viewBox: "0 0 24 24",
   };
 
   switch (name) {
     case "Terminal":
       return (
         <svg {...props}>
-          <polyline points="4 17 10 11 4 5" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="12" y1="19" x2="20" y2="19" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline
+            points="4 17 10 11 4 5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <line
+            x1="12"
+            y1="19"
+            x2="20"
+            y2="19"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case "Trophy":
       return (
         <svg {...props}>
-          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           <path d="M4 22h16" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M12 2a6 6 0 0 1 6 6c0 3.6-2 5.5-6 6.5-4-1-6-2.9-6-6.5a6 6 0 0 1 6-6Z" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M12 2a6 6 0 0 1 6 6c0 3.6-2 5.5-6 6.5-4-1-6-2.9-6-6.5a6 6 0 0 1 6-6Z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case "BookOpen":
       return (
         <svg {...props}>
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case "Palette":
       return (
         <svg {...props}>
-          <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.32115 19.4626 5.37256 20.2036 4.97549 20.7256C4.42398 21.4507 3.50428 21.8491 2.5 22C4.52044 22 8.78453 22 12 22Z" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.32115 19.4626 5.37256 20.2036 4.97549 20.7256C4.42398 21.4507 3.50428 21.8491 2.5 22C4.52044 22 8.78453 22 12 22Z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           <circle cx="7.5" cy="10.5" r="1" fill="currentColor" />
           <circle cx="11.5" cy="7.5" r="1" fill="currentColor" />
           <circle cx="16.5" cy="9.5" r="1" fill="currentColor" />
@@ -162,7 +207,11 @@ function ClubIcon({ name, className }: { name: string; className?: string }) {
     case "Music":
       return (
         <svg {...props}>
-          <path d="M9 18V5l12-2v13" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M9 18V5l12-2v13"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           <circle cx="6" cy="18" r="3" />
           <circle cx="18" cy="16" r="3" />
         </svg>
@@ -170,13 +219,21 @@ function ClubIcon({ name, className }: { name: string; className?: string }) {
     case "Heart":
       return (
         <svg {...props}>
-          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case "Shield":
       return (
         <svg {...props}>
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     default:
@@ -284,33 +341,43 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   } | null>(null);
 
   /* ── Trigger a section-snap transition ── */
-  const startTransition = useCallback((targetPhase: "hero" | "clubs" | "about") => {
-    if (phaseRef.current === "animating") return;
-    if (phaseRef.current === "zooming" || phaseRef.current === "zoomed") return;
+  const startTransition = useCallback(
+    (targetPhase: "hero" | "clubs" | "about") => {
+      if (phaseRef.current === "animating") return;
+      if (phaseRef.current === "zooming" || phaseRef.current === "zoomed")
+        return;
 
-    let scrollTarget = 0;
-    if (targetPhase === "hero") {
-      scrollTarget = 0;
-    } else if (targetPhase === "clubs") {
-      const clubsSection = document.getElementById("clubs");
-      if (clubsSection) {
-        scrollTarget = clubsSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
+      let scrollTarget = 0;
+      if (targetPhase === "hero") {
+        scrollTarget = 0;
+      } else if (targetPhase === "clubs") {
+        const clubsSection = document.getElementById("clubs");
+        if (clubsSection) {
+          scrollTarget =
+            clubsSection.getBoundingClientRect().top +
+            window.scrollY -
+            HEADER_H;
+        }
+      } else if (targetPhase === "about") {
+        const aboutSection = document.getElementById("about");
+        if (aboutSection) {
+          scrollTarget =
+            aboutSection.getBoundingClientRect().top +
+            window.scrollY -
+            HEADER_H;
+        }
       }
-    } else if (targetPhase === "about") {
-      const aboutSection = document.getElementById("about");
-      if (aboutSection) {
-        scrollTarget = aboutSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
-      }
-    }
 
-    phaseRef.current = "animating";
-    animRef.current = {
-      targetPhase,
-      startTime: performance.now(),
-      scrollStart: window.scrollY,
-      scrollEnd: scrollTarget,
-    };
-  }, []);
+      phaseRef.current = "animating";
+      animRef.current = {
+        targetPhase,
+        startTime: performance.now(),
+        scrollStart: window.scrollY,
+        scrollEnd: scrollTarget,
+      };
+    },
+    [],
+  );
 
   /* ── Zoom initialization (stored in ref for access from rAF tick) ── */
   initZoomRef.current = (slug: string) => {
@@ -326,8 +393,12 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
     const isNucleus = slug === "executive-team";
     const targetRotation = ROTATION_OFFSETS[slug] ?? 0;
-    const electronCanvasX = isNucleus ? CANVAS_INTRINSIC / 2 : ELECTRON_TARGET_X;
-    const electronCanvasY = isNucleus ? CANVAS_INTRINSIC / 2 : ELECTRON_TARGET_Y;
+    const electronCanvasX = isNucleus
+      ? CANVAS_INTRINSIC / 2
+      : ELECTRON_TARGET_X;
+    const electronCanvasY = isNucleus
+      ? CANVAS_INTRINSIC / 2
+      : ELECTRON_TARGET_Y;
 
     setSelectedClub(slug);
     setCardRevealVisible(false);
@@ -347,16 +418,24 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   };
 
   /* ── Electron & Nucleus Click Handler ── */
-  const handleElectronClick = useCallback((slug: string) => {
-    if (phaseRef.current === "zooming" || phaseRef.current === "zoomed" || phaseRef.current === "about") return;
+  const handleElectronClick = useCallback(
+    (slug: string) => {
+      if (
+        phaseRef.current === "zooming" ||
+        phaseRef.current === "zoomed" ||
+        phaseRef.current === "about"
+      )
+        return;
 
-    if (phaseRef.current === "hero") {
-      startTransition("clubs");
-      pendingZoomSlugRef.current = slug;
-    } else if (phaseRef.current === "clubs") {
-      initZoomRef.current(slug);
-    }
-  }, [startTransition]);
+      if (phaseRef.current === "hero") {
+        startTransition("clubs");
+        pendingZoomSlugRef.current = slug;
+      } else if (phaseRef.current === "clubs") {
+        initZoomRef.current(slug);
+      }
+    },
+    [startTransition],
+  );
 
   /* ── Close club card and reverse zoom ── */
   const handleCloseClub = useCallback(() => {
@@ -376,8 +455,12 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
     const isNucleus = slug === "executive-team";
     const targetRotation = ROTATION_OFFSETS[slug] ?? 0;
-    const electronCanvasX = isNucleus ? CANVAS_INTRINSIC / 2 : ELECTRON_TARGET_X;
-    const electronCanvasY = isNucleus ? CANVAS_INTRINSIC / 2 : ELECTRON_TARGET_Y;
+    const electronCanvasX = isNucleus
+      ? CANVAS_INTRINSIC / 2
+      : ELECTRON_TARGET_X;
+    const electronCanvasY = isNucleus
+      ? CANVAS_INTRINSIC / 2
+      : ELECTRON_TARGET_Y;
 
     setCardRevealVisible(false);
 
@@ -407,8 +490,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       const y3 = cardRect.bottom;
       setProjectorCoords({ x1, y1, x2, y2, x3, y3 });
     } else if (phaseRef.current === "about") {
-      const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
-      const aboutAnchor = isMobile ? mobileAboutAnchorRef.current : desktopAboutAnchorRef.current;
+      const isMobile =
+        typeof window !== "undefined" && window.innerWidth < 1024;
+      const aboutAnchor = isMobile
+        ? mobileAboutAnchorRef.current
+        : desktopAboutAnchorRef.current;
       if (aboutAnchor) {
         // Calculate active timeline node's screen position
         const anchorRect = aboutAnchor.getBoundingClientRect();
@@ -423,11 +509,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const y1 = anchorCy + (nodeCanvasY - halfC) * scale;
 
         // Find the active about panel card
-        const activeCard = document.querySelector(`.about-panel[data-node="${nodeIdx}"]`);
+        const activeCard = document.querySelector(
+          `.about-panel[data-node="${nodeIdx}"]`,
+        );
         if (activeCard) {
           const cardRect = activeCard.getBoundingClientRect();
           setProjectorCoords({
-            x1, y1,
+            x1,
+            y1,
             x2: cardRect.left,
             y2: cardRect.top,
             x3: cardRect.left,
@@ -477,13 +566,27 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         initializedRef.current = true;
         const clubsSection = document.getElementById("clubs");
         const aboutSection = document.getElementById("about");
-        if (aboutSection && window.scrollY >= aboutSection.getBoundingClientRect().top + window.scrollY - HEADER_H - 50) {
+        if (
+          aboutSection &&
+          window.scrollY >=
+            aboutSection.getBoundingClientRect().top +
+              window.scrollY -
+              HEADER_H -
+              50
+        ) {
           phaseRef.current = "about";
           atomProgressRef.current = 1;
           aboutProgressRef.current = 1;
           prevShowTextRef.current = true;
           setClubsTextVisible(true);
-        } else if (clubsSection && window.scrollY >= clubsSection.getBoundingClientRect().top + window.scrollY - HEADER_H - 50) {
+        } else if (
+          clubsSection &&
+          window.scrollY >=
+            clubsSection.getBoundingClientRect().top +
+              window.scrollY -
+              HEADER_H -
+              50
+        ) {
           phaseRef.current = "clubs";
           atomProgressRef.current = 1;
           aboutProgressRef.current = 0;
@@ -542,7 +645,10 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             initZoomRef.current(slug);
           }
         }
-      } else if (phaseRef.current === "zooming" || phaseRef.current === "zoomed") {
+      } else if (
+        phaseRef.current === "zooming" ||
+        phaseRef.current === "zoomed"
+      ) {
         posT = 1;
         aboutT = 0;
         atomProgressRef.current = 1;
@@ -552,8 +658,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const clubsSection = document.getElementById("clubs");
         const aboutSection = document.getElementById("about");
         if (clubsSection && aboutSection) {
-          const clubsScrollY = clubsSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
-          const aboutScrollY = aboutSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
+          const clubsScrollY =
+            clubsSection.getBoundingClientRect().top +
+            window.scrollY -
+            HEADER_H;
+          const aboutScrollY =
+            aboutSection.getBoundingClientRect().top +
+            window.scrollY -
+            HEADER_H;
           const sy = window.scrollY;
 
           if (sy < clubsScrollY) {
@@ -563,7 +675,9 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           } else if (sy < aboutScrollY) {
             phaseRef.current = "clubs";
             posT = 1;
-            aboutT = clamp01((sy - clubsScrollY) / Math.max(aboutScrollY - clubsScrollY, 1));
+            aboutT = clamp01(
+              (sy - clubsScrollY) / Math.max(aboutScrollY - clubsScrollY, 1),
+            );
           } else {
             phaseRef.current = "about";
             posT = 1;
@@ -591,8 +705,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       /* ── Interpolate atom position between hero & clubs & about anchors ── */
       const heroRect = heroAnchor.getBoundingClientRect();
       const clubsRect = clubsAnchor.getBoundingClientRect();
-      const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
-      const aboutAnchor = isMobile ? mobileAboutAnchorRef.current : desktopAboutAnchorRef.current;
+      const isMobile =
+        typeof window !== "undefined" && window.innerWidth < 1024;
+      const aboutAnchor = isMobile
+        ? mobileAboutAnchorRef.current
+        : desktopAboutAnchorRef.current;
 
       let cx = 0;
       let cy = 0;
@@ -619,12 +736,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         size = lerp(heroRect.width, clubsRect.width, atomProgressRef.current);
       }
 
-      floating.style.transform =
-        `translate(${cx - CANVAS_INTRINSIC / 2}px, ${cy - CANVAS_INTRINSIC / 2}px)`;
+      floating.style.transform = `translate(${cx - CANVAS_INTRINSIC / 2}px, ${cy - CANVAS_INTRINSIC / 2}px)`;
       canvasWrap.style.transform = `scale(${size / CANVAS_INTRINSIC})`;
 
       /* ── Zoom phase overrides ── */
-      if ((phaseRef.current === "zooming" || phaseRef.current === "zoomed") && zoomAnimRef.current) {
+      if (
+        (phaseRef.current === "zooming" || phaseRef.current === "zoomed") &&
+        zoomAnimRef.current
+      ) {
         const zoom = zoomAnimRef.current;
         const isNucleusZoom = zoom.slug === "executive-team";
         const duration = isNucleusZoom ? NUCLEUS_ZOOM_DURATION : ZOOM_DURATION;
@@ -636,8 +755,10 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const zTargetVpX = window.innerWidth * 0.18;
         const zTargetVpY = window.innerHeight * 0.5;
         const halfC = CANVAS_INTRINSIC / 2;
-        const zoomedFloatX = zTargetVpX - halfC - (zoom.electronCanvasX - halfC) * zTargetScale;
-        const zoomedFloatY = zTargetVpY - halfC - (zoom.electronCanvasY - halfC) * zTargetScale;
+        const zoomedFloatX =
+          zTargetVpX - halfC - (zoom.electronCanvasX - halfC) * zTargetScale;
+        const zoomedFloatY =
+          zTargetVpY - halfC - (zoom.electronCanvasY - halfC) * zTargetScale;
 
         if (phaseRef.current === "zoomed") {
           // Maintain final zoomed state
@@ -654,7 +775,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               /* ═══ SPECIAL NUCLEUS SEPARATION ANIMATION ═══ */
 
               /* Phase 1 — Separation (0 → 0.30): orbits slide right, nucleus stays */
-              const sepT = clamp01(totalT / 0.30);
+              const sepT = clamp01(totalT / 0.3);
               nucleusSeparationRef.current = easeInOutQuart(sepT);
 
               /* Phase 2 — Zoom into isolated nucleus (0.22 → 0.78) */
@@ -680,8 +801,10 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               /* ═══ STANDARD ELECTRON ZOOM ═══ */
 
               /* Phase 1 — Rotation (0 → 0.35) */
-              const rotT = zoom.targetRotation === 0 ? 1 : clamp01(totalT / 0.35);
-              rotationOffsetRef.current = easeInOutQuart(rotT) * zoom.targetRotation;
+              const rotT =
+                zoom.targetRotation === 0 ? 1 : clamp01(totalT / 0.35);
+              rotationOffsetRef.current =
+                easeInOutQuart(rotT) * zoom.targetRotation;
 
               /* Phase 2 — Zoom (0.15 → 0.80) */
               const zoomT = clamp01((totalT - 0.15) / 0.65);
@@ -746,8 +869,10 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               canvasWrap.style.transform = `scale(${curScale})`;
 
               /* Phase 2 — Rotation reverse (0.50 → 1.0) */
-              const rotRevT = zoom.targetRotation === 0 ? 1 : clamp01((totalT - 0.50) / 0.50);
-              rotationOffsetRef.current = (1 - easeInOutQuart(rotRevT)) * zoom.targetRotation;
+              const rotRevT =
+                zoom.targetRotation === 0 ? 1 : clamp01((totalT - 0.5) / 0.5);
+              rotationOffsetRef.current =
+                (1 - easeInOutQuart(rotRevT)) * zoom.targetRotation;
 
               if (totalT >= 1) {
                 phaseRef.current = "clubs";
@@ -778,7 +903,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   /* ── Wheel & touch handlers for section-snap ── */
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-      if (phaseRef.current === "animating" || phaseRef.current === "zooming" || phaseRef.current === "zoomed") {
+      if (
+        phaseRef.current === "animating" ||
+        phaseRef.current === "zooming" ||
+        phaseRef.current === "zoomed"
+      ) {
         e.preventDefault();
         return;
       }
@@ -787,7 +916,8 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       const aboutSection = document.getElementById("about");
       if (!clubsSection) return;
 
-      const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
+      const clubsAbsTop =
+        clubsSection.getBoundingClientRect().top + window.scrollY;
       const clubsScrollY = clubsAbsTop - HEADER_H;
 
       // Hero → Clubs
@@ -813,9 +943,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       // About → Clubs
       if (e.deltaY < 0 && phaseRef.current === "about" && aboutSection) {
-        const aboutAbsTop = aboutSection.getBoundingClientRect().top + window.scrollY;
-        const aboutScrollY = aboutAbsTop - HEADER_H;
-        if (window.scrollY <= aboutScrollY + 15) {
+        const aRect = aboutSection.getBoundingClientRect();
+        const sectionScrolled = -(aRect.top - HEADER_H);
+
+        // 👇 FIX: Only snap back if we're at the very top edge (within 5px)
+        if (sectionScrolled <= 5) {
           e.preventDefault();
           if (Math.abs(e.deltaY) >= 10) startTransition("clubs");
         }
@@ -830,7 +962,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       if (touchStartRef.current === null) return;
       const deltaY = touchStartRef.current - (e.touches[0]?.clientY ?? 0);
 
-      if (phaseRef.current === "animating" || phaseRef.current === "zooming" || phaseRef.current === "zoomed") {
+      if (
+        phaseRef.current === "animating" ||
+        phaseRef.current === "zooming" ||
+        phaseRef.current === "zoomed"
+      ) {
         e.preventDefault();
         return;
       }
@@ -839,7 +975,8 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       const aboutSection = document.getElementById("about");
       if (!clubsSection) return;
 
-      const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
+      const clubsAbsTop =
+        clubsSection.getBoundingClientRect().top + window.scrollY;
       const clubsScrollY = clubsAbsTop - HEADER_H;
 
       if (deltaY > 0 && phaseRef.current === "hero") {
@@ -865,9 +1002,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           }
         }
       } else if (deltaY < 0 && phaseRef.current === "about" && aboutSection) {
-        const aboutAbsTop = aboutSection.getBoundingClientRect().top + window.scrollY;
-        const aboutScrollY = aboutAbsTop - HEADER_H;
-        if (window.scrollY <= aboutScrollY + 15) {
+        const aRect = aboutSection.getBoundingClientRect();
+        const sectionScrolled = -(aRect.top - HEADER_H);
+
+        // 👇 FIX: Only snap back if we're at the very top edge (within 5px)
+        if (sectionScrolled <= 5) {
           e.preventDefault();
           if (Math.abs(deltaY) >= 20) {
             startTransition("clubs");
@@ -885,7 +1024,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
     return () => {
       window.removeEventListener("wheel", handleWheel, opts);
-      window.removeEventListener("mousewheel", handleWheel as EventListener, opts);
+      window.removeEventListener(
+        "mousewheel",
+        handleWheel as EventListener,
+        opts,
+      );
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove, opts);
     };
@@ -894,7 +1037,9 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   return (
     <div className="home-scroll-experience bg-bg">
       {/* ═══ CSS ANIMATIONS & DEBOSSED CARVED TEXT ═══ */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes flicker-in {
           0% { opacity: 0; }
           10% { opacity: 0.4; }
@@ -1046,7 +1191,9 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         .about-heading-glow {
           animation: about-heading-glow 3s ease-in-out infinite;
         }
-      `}} />
+      `,
+        }}
+      />
 
       {/* ═══ HERO ═══ */}
       <div className="[&_.hero-atom-origin]:invisible">
@@ -1104,28 +1251,145 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               }`}
               style={{ willChange: "transform, opacity" }}
             >
-            {CLUBS_DETAILS.map((club) => {
-              const isActive = selectedClub === club.slug;
-              if (!isActive) return null;
+              {CLUBS_DETAILS.map((club) => {
+                const isActive = selectedClub === club.slug;
+                if (!isActive) return null;
 
-              // Special Luxury Golden Executive Card (Nucleus) - Simplified Clean gold background
-              if (club.isSpecial) {
+                // Special Luxury Golden Executive Card (Nucleus) - Simplified Clean gold background
+                if (club.isSpecial) {
+                  return (
+                    <div
+                      key={club.slug}
+                      className="animate-slide-in-card metallic-card metallic-card-gold relative flex flex-col justify-between pt-10 pb-6 px-10 sm:pt-12 sm:pb-8 sm:px-12 rounded-3xl bg-accent w-full max-w-lg min-h-[460px] overflow-hidden"
+                    >
+                      {/* Left connection indicator - emerges from the orbit */}
+                      <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-primary/20" />
+
+                      {/* Close / Dismiss button at top right */}
+                      <button
+                        onClick={handleCloseClub}
+                        className="absolute top-6 right-6 p-2 rounded-full text-primary/60 hover:text-primary hover:bg-primary/5 transition-all duration-200 z-20"
+                        aria-label="Back to clubs"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+
+                      <div className="flex flex-col h-full justify-between gap-6">
+                        {/* Header Area */}
+                        <div>
+                          {/* Category Indicator & Icon */}
+                          <div className="flex items-center gap-2 mb-2.5 opacity-90 animate-flicker-in">
+                            <ClubIcon
+                              name={club.iconName}
+                              className="w-4 h-4 text-primary/70"
+                            />
+                            <span className="text-[11px] font-bold tracking-[0.2em] text-primary/75 uppercase font-body">
+                              {club.category}
+                            </span>
+                          </div>
+
+                          {/* Large Title */}
+                          <h3 className="animate-flicker-in text-carved-light font-display text-4xl sm:text-5xl font-black mb-6 tracking-tight">
+                            {club.name}
+                          </h3>
+
+                          {/* Club Tags / Themes */}
+                          <div className="animate-fade-in-delayed flex flex-wrap gap-x-2 gap-y-1 text-xs font-semibold text-slate-800/80 font-body">
+                            {club.themes.map((theme, i) => (
+                              <span key={theme} className="flex items-center">
+                                {theme}
+                                {i < club.themes.length - 1 && (
+                                  <span className="ml-2 mr-0.5 opacity-60">
+                                    •
+                                  </span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div className="flex-grow flex items-center">
+                          <p className="animate-fade-in-delayed font-body text-slate-800 text-sm sm:text-base leading-relaxed max-w-md font-medium">
+                            {club.tagline}
+                          </p>
+                        </div>
+
+                        {/* Club Information Row */}
+                        <div className="animate-fade-in-delayed border-t border-primary/10 pt-5 mt-auto">
+                          <div className="grid grid-cols-3 gap-4">
+                            {club.info.map((item) => (
+                              <div key={item.label}>
+                                <div className="text-[10px] uppercase tracking-wider text-primary/65 font-body font-semibold">
+                                  {item.label}
+                                </div>
+                                <div className="text-sm sm:text-base font-black font-display text-slate-900 mt-0.5">
+                                  {item.value}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Action Area */}
+                        <div className="animate-fade-in-delayed w-full mt-0">
+                          <Link
+                            href="#executive-team"
+                            className="inline-flex items-center justify-center w-full bg-primary hover:bg-primary/95 text-white text-sm font-bold tracking-wide px-8 py-3.5 rounded-xl transition-all duration-300 active:scale-95 shadow-[0_4px_12px_rgba(2,59,142,0.15)] font-body"
+                          >
+                            Meet the Executive Team
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Standard Club Cards - Simplified Clean primary deep navy background
                 return (
                   <div
                     key={club.slug}
-                    className="animate-slide-in-card metallic-card metallic-card-gold relative flex flex-col justify-between pt-10 pb-6 px-10 sm:pt-12 sm:pb-8 sm:px-12 rounded-3xl bg-accent w-full max-w-lg min-h-[460px] overflow-hidden"
+                    className="animate-slide-in-card metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-6 px-10 sm:pt-12 sm:pb-8 sm:px-12 rounded-3xl bg-primary w-full max-w-lg min-h-[460px] overflow-hidden"
+                    style={{
+                      boxShadow: `inset 0 1.5px 0.5px rgba(255, 255, 255, 0.22), inset 0 -1.5px 1px rgba(0, 0, 0, 0.3), 0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 15px 35px -5px ${club.color}25`,
+                    }}
                   >
                     {/* Left connection indicator - emerges from the orbit */}
-                    <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-primary/20" />
+                    <div
+                      className="absolute left-0 top-0 bottom-0 w-[4px]"
+                      style={{ backgroundColor: club.color }}
+                    />
 
                     {/* Close / Dismiss button at top right */}
                     <button
                       onClick={handleCloseClub}
-                      className="absolute top-6 right-6 p-2 rounded-full text-primary/60 hover:text-primary hover:bg-primary/5 transition-all duration-200 z-20"
+                      className="absolute top-6 right-6 p-2 rounded-full text-white/60 hover:text-white hover:bg-white/8 transition-all duration-200 z-20"
                       aria-label="Back to clubs"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
 
@@ -1134,23 +1398,30 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                       <div>
                         {/* Category Indicator & Icon */}
                         <div className="flex items-center gap-2 mb-2.5 opacity-90 animate-flicker-in">
-                          <ClubIcon name={club.iconName} className="w-4 h-4 text-primary/70" />
-                          <span className="text-[11px] font-bold tracking-[0.2em] text-primary/75 uppercase font-body">
+                          <ClubIcon
+                            name={club.iconName}
+                            className="w-4 h-4 text-white/70"
+                          />
+                          <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
                             {club.category}
                           </span>
                         </div>
 
                         {/* Large Title */}
-                        <h3 className="animate-flicker-in text-carved-light font-display text-4xl sm:text-5xl font-black mb-6 tracking-tight">
+                        <h3 className="animate-flicker-in text-carved-dark font-display text-4xl sm:text-5xl font-black mb-6 tracking-tight">
                           {club.name}
                         </h3>
 
                         {/* Club Tags / Themes */}
-                        <div className="animate-fade-in-delayed flex flex-wrap gap-x-2 gap-y-1 text-xs font-semibold text-slate-800/80 font-body">
+                        <div className="animate-fade-in-delayed flex flex-wrap gap-x-2 gap-y-1 text-xs font-medium text-slate-300/80 font-body">
                           {club.themes.map((theme, i) => (
                             <span key={theme} className="flex items-center">
                               {theme}
-                              {i < club.themes.length - 1 && <span className="ml-2 mr-0.5 opacity-60">•</span>}
+                              {i < club.themes.length - 1 && (
+                                <span className="ml-2 mr-0.5 opacity-60">
+                                  •
+                                </span>
+                              )}
                             </span>
                           ))}
                         </div>
@@ -1158,20 +1429,20 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
                       {/* Description */}
                       <div className="flex-grow flex items-center">
-                        <p className="animate-fade-in-delayed font-body text-slate-800 text-sm sm:text-base leading-relaxed max-w-md font-medium">
+                        <p className="animate-fade-in-delayed font-body text-slate-200/90 text-sm sm:text-base leading-relaxed max-w-md">
                           {club.tagline}
                         </p>
                       </div>
 
                       {/* Club Information Row */}
-                      <div className="animate-fade-in-delayed border-t border-primary/10 pt-5 mt-auto">
+                      <div className="animate-fade-in-delayed border-t border-white/10 pt-5 mt-auto">
                         <div className="grid grid-cols-3 gap-4">
                           {club.info.map((item) => (
                             <div key={item.label}>
-                              <div className="text-[10px] uppercase tracking-wider text-primary/65 font-body font-semibold">
+                              <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
                                 {item.label}
                               </div>
-                              <div className="text-sm sm:text-base font-black font-display text-slate-900 mt-0.5">
+                              <div className="text-sm sm:text-base font-bold font-display text-white mt-0.5">
                                 {item.value}
                               </div>
                             </div>
@@ -1182,116 +1453,25 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                       {/* Action Area */}
                       <div className="animate-fade-in-delayed w-full mt-0">
                         <Link
-                          href="#executive-team"
-                          className="inline-flex items-center justify-center w-full bg-primary hover:bg-primary/95 text-white text-sm font-bold tracking-wide px-8 py-3.5 rounded-xl transition-all duration-300 active:scale-95 shadow-[0_4px_12px_rgba(2,59,142,0.15)] font-body"
+                          href={`/clubs/${club.slug}`}
+                          className="inline-flex items-center justify-center w-full bg-white hover:bg-slate-100 text-primary text-sm font-bold tracking-wide px-8 py-3.5 rounded-xl transition-all duration-300 active:scale-95 shadow-[0_4px_12px_rgba(255,255,255,0.15)] font-body"
                         >
-                          Meet the Executive Team
+                          Explore Club Profile
                         </Link>
                       </div>
                     </div>
                   </div>
                 );
-              }
-
-              // Standard Club Cards - Simplified Clean primary deep navy background
-              return (
-                <div
-                  key={club.slug}
-                  className="animate-slide-in-card metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-6 px-10 sm:pt-12 sm:pb-8 sm:px-12 rounded-3xl bg-primary w-full max-w-lg min-h-[460px] overflow-hidden"
-                  style={{
-                    boxShadow: `inset 0 1.5px 0.5px rgba(255, 255, 255, 0.22), inset 0 -1.5px 1px rgba(0, 0, 0, 0.3), 0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 15px 35px -5px ${club.color}25`
-                  }}
-                >
-                  {/* Left connection indicator - emerges from the orbit */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px]" style={{ backgroundColor: club.color }} />
-
-                  {/* Close / Dismiss button at top right */}
-                  <button
-                    onClick={handleCloseClub}
-                    className="absolute top-6 right-6 p-2 rounded-full text-white/60 hover:text-white hover:bg-white/8 transition-all duration-200 z-20"
-                    aria-label="Back to clubs"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-
-                  <div className="flex flex-col h-full justify-between gap-6">
-                    {/* Header Area */}
-                    <div>
-                      {/* Category Indicator & Icon */}
-                      <div className="flex items-center gap-2 mb-2.5 opacity-90 animate-flicker-in">
-                        <ClubIcon name={club.iconName} className="w-4 h-4 text-white/70" />
-                        <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
-                          {club.category}
-                        </span>
-                      </div>
-
-                      {/* Large Title */}
-                      <h3 className="animate-flicker-in text-carved-dark font-display text-4xl sm:text-5xl font-black mb-6 tracking-tight">
-                        {club.name}
-                      </h3>
-
-                      {/* Club Tags / Themes */}
-                      <div className="animate-fade-in-delayed flex flex-wrap gap-x-2 gap-y-1 text-xs font-medium text-slate-300/80 font-body">
-                        {club.themes.map((theme, i) => (
-                          <span key={theme} className="flex items-center">
-                            {theme}
-                            {i < club.themes.length - 1 && <span className="ml-2 mr-0.5 opacity-60">•</span>}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="flex-grow flex items-center">
-                      <p className="animate-fade-in-delayed font-body text-slate-200/90 text-sm sm:text-base leading-relaxed max-w-md">
-                        {club.tagline}
-                      </p>
-                    </div>
-
-                    {/* Club Information Row */}
-                    <div className="animate-fade-in-delayed border-t border-white/10 pt-5 mt-auto">
-                      <div className="grid grid-cols-3 gap-4">
-                        {club.info.map((item) => (
-                          <div key={item.label}>
-                            <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                              {item.label}
-                            </div>
-                            <div className="text-sm sm:text-base font-bold font-display text-white mt-0.5">
-                              {item.value}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Action Area */}
-                    <div className="animate-fade-in-delayed w-full mt-0">
-                      <Link
-                        href={`/clubs/${club.slug}`}
-                        className="inline-flex items-center justify-center w-full bg-white hover:bg-slate-100 text-primary text-sm font-bold tracking-wide px-8 py-3.5 rounded-xl transition-all duration-300 active:scale-95 shadow-[0_4px_12px_rgba(255,255,255,0.15)] font-body"
-                      >
-                        Explore Club Profile
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+              })}
             </div>
           </div>
         </div>
       </section>
 
       {/* ═══ ABOUT SECTION — 3-Panel Interactive Timeline Narrative ═══ */}
-      <section
-        id="about"
-        className="relative scroll-mt-16 bg-white"
-      >
+      <section id="about" className="relative scroll-mt-16 bg-white">
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid lg:grid-cols-2 gap-0 lg:gap-10">
-
             {/* Left column – Sticky atom/timeline anchor */}
             <div className="hidden lg:flex sticky top-16 h-[calc(100svh-4rem)] items-center justify-center px-6">
               <div
@@ -1310,55 +1490,83 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
             {/* Right column – Scrollable narrative panels */}
             <div className="flex flex-col px-6 sm:px-8 lg:px-4">
-
               {/* ── Panel 0: Our Origin ── */}
               <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center py-16">
                 <div
                   data-node="0"
                   className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
-                    activeAboutNode === 0 ? 'about-panel-active' : 'about-panel-inactive'
+                    activeAboutNode === 0
+                      ? "about-panel-active"
+                      : "about-panel-inactive"
                   }`}
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
                   <div className="flex flex-col h-full justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-2 mb-2 opacity-95">
-                        <ClubIcon name="BookOpen" className="w-4 h-4 text-white/70" />
+                        <ClubIcon
+                          name="BookOpen"
+                          className="w-4 h-4 text-white/70"
+                        />
                         <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
                           History & Heritage
                         </span>
                       </div>
-                      <h3 className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
-                        activeAboutNode === 0 ? 'text-carved-dark about-heading-glow' : 'text-carved-dark'
-                      }`}>
+                      <h3
+                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
+                          activeAboutNode === 0
+                            ? "text-carved-dark about-heading-glow"
+                            : "text-carved-dark"
+                        }`}
+                      >
                         Our Origin
                       </h3>
-                      <p className="text-sm text-white/50 font-body font-semibold mb-6">Where It All Began</p>
+                      <p className="text-sm text-white/50 font-body font-semibold mb-6">
+                        Where It All Began
+                      </p>
                       <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium">
-                        Founded in the heart of our institution, NSS Clubs began as a small group of passionate students
-                        with a shared dream — to create a vibrant community where every talent finds its stage.
-                        What started as informal gatherings under the shade of the old banyan tree has grown into the
-                        largest student-run organization in the institution&apos;s history.
+                        Founded in the heart of our institution, NSS Clubs began
+                        as a small group of passionate students with a shared
+                        dream — to create a vibrant community where every talent
+                        finds its stage. What started as informal gatherings
+                        under the shade of the old banyan tree has grown into
+                        the largest student-run organization in the
+                        institution&apos;s history.
                       </p>
                       <p className="font-body text-slate-300/80 text-sm sm:text-base leading-relaxed font-medium mt-4">
-                        Our founders believed that education extends far beyond textbooks, and that belief still echoes
-                        in everything we do today. From the first cultural event to the establishment of six specialized
-                        clubs, every milestone was built on the foundation of curiosity, courage, and community.
+                        Our founders believed that education extends far beyond
+                        textbooks, and that belief still echoes in everything we
+                        do today. From the first cultural event to the
+                        establishment of six specialized clubs, every milestone
+                        was built on the foundation of curiosity, courage, and
+                        community.
                       </p>
                     </div>
                     <div className="border-t border-white/10 pt-5 mt-auto">
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Founded</div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">2018</div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                            Founded
+                          </div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                            2018
+                          </div>
                         </div>
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Founders</div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">12</div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                            Founders
+                          </div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                            12
+                          </div>
                         </div>
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">First Event</div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">2019</div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                            First Event
+                          </div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                            2019
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1371,48 +1579,76 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 <div
                   data-node="1"
                   className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
-                    activeAboutNode === 1 ? 'about-panel-active' : 'about-panel-inactive'
+                    activeAboutNode === 1
+                      ? "about-panel-active"
+                      : "about-panel-inactive"
                   }`}
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
                   <div className="flex flex-col h-full justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-2 mb-2 opacity-95">
-                        <ClubIcon name="Heart" className="w-4 h-4 text-white/70" />
+                        <ClubIcon
+                          name="Heart"
+                          className="w-4 h-4 text-white/70"
+                        />
                         <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
                           Mission & Purpose
                         </span>
                       </div>
-                      <h3 className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
-                        activeAboutNode === 1 ? 'text-carved-dark about-heading-glow' : 'text-carved-dark'
-                      }`}>
+                      <h3
+                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
+                          activeAboutNode === 1
+                            ? "text-carved-dark about-heading-glow"
+                            : "text-carved-dark"
+                        }`}
+                      >
                         Our Vision
                       </h3>
-                      <p className="text-sm text-white/50 font-body font-semibold mb-6">What Drives Us Forward</p>
+                      <p className="text-sm text-white/50 font-body font-semibold mb-6">
+                        What Drives Us Forward
+                      </p>
                       <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium">
-                        We envision a campus where creativity knows no boundaries, where a scientist can paint,
-                        a dancer can code, and a writer can score goals. NSS Clubs exist to blur the lines between
-                        disciplines and build bridges between passions.
+                        We envision a campus where creativity knows no
+                        boundaries, where a scientist can paint, a dancer can
+                        code, and a writer can score goals. NSS Clubs exist to
+                        blur the lines between disciplines and build bridges
+                        between passions.
                       </p>
                       <p className="font-body text-slate-300/80 text-sm sm:text-base leading-relaxed font-medium mt-4">
-                        Our mission is simple yet powerful: to nurture well-rounded individuals who lead with empathy,
-                        create with purpose, and serve with dedication. Every event we host, every project we launch,
-                        is a step toward a future where student potential is limitless and every voice matters.
+                        Our mission is simple yet powerful: to nurture
+                        well-rounded individuals who lead with empathy, create
+                        with purpose, and serve with dedication. Every event we
+                        host, every project we launch, is a step toward a future
+                        where student potential is limitless and every voice
+                        matters.
                       </p>
                     </div>
                     <div className="border-t border-white/10 pt-5 mt-auto">
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Clubs</div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">6</div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                            Clubs
+                          </div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                            6
+                          </div>
                         </div>
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Events/Year</div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">50+</div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                            Events/Year
+                          </div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                            50+
+                          </div>
                         </div>
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Impact</div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">1000+</div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                            Impact
+                          </div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                            1000+
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1426,31 +1662,45 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                   ref={aboutCardRef}
                   data-node="2"
                   className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
-                    activeAboutNode === 2 ? 'about-panel-active' : 'about-panel-inactive'
+                    activeAboutNode === 2
+                      ? "about-panel-active"
+                      : "about-panel-inactive"
                   }`}
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
                   <div className="flex flex-col h-full justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-2 mb-2 opacity-95">
-                        <ClubIcon name="Shield" className="w-4 h-4 text-white/70" />
+                        <ClubIcon
+                          name="Shield"
+                          className="w-4 h-4 text-white/70"
+                        />
                         <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
                           Leadership & Vision
                         </span>
                       </div>
-                      <h3 className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
-                        activeAboutNode === 2 ? 'text-carved-dark about-heading-glow' : 'text-carved-dark'
-                      }`}>
+                      <h3
+                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
+                          activeAboutNode === 2
+                            ? "text-carved-dark about-heading-glow"
+                            : "text-carved-dark"
+                        }`}
+                      >
                         The Legacy
                       </h3>
-                      <p className="text-sm text-white/50 font-body font-semibold mb-6">Building Tomorrow&apos;s Leaders</p>
+                      <p className="text-sm text-white/50 font-body font-semibold mb-6">
+                        Building Tomorrow&apos;s Leaders
+                      </p>
 
                       {/* President's Message & Photo */}
                       <div className="flex flex-col sm:flex-row gap-6 items-start">
                         {data?.presidentPhoto && (
                           <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 shadow-sm bg-white/10">
                             <Image
-                              src={urlFor(data.presidentPhoto).width(120).height(120).url()}
+                              src={urlFor(data.presidentPhoto)
+                                .width(120)
+                                .height(120)
+                                .url()}
                               alt="President Photo"
                               width={120}
                               height={120}
@@ -1484,7 +1734,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -1504,7 +1753,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         <div
           ref={canvasWrapRef}
           className="origin-center"
-          style={{ width: CANVAS_INTRINSIC, height: CANVAS_INTRINSIC, willChange: "transform" }}
+          style={{
+            width: CANVAS_INTRINSIC,
+            height: CANVAS_INTRINSIC,
+            willChange: "transform",
+          }}
         >
           {/* pointer-events-auto so listeners on canvas work! */}
           <div className="pointer-events-auto">
@@ -1521,45 +1774,86 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       </div>
 
       {/* ═══ PROJECTOR BEAM EFFECT ═══ */}
-      {projectorCoords && (cardRevealVisible || phaseRef.current === "about") && (() => {
-        const activeClubData = CLUBS_DETAILS.find((c) => c.slug === selectedClub);
-        const connectorColor = activeClubData ? activeClubData.color : "#023B8E";
-        const isAboutProjector = phaseRef.current === "about";
-        return (
-          <svg
-            className="fixed top-0 left-0 w-full h-full pointer-events-none z-40 transition-opacity duration-700 ease-out animate-flicker-in"
-            style={{ opacity: (cardRevealVisible || isAboutProjector) ? 1 : 0 }}
-          >
-            <defs>
-              <linearGradient id="projector-beam-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor={connectorColor} stopOpacity="0.22" />
-                <stop offset="40%" stopColor={connectorColor} stopOpacity="0.08" />
-                <stop offset="100%" stopColor={connectorColor} stopOpacity="0.02" />
-              </linearGradient>
-            </defs>
-            {/* Holographic Light Cone */}
-            <polygon
-              points={`${projectorCoords.x1},${projectorCoords.y1} ${projectorCoords.x2},${projectorCoords.y2} ${projectorCoords.x3},${projectorCoords.y3}`}
-              fill="url(#projector-beam-grad)"
-              className="projector-beam"
-            />
-            {/* Glowing Laser Border at the Card Edge */}
-            <line
-              x1={projectorCoords.x2}
-              y1={projectorCoords.y2}
-              x2={projectorCoords.x3}
-              y2={projectorCoords.y3}
-              stroke={connectorColor}
-              strokeWidth="2"
-              className="projector-edge-line"
-              opacity="0.85"
-            />
-            {/* Glowing origin circle at the electron / nucleus */}
-            <circle cx={projectorCoords.x1} cy={projectorCoords.y1} r="5" fill={connectorColor} opacity="0.9" />
-            <circle cx={projectorCoords.x1} cy={projectorCoords.y1} r="10" stroke={connectorColor} strokeWidth="1" fill="none" className="animate-ping" style={{ transformOrigin: `${projectorCoords.x1}px ${projectorCoords.y1}px` }} />
-          </svg>
-        );
-      })()}
+      {projectorCoords &&
+        (cardRevealVisible || phaseRef.current === "about") &&
+        (() => {
+          const activeClubData = CLUBS_DETAILS.find(
+            (c) => c.slug === selectedClub,
+          );
+          const connectorColor = activeClubData
+            ? activeClubData.color
+            : "#023B8E";
+          const isAboutProjector = phaseRef.current === "about";
+          return (
+            <svg
+              className="fixed top-0 left-0 w-full h-full pointer-events-none z-40 transition-opacity duration-700 ease-out animate-flicker-in"
+              style={{ opacity: cardRevealVisible || isAboutProjector ? 1 : 0 }}
+            >
+              <defs>
+                <linearGradient
+                  id="projector-beam-grad"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop
+                    offset="0%"
+                    stopColor={connectorColor}
+                    stopOpacity="0.22"
+                  />
+                  <stop
+                    offset="40%"
+                    stopColor={connectorColor}
+                    stopOpacity="0.08"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={connectorColor}
+                    stopOpacity="0.02"
+                  />
+                </linearGradient>
+              </defs>
+              {/* Holographic Light Cone */}
+              <polygon
+                points={`${projectorCoords.x1},${projectorCoords.y1} ${projectorCoords.x2},${projectorCoords.y2} ${projectorCoords.x3},${projectorCoords.y3}`}
+                fill="url(#projector-beam-grad)"
+                className="projector-beam"
+              />
+              {/* Glowing Laser Border at the Card Edge */}
+              <line
+                x1={projectorCoords.x2}
+                y1={projectorCoords.y2}
+                x2={projectorCoords.x3}
+                y2={projectorCoords.y3}
+                stroke={connectorColor}
+                strokeWidth="2"
+                className="projector-edge-line"
+                opacity="0.85"
+              />
+              {/* Glowing origin circle at the electron / nucleus */}
+              <circle
+                cx={projectorCoords.x1}
+                cy={projectorCoords.y1}
+                r="5"
+                fill={connectorColor}
+                opacity="0.9"
+              />
+              <circle
+                cx={projectorCoords.x1}
+                cy={projectorCoords.y1}
+                r="10"
+                stroke={connectorColor}
+                strokeWidth="1"
+                fill="none"
+                className="animate-ping"
+                style={{
+                  transformOrigin: `${projectorCoords.x1}px ${projectorCoords.y1}px`,
+                }}
+              />
+            </svg>
+          );
+        })()}
 
       <span className="sr-only" aria-live="polite">
         {phaseRef.current === "animating" ? "Moving between sections" : ""}
