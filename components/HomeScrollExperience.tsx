@@ -241,6 +241,399 @@ function ClubIcon({ name, className }: { name: string; className?: string }) {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   DNA HELIX — Mathematically precise, premium double helix component
+   Uses real sin/cos geometry for each sample point on both strands,
+   with depth-sorted rungs, metallic gradients, glow filters, and
+   ambient energy field. Responds to activeNode for node highlighting.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function DNAHelix({ activeNode }: { activeNode: number }) {
+  // ── Layout constants (viewBox: 0 0 340 900) ──
+  const VW = 340;
+  const VH = 900;
+  const CX = VW / 2; // 170 — center axis
+  const AMP = 72; // horizontal amplitude of each strand
+  const STEPS = 180; // samples per strand (smooth curve)
+  const Y_TOP = 30;
+  const Y_BOT = 870;
+  const RUNG_STEP = 18; // samples between rungs
+
+  // Node positions along the helix (in viewBox Y coords)
+  const NODE_Y = [180, 450, 720];
+
+  // ── Build strand point arrays ──
+  const goldPts: { x: number; y: number; z: number }[] = [];
+  const bluePts: { x: number; y: number; z: number }[] = [];
+
+  for (let i = 0; i <= STEPS; i++) {
+    const t = i / STEPS;
+    const y = Y_TOP + t * (Y_BOT - Y_TOP);
+    const angle = t * Math.PI * 5; // 2.5 full rotations
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+
+    // Gold strand: phase 0, Blue strand: phase π (opposite)
+    goldPts.push({ x: CX + AMP * cosA, y, z: sinA }); // z for depth
+    bluePts.push({
+      x: CX + AMP * Math.cos(angle + Math.PI),
+      y,
+      z: Math.sin(angle + Math.PI),
+    });
+  }
+
+  // ── Build SVG path string from point array ──
+  function toPath(pts: { x: number; y: number }[]) {
+    if (pts.length === 0) return "";
+    let d = `M ${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`;
+    // Catmull-Rom → cubic bezier approximation for smoothness
+    for (let i = 1; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)];
+      const p1 = pts[i];
+      const p2 = pts[Math.min(pts.length - 1, i + 1)];
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p1.x - (p2.x - p0.x) / 6;
+      const cp2y = p1.y - (p2.y - p0.y) / 6;
+      d += ` C ${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${p1.x.toFixed(2)},${p1.y.toFixed(2)}`;
+    }
+    return d;
+  }
+
+  // ── Build rungs between the two strands ──
+  // Only draw rungs; colour by depth (z of gold strand at that sample)
+  const rungs: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    opacity: number;
+    width: number;
+    isFront: boolean;
+  }[] = [];
+
+  for (let i = 0; i <= STEPS; i += RUNG_STEP) {
+    const gp = goldPts[i];
+    const bp = bluePts[i];
+    const depth = (gp.z + 1) / 2; // 0 = behind, 1 = in front
+    const isFront = gp.z > 0;
+    rungs.push({
+      x1: gp.x,
+      y1: gp.y,
+      x2: bp.x,
+      y2: bp.y,
+      opacity: 0.25 + depth * 0.65,
+      width: 0.8 + depth * 1.6,
+      isFront,
+    });
+  }
+
+  // Depth sort: back rungs first, front rungs on top
+  const backRungs = rungs.filter((r) => !r.isFront);
+  const frontRungs = rungs.filter((r) => r.isFront);
+
+  // ── Node highlight ring sizes ──
+  function nodeRingR(idx: number) {
+    return activeNode === idx ? 26 : 18;
+  }
+  function nodeRingOpacity(idx: number) {
+    return activeNode === idx ? 1 : 0.45;
+  }
+
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox={`0 0 ${VW} ${VH}`}
+      preserveAspectRatio="xMidYMid meet"
+      style={{ overflow: "visible" }}
+    >
+      <defs>
+        {/* ── Energy field gradient ── */}
+        <radialGradient id="dna-energy" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#D4A373" stopOpacity="0.18" />
+          <stop offset="45%" stopColor="#023B8E" stopOpacity="0.10" />
+          <stop offset="100%" stopColor="#023B8E" stopOpacity="0" />
+        </radialGradient>
+
+        {/* ── Gold strand gradient (vertical) ── */}
+        <linearGradient id="dna-gold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#c8893a" stopOpacity="0.85" />
+          <stop offset="25%" stopColor="#F5D84A" stopOpacity="1" />
+          <stop offset="50%" stopColor="#D4A373" stopOpacity="1" />
+          <stop offset="75%" stopColor="#f0c040" stopOpacity="1" />
+          <stop offset="100%" stopColor="#b07820" stopOpacity="0.85" />
+        </linearGradient>
+
+        {/* ── Blue strand gradient (vertical) ── */}
+        <linearGradient id="dna-blue" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#023B8E" stopOpacity="0.85" />
+          <stop offset="30%" stopColor="#0EA5E9" stopOpacity="1" />
+          <stop offset="60%" stopColor="#1d4ed8" stopOpacity="1" />
+          <stop offset="100%" stopColor="#023B8E" stopOpacity="0.85" />
+        </linearGradient>
+
+        {/* ── Glow filter for strands ── */}
+        <filter id="dna-glow" x="-60%" y="-10%" width="220%" height="120%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        {/* ── Soft glow for nodes ── */}
+        <filter id="node-glow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        {/* ── Gold node gradient ── */}
+        <radialGradient id="node-gold-active" cx="38%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#fff8c0" />
+          <stop offset="30%" stopColor="#F5D84A" />
+          <stop offset="65%" stopColor="#D4A373" />
+          <stop offset="100%" stopColor="#8a5e00" />
+        </radialGradient>
+
+        {/* ── Blue node gradient ── */}
+        <radialGradient id="node-blue-inactive" cx="38%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#b8d4ff" />
+          <stop offset="35%" stopColor="#4a90d9" />
+          <stop offset="70%" stopColor="#023B8E" />
+          <stop offset="100%" stopColor="#010f2e" />
+        </radialGradient>
+
+        {/* ── Clip path to keep energy field contained ── */}
+        <clipPath id="dna-clip">
+          <rect x="0" y="0" width={VW} height={VH} />
+        </clipPath>
+      </defs>
+
+      {/* ── 1. Ambient energy field ── */}
+      <ellipse
+        cx={CX}
+        cy={VH / 2}
+        rx={AMP + 60}
+        ry={VH / 2}
+        fill="url(#dna-energy)"
+        clipPath="url(#dna-clip)"
+        className="animate-[spine-pulse_7s_ease-in-out_infinite]"
+      />
+
+      {/* ── 2. Back rungs (behind both strands) ── */}
+      <g>
+        {backRungs.map((r, i) => (
+          <line
+            key={`br-${i}`}
+            x1={r.x1}
+            y1={r.y1}
+            x2={r.x2}
+            y2={r.y2}
+            stroke="#D4A373"
+            strokeWidth={r.width}
+            opacity={r.opacity * 0.55}
+            strokeLinecap="round"
+          />
+        ))}
+      </g>
+
+      {/* ── 3. Gold strand (back half hidden behind blue) ── */}
+      <path
+        d={toPath(goldPts)}
+        fill="none"
+        stroke="url(#dna-gold)"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        filter="url(#dna-glow)"
+        opacity="0.95"
+        className="animate-[spine-pulse_5s_ease-in-out_infinite]"
+      />
+      {/* Gold strand shadow/depth layer */}
+      <path
+        d={toPath(goldPts)}
+        fill="none"
+        stroke="#D4A373"
+        strokeWidth="9"
+        strokeLinecap="round"
+        opacity="0.12"
+      />
+
+      {/* ── 4. Blue strand ── */}
+      <path
+        d={toPath(bluePts)}
+        fill="none"
+        stroke="url(#dna-blue)"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        filter="url(#dna-glow)"
+        opacity="0.95"
+        className="animate-[spine-pulse_5s_ease-in-out_infinite]"
+        style={{ animationDelay: "2.5s" }}
+      />
+      {/* Blue strand shadow/depth layer */}
+      <path
+        d={toPath(bluePts)}
+        fill="none"
+        stroke="#0EA5E9"
+        strokeWidth="9"
+        strokeLinecap="round"
+        opacity="0.10"
+      />
+
+      {/* ── 5. Front rungs (in front of both strands) ── */}
+      <g>
+        {frontRungs.map((r, i) => (
+          <line
+            key={`fr-${i}`}
+            x1={r.x1}
+            y1={r.y1}
+            x2={r.x2}
+            y2={r.y2}
+            stroke="#D4A373"
+            strokeWidth={r.width}
+            opacity={r.opacity}
+            strokeLinecap="round"
+          />
+        ))}
+      </g>
+
+      {/* ── 6. Floating particles along strands ── */}
+      {[0.15, 0.38, 0.62, 0.85].map((frac, fi) => {
+        const idx = Math.round(frac * STEPS);
+        const gp = goldPts[Math.min(idx, STEPS)];
+        return (
+          <circle
+            key={`gp-${fi}`}
+            cx={gp.x}
+            cy={gp.y}
+            r="3"
+            fill="#F5D84A"
+            opacity="0.7"
+            className="animate-[spine-pulse_3s_ease-in-out_infinite]"
+            style={{ animationDelay: `${fi * 0.75}s` }}
+          />
+        );
+      })}
+      {[0.08, 0.3, 0.54, 0.78].map((frac, fi) => {
+        const idx = Math.round(frac * STEPS);
+        const bp = bluePts[Math.min(idx, STEPS)];
+        return (
+          <circle
+            key={`bp-${fi}`}
+            cx={bp.x}
+            cy={bp.y}
+            r="3"
+            fill="#0EA5E9"
+            opacity="0.7"
+            className="animate-[spine-pulse_3s_ease-in-out_infinite]"
+            style={{ animationDelay: `${fi * 0.75 + 0.4}s` }}
+          />
+        );
+      })}
+
+      {/* ── 7. Three node markers (where electrons land) ── */}
+      {NODE_Y.map((ny, idx) => {
+        const isActive = activeNode === idx;
+        const r = nodeRingR(idx);
+        const op = nodeRingOpacity(idx);
+
+        return (
+          <g key={`node-${idx}`}>
+            {/* Outer pulse ring — active only */}
+            {isActive && (
+              <circle
+                cx={CX}
+                cy={ny}
+                r={r + 14}
+                fill="none"
+                stroke="#D4A373"
+                strokeWidth="1"
+                opacity="0.35"
+                className="animate-[spin_8s_linear_infinite]"
+                strokeDasharray="6 4"
+              />
+            )}
+
+            {/* Ambient glow halo */}
+            {isActive && (
+              <circle
+                cx={CX}
+                cy={ny}
+                r={r + 22}
+                fill="#D4A373"
+                opacity="0.10"
+                className="animate-[spine-pulse_4s_ease-in-out_infinite]"
+              />
+            )}
+
+            {/* Node ring */}
+            <circle
+              cx={CX}
+              cy={ny}
+              r={r}
+              fill={isActive ? "rgba(212,163,115,0.08)" : "rgba(2,59,142,0.06)"}
+              stroke={isActive ? "#D4A373" : "rgba(2,59,142,0.4)"}
+              strokeWidth={isActive ? 2 : 1.5}
+              opacity={op}
+              style={{ transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
+            />
+
+            {/* Node core sphere */}
+            <circle
+              cx={CX}
+              cy={ny}
+              r={isActive ? 12 : 9}
+              fill={
+                isActive ? "url(#node-gold-active)" : "url(#node-blue-inactive)"
+              }
+              filter={isActive ? "url(#node-glow)" : undefined}
+              opacity={op}
+              style={{ transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
+            />
+
+            {/* Specular highlight on node */}
+            <circle
+              cx={CX - (isActive ? 4 : 3)}
+              cy={ny - (isActive ? 4 : 3)}
+              r={isActive ? 3.5 : 2.5}
+              fill="rgba(255,255,240,0.9)"
+              opacity={op * 0.85}
+            />
+
+            {/* Active horizontal connector beam */}
+            {isActive && (
+              <line
+                x1={CX + 14}
+                y1={ny}
+                x2={CX + 110}
+                y2={ny}
+                stroke="#D4A373"
+                strokeWidth="1.5"
+                opacity="0.5"
+                strokeDasharray="5,4"
+                className="animate-[spine-pulse_3s_ease-in-out_infinite]"
+              />
+            )}
+          </g>
+        );
+      })}
+
+      {/* ── 8. Vertical central axis (spine) ── */}
+      <line
+        x1={CX}
+        y1={Y_TOP}
+        x2={CX}
+        y2={Y_BOT}
+        stroke="rgba(212,163,115,0.12)"
+        strokeWidth="1"
+        strokeDasharray="4,8"
+      />
+    </svg>
+  );
+}
+
 /* ─── zoom animation constants ─── */
 const ZOOM_DURATION = 2400;
 const NUCLEUS_ZOOM_DURATION = 3200; // longer for the dramatic separation + zoom
@@ -1034,6 +1427,37 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     };
   }, [startTransition]);
 
+  /* ═══ FLAWLESS SCROLL OBSERVER FOR ABOUT SECTION ═══ */
+  useEffect(() => {
+    const panels = document.querySelectorAll(".about-panel");
+    if (panels.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const node = parseInt(
+              entry.target.getAttribute("data-node") || "0",
+              10,
+            );
+            setActiveAboutNode(node);
+          }
+        });
+      },
+      {
+        threshold: 0.5, // Triggers when 50% of the panel is visible
+        rootMargin: "-10% 0px -10% 0px", // Tightens the trigger zone to the center of the screen
+      },
+    );
+
+    panels.forEach((panel) => observer.observe(panel));
+
+    return () => {
+      panels.forEach((panel) => observer.unobserve(panel));
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div className="home-scroll-experience bg-bg">
       {/* ═══ CSS ANIMATIONS & DEBOSSED CARVED TEXT ═══ */}
@@ -1191,6 +1615,53 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         .about-heading-glow {
           animation: about-heading-glow 3s ease-in-out infinite;
         }
+
+        /* ═══ KINETIC SPINE: Premium About Section Animations ═══ */
+@keyframes spine-pulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 0.6; transform: scaleY(1.05); }
+}
+
+@keyframes node-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(212, 163, 115, 0.3), 0 0 30px rgba(212, 163, 115, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(212, 163, 115, 0.6), 0 0 50px rgba(212, 163, 115, 0.2); }
+}
+
+@keyframes draw-line {
+  to { stroke-dashoffset: 0; }
+}
+
+.kinetic-spine-node {
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kinetic-spine-node.active {
+  transform: scale(1.15);
+}
+
+.kinetic-spine-node.active .node-core {
+  background: linear-gradient(135deg, #fff8c0 0%, #D4A373 50%, #b07d10 100%);
+  box-shadow: 0 0 20px rgba(212, 163, 115, 0.6), 0 0 40px rgba(212, 163, 115, 0.3);
+  border-color: #fff8c0;
+}
+
+.kinetic-spine-node.active .node-label {
+  color: #D4A373;
+  font-weight: 700;
+  transform: translateX(8px);
+}
+
+.connector-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  opacity: 0;
+}
+
+.connector-line.active {
+  stroke-dashoffset: 0;
+  opacity: 1;
+}
       `,
         }}
       />
@@ -1468,37 +1939,67 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         </div>
       </section>
 
-      {/* ═══ ABOUT SECTION — 3-Panel Interactive Timeline Narrative ═══ */}
-      <section id="about" className="relative scroll-mt-16 bg-white">
+      {/* ═══ ABOUT SECTION: Kinetic Spine ═══ */}
+      <section id="about" className="relative bg-white overflow-hidden">
         <div className="mx-auto w-full max-w-7xl">
-          <div className="grid lg:grid-cols-2 gap-0 lg:gap-10">
-            {/* Left column – Sticky atom/timeline anchor */}
+          <div className="grid lg:grid-cols-2 gap-0 lg:gap-16">
+            {/* ── LEFT COLUMN: Sticky Kinetic Spine ── */}
             <div className="hidden lg:flex sticky top-16 h-[calc(100svh-4rem)] items-center justify-center px-6">
-              <div
-                ref={desktopAboutAnchorRef}
-                className="relative flex aspect-square w-[min(78vw,25rem)] items-center justify-center sm:w-[30rem] lg:w-[34rem]"
-              />
+              <div className="relative flex flex-col items-center w-full max-w-md h-full py-20">
+                {/* ═══ PREMIUM DNA DOUBLE HELIX — Mathematically Precise ═══ */}
+                <DNAHelix activeNode={activeAboutNode} />
+
+                {/* 3 Interactive Nodes (Aligned perfectly with Canvas TIMELINE_NODES) */}
+                <div className="relative z-10 flex flex-col justify-between h-full w-full py-10">
+                  {["Our Origin", "Our Vision", "The Legacy"].map(
+                    (label, idx) => (
+                      <div
+                        key={label}
+                        className={`kinetic-spine-node flex items-center gap-4 ${activeAboutNode === idx ? "active" : ""}`}
+                      >
+                        {/* Node Core (Matches Canvas drawTimelineNode) */}
+                        <div className="node-core relative w-5 h-5 rounded-full border-2 border-slate-300 bg-white transition-all duration-500" />
+
+                        {/* Node Label */}
+                        <span className="node-label text-sm font-display font-semibold text-slate-400 tracking-wide transition-all duration-500">
+                          {label}
+                        </span>
+
+                        {/* Animated Connector Line */}
+                        <svg className="absolute left-6 top-2.5 w-40 h-4 pointer-events-none overflow-visible">
+                          <line
+                            x1="0"
+                            y1="0"
+                            x2="150"
+                            y2="0"
+                            stroke="#D4A373"
+                            strokeWidth="2"
+                            className={`connector-line ${activeAboutNode === idx ? "active" : ""}`}
+                          />
+                          <circle
+                            cx="150"
+                            cy="0"
+                            r="3"
+                            fill="#D4A373"
+                            className={`transition-opacity duration-500 ${activeAboutNode === idx ? "opacity-100" : "opacity-0"}`}
+                          />
+                        </svg>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Mobile atom anchor (non-sticky) */}
-            <div className="flex lg:hidden min-h-[42svh] items-center justify-center px-6 py-8">
-              <div
-                ref={mobileAboutAnchorRef}
-                className="relative flex aspect-square w-[min(78vw,25rem)] items-center justify-center sm:w-[30rem]"
-              />
-            </div>
-
-            {/* Right column – Scrollable narrative panels */}
+            {/* RIGHT COLUMN: Scrollable Narrative Panels ── */}
             <div className="flex flex-col px-6 sm:px-8 lg:px-4">
-              {/* ── Panel 0: Our Origin ── */}
-              <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center py-16">
+              {/* Panel 0: Our Origin */}
+              <div
+                data-node="0"
+                className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
+              >
                 <div
-                  data-node="0"
-                  className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
-                    activeAboutNode === 0
-                      ? "about-panel-active"
-                      : "about-panel-inactive"
-                  }`}
+                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 0 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
                   <div className="flex flex-col h-full justify-between gap-6">
@@ -1513,11 +2014,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                         </span>
                       </div>
                       <h3
-                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
-                          activeAboutNode === 0
-                            ? "text-carved-dark about-heading-glow"
-                            : "text-carved-dark"
-                        }`}
+                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 0 ? "about-heading-glow" : ""}`}
                       >
                         Our Origin
                       </h3>
@@ -1528,18 +2025,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                         Founded in the heart of our institution, NSS Clubs began
                         as a small group of passionate students with a shared
                         dream — to create a vibrant community where every talent
-                        finds its stage. What started as informal gatherings
-                        under the shade of the old banyan tree has grown into
-                        the largest student-run organization in the
-                        institution&apos;s history.
-                      </p>
-                      <p className="font-body text-slate-300/80 text-sm sm:text-base leading-relaxed font-medium mt-4">
-                        Our founders believed that education extends far beyond
-                        textbooks, and that belief still echoes in everything we
-                        do today. From the first cultural event to the
-                        establishment of six specialized clubs, every milestone
-                        was built on the foundation of curiosity, courage, and
-                        community.
+                        finds its stage.
                       </p>
                     </div>
                     <div className="border-t border-white/10 pt-5 mt-auto">
@@ -1574,15 +2060,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 </div>
               </div>
 
-              {/* ── Panel 1: Our Vision ── */}
-              <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center py-16">
+              {/* Panel 1: Our Vision */}
+              <div
+                data-node="1"
+                className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
+              >
                 <div
-                  data-node="1"
-                  className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
-                    activeAboutNode === 1
-                      ? "about-panel-active"
-                      : "about-panel-inactive"
-                  }`}
+                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 1 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
                   <div className="flex flex-col h-full justify-between gap-6">
@@ -1597,11 +2081,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                         </span>
                       </div>
                       <h3
-                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
-                          activeAboutNode === 1
-                            ? "text-carved-dark about-heading-glow"
-                            : "text-carved-dark"
-                        }`}
+                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 1 ? "about-heading-glow" : ""}`}
                       >
                         Our Vision
                       </h3>
@@ -1612,16 +2092,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                         We envision a campus where creativity knows no
                         boundaries, where a scientist can paint, a dancer can
                         code, and a writer can score goals. NSS Clubs exist to
-                        blur the lines between disciplines and build bridges
-                        between passions.
-                      </p>
-                      <p className="font-body text-slate-300/80 text-sm sm:text-base leading-relaxed font-medium mt-4">
-                        Our mission is simple yet powerful: to nurture
-                        well-rounded individuals who lead with empathy, create
-                        with purpose, and serve with dedication. Every event we
-                        host, every project we launch, is a step toward a future
-                        where student potential is limitless and every voice
-                        matters.
+                        blur the lines between disciplines.
                       </p>
                     </div>
                     <div className="border-t border-white/10 pt-5 mt-auto">
@@ -1656,16 +2127,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 </div>
               </div>
 
-              {/* ── Panel 2: The Legacy (President's Message + Stats from Sanity) ── */}
-              <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center py-16">
+              {/* Panel 2: The Legacy */}
+              <div
+                data-node="2"
+                className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
+              >
                 <div
-                  ref={aboutCardRef}
-                  data-node="2"
-                  className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
-                    activeAboutNode === 2
-                      ? "about-panel-active"
-                      : "about-panel-inactive"
-                  }`}
+                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 2 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
                   <div className="flex flex-col h-full justify-between gap-6">
@@ -1680,30 +2148,28 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                         </span>
                       </div>
                       <h3
-                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
-                          activeAboutNode === 2
-                            ? "text-carved-dark about-heading-glow"
-                            : "text-carved-dark"
-                        }`}
+                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 2 ? "about-heading-glow" : ""}`}
                       >
                         The Legacy
                       </h3>
                       <p className="text-sm text-white/50 font-body font-semibold mb-6">
-                        Building Tomorrow&apos;s Leaders
+                        Building Tomorrow's Leaders
                       </p>
 
-                      {/* President's Message & Photo */}
+                      {/* President's Message & Photo (OPTIMIZED) */}
                       <div className="flex flex-col sm:flex-row gap-6 items-start">
                         {data?.presidentPhoto && (
                           <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 shadow-sm bg-white/10">
                             <Image
                               src={urlFor(data.presidentPhoto)
-                                .width(120)
-                                .height(120)
+                                .width(256)
+                                .height(256)
+                                .fit("crop")
+                                .auto("format")
                                 .url()}
                               alt="President Photo"
-                              width={120}
-                              height={120}
+                              width={128}
+                              height={128}
                               className="object-cover w-full h-full"
                             />
                           </div>
