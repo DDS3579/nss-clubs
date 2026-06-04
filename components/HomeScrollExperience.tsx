@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Hero from "./Hero";
-import HeroAtom from "./HeroAtom";
+import HeroAtom, { TIMELINE_NODES } from "./HeroAtom";
+import { urlFor } from "@/sanity/lib/image";
+import type { HomepageData } from "@/sanity/lib/types";
 
 /* ─── constants ─── */
 const HEADER_H = 64;
@@ -185,7 +188,7 @@ function ClubIcon({ name, className }: { name: string; className?: string }) {
 const ZOOM_DURATION = 2400;
 const NUCLEUS_ZOOM_DURATION = 3200; // longer for the dramatic separation + zoom
 const ZOOM_SCALE_FACTOR = 5.5;
-const ELECTRON_TARGET_X = 490; // CX + orbit rx = 320 + 170
+const ELECTRON_TARGET_X = 520; // CX + orbit rx = 320 + 200
 const ELECTRON_TARGET_Y = 320; // CY
 
 /** Rotation offset (radians) to bring each club's electron to the Literature Club position (right-center of horizontal orbit). */
@@ -220,10 +223,10 @@ function getLayoutElement(selector: string): HTMLElement | null {
   return null;
 }
 
-type Phase = "hero" | "animating" | "clubs" | "zooming" | "zoomed";
+type Phase = "hero" | "animating" | "clubs" | "zooming" | "zoomed" | "about";
 
 interface AnimState {
-  direction: "forward" | "reverse";
+  targetPhase: "hero" | "clubs" | "about";
   startTime: number;
   scrollStart: number;
   scrollEnd: number;
@@ -241,15 +244,19 @@ interface ZoomAnimState {
   clubsScale: number;
 }
 
-export default function HomeScrollExperience() {
+export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   /* ── refs ── */
   const clubsAnchorRef = useRef<HTMLDivElement>(null);
+  const desktopAboutAnchorRef = useRef<HTMLDivElement>(null);
+  const mobileAboutAnchorRef = useRef<HTMLDivElement>(null);
+  const aboutCardRef = useRef<HTMLDivElement>(null);
   const floatingRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
   const phaseRef = useRef<Phase>("hero");
   const animRef = useRef<AnimState | null>(null);
   const atomProgressRef = useRef(0);
+  const aboutProgressRef = useRef(0);
   const touchStartRef = useRef<number | null>(null);
   const prevShowTextRef = useRef(false);
   const initializedRef = useRef(false);
@@ -258,10 +265,13 @@ export default function HomeScrollExperience() {
   const zoomAnimRef = useRef<ZoomAnimState | null>(null);
   const pendingZoomSlugRef = useRef<string | null>(null);
   const initZoomRef = useRef<(slug: string) => void>(() => {});
+  const activeAboutNodeRef = useRef(0);
+  const prevActiveNodeRef = useRef(-1);
 
   const [clubsTextVisible, setClubsTextVisible] = useState(false);
   const [selectedClub, setSelectedClub] = useState<string | null>(null);
   const [cardRevealVisible, setCardRevealVisible] = useState(false);
+  const [activeAboutNode, setActiveAboutNode] = useState(0);
 
   const cardWrapperRef = useRef<HTMLDivElement>(null);
   const [projectorCoords, setProjectorCoords] = useState<{
@@ -274,23 +284,31 @@ export default function HomeScrollExperience() {
   } | null>(null);
 
   /* ── Trigger a section-snap transition ── */
-  const startTransition = useCallback((direction: "forward" | "reverse") => {
+  const startTransition = useCallback((targetPhase: "hero" | "clubs" | "about") => {
     if (phaseRef.current === "animating") return;
-    if (direction === "forward" && phaseRef.current !== "hero") return;
-    if (direction === "reverse" && phaseRef.current !== "clubs") return;
+    if (phaseRef.current === "zooming" || phaseRef.current === "zoomed") return;
 
-    const clubsSection = document.getElementById("clubs");
-    if (!clubsSection) return;
-
-    const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
-    const scrollTarget = clubsAbsTop - HEADER_H;
+    let scrollTarget = 0;
+    if (targetPhase === "hero") {
+      scrollTarget = 0;
+    } else if (targetPhase === "clubs") {
+      const clubsSection = document.getElementById("clubs");
+      if (clubsSection) {
+        scrollTarget = clubsSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
+      }
+    } else if (targetPhase === "about") {
+      const aboutSection = document.getElementById("about");
+      if (aboutSection) {
+        scrollTarget = aboutSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
+      }
+    }
 
     phaseRef.current = "animating";
     animRef.current = {
-      direction,
+      targetPhase,
       startTime: performance.now(),
       scrollStart: window.scrollY,
-      scrollEnd: direction === "forward" ? scrollTarget : 0,
+      scrollEnd: scrollTarget,
     };
   }, []);
 
@@ -330,10 +348,10 @@ export default function HomeScrollExperience() {
 
   /* ── Electron & Nucleus Click Handler ── */
   const handleElectronClick = useCallback((slug: string) => {
-    if (phaseRef.current === "zooming" || phaseRef.current === "zoomed") return;
+    if (phaseRef.current === "zooming" || phaseRef.current === "zoomed" || phaseRef.current === "about") return;
 
     if (phaseRef.current === "hero") {
-      startTransition("forward");
+      startTransition("clubs");
       pendingZoomSlugRef.current = slug;
     } else if (phaseRef.current === "clubs") {
       initZoomRef.current(slug);
@@ -379,23 +397,54 @@ export default function HomeScrollExperience() {
 
   /* ── Holographic Projector Coordinate Updater ── */
   const updateProjectorCoords = useCallback(() => {
-    if (!selectedClub || !cardWrapperRef.current) {
+    if (selectedClub && cardWrapperRef.current) {
+      const cardRect = cardWrapperRef.current.getBoundingClientRect();
+      const x1 = window.innerWidth * 0.18;
+      const y1 = window.innerHeight * 0.5;
+      const x2 = cardRect.left;
+      const y2 = cardRect.top;
+      const x3 = cardRect.left;
+      const y3 = cardRect.bottom;
+      setProjectorCoords({ x1, y1, x2, y2, x3, y3 });
+    } else if (phaseRef.current === "about") {
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+      const aboutAnchor = isMobile ? mobileAboutAnchorRef.current : desktopAboutAnchorRef.current;
+      if (aboutAnchor) {
+        // Calculate active timeline node's screen position
+        const anchorRect = aboutAnchor.getBoundingClientRect();
+        const anchorCx = anchorRect.left + anchorRect.width / 2;
+        const anchorCy = anchorRect.top + anchorRect.height / 2;
+        const scale = anchorRect.width / CANVAS_INTRINSIC;
+        const halfC = CANVAS_INTRINSIC / 2;
+
+        const nodeIdx = activeAboutNodeRef.current;
+        const nodeCanvasY = TIMELINE_NODES[nodeIdx]?.targetY ?? halfC;
+        const x1 = anchorCx; // node X = CX = center
+        const y1 = anchorCy + (nodeCanvasY - halfC) * scale;
+
+        // Find the active about panel card
+        const activeCard = document.querySelector(`.about-panel[data-node="${nodeIdx}"]`);
+        if (activeCard) {
+          const cardRect = activeCard.getBoundingClientRect();
+          setProjectorCoords({
+            x1, y1,
+            x2: cardRect.left,
+            y2: cardRect.top,
+            x3: cardRect.left,
+            y3: cardRect.bottom,
+          });
+        } else {
+          setProjectorCoords(null);
+        }
+      }
+    } else {
       setProjectorCoords(null);
-      return;
     }
-    const cardRect = cardWrapperRef.current.getBoundingClientRect();
-    const x1 = window.innerWidth * 0.18;
-    const y1 = window.innerHeight * 0.5;
-    // Anchor projector beam to top-left and bottom-left of the card
-    const x2 = cardRect.left;
-    const y2 = cardRect.top;
-    const x3 = cardRect.left;
-    const y3 = cardRect.bottom;
-    setProjectorCoords({ x1, y1, x2, y2, x3, y3 });
   }, [selectedClub]);
 
   useEffect(() => {
-    if (cardRevealVisible) {
+    const active = cardRevealVisible || phaseRef.current === "about";
+    if (active) {
       const timer = setTimeout(() => {
         updateProjectorCoords();
       }, 50);
@@ -424,76 +473,151 @@ export default function HomeScrollExperience() {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
-
-      /* ── Initialize phase from scroll position on first frame ── */
       if (!initializedRef.current) {
         initializedRef.current = true;
         const clubsSection = document.getElementById("clubs");
-        if (clubsSection) {
-          const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
-          if (window.scrollY >= clubsAbsTop - HEADER_H - 50) {
-            phaseRef.current = "clubs";
-            atomProgressRef.current = 1;
-            prevShowTextRef.current = true;
-            setClubsTextVisible(true);
-          }
+        const aboutSection = document.getElementById("about");
+        if (aboutSection && window.scrollY >= aboutSection.getBoundingClientRect().top + window.scrollY - HEADER_H - 50) {
+          phaseRef.current = "about";
+          atomProgressRef.current = 1;
+          aboutProgressRef.current = 1;
+          prevShowTextRef.current = true;
+          setClubsTextVisible(true);
+        } else if (clubsSection && window.scrollY >= clubsSection.getBoundingClientRect().top + window.scrollY - HEADER_H - 50) {
+          phaseRef.current = "clubs";
+          atomProgressRef.current = 1;
+          aboutProgressRef.current = 0;
+          prevShowTextRef.current = true;
+          setClubsTextVisible(true);
         }
         floating.style.opacity = "1";
       }
 
       /* ── Compute position‑t and atom progress ── */
       let posT = 0;
+      let aboutT = 0;
 
-      if (phaseRef.current === "hero") {
-        posT = 0;
-        atomProgressRef.current = 0;
-      } else if (phaseRef.current === "clubs" || phaseRef.current === "zooming" || phaseRef.current === "zoomed") {
-        posT = 1;
-        atomProgressRef.current = 1;
-      } else if (phaseRef.current === "animating" && animRef.current) {
+      if (phaseRef.current === "animating" && animRef.current) {
         const anim = animRef.current;
         const elapsed = now - anim.startTime;
         const rawT = clamp01(elapsed / TRANSITION_MS);
         const easedT = easeInOutQuart(rawT);
 
-        if (anim.direction === "forward") {
-          posT = easedT;
-          atomProgressRef.current = easedT;
-        } else {
+        if (anim.targetPhase === "clubs") {
+          if (anim.scrollStart < anim.scrollEnd) {
+            // Hero -> Clubs
+            posT = easedT;
+            aboutT = 0;
+          } else {
+            // About -> Clubs
+            posT = 1;
+            aboutT = 1 - easedT;
+          }
+        } else if (anim.targetPhase === "hero") {
+          // Clubs -> Hero
           posT = 1 - easedT;
-          atomProgressRef.current = 1 - easedT;
+          aboutT = 0;
+        } else if (anim.targetPhase === "about") {
+          // Clubs -> About
+          posT = 1;
+          aboutT = easedT;
         }
+
+        atomProgressRef.current = posT;
+        aboutProgressRef.current = aboutT;
 
         // Programmatic scroll
         window.scrollTo(0, lerp(anim.scrollStart, anim.scrollEnd, easedT));
 
         // Finished?
         if (rawT >= 1) {
-          const finalPhase: Phase = anim.direction === "forward" ? "clubs" : "hero";
-          phaseRef.current = finalPhase;
+          phaseRef.current = anim.targetPhase;
           animRef.current = null;
+          updateProjectorCoords(); // Update projector coords on transition finish
 
-          // Trigger pending zoom after hero→clubs transition
-          if (finalPhase === "clubs" && pendingZoomSlugRef.current) {
+          // Trigger pending zoom after transition
+          if (phaseRef.current === "clubs" && pendingZoomSlugRef.current) {
             const slug = pendingZoomSlugRef.current;
             pendingZoomSlugRef.current = null;
             initZoomRef.current(slug);
           }
         }
+      } else if (phaseRef.current === "zooming" || phaseRef.current === "zoomed") {
+        posT = 1;
+        aboutT = 0;
+        atomProgressRef.current = 1;
+        aboutProgressRef.current = 0;
+      } else {
+        // Normal scroll tracking (when not animating snap transitions or zoomed)
+        const clubsSection = document.getElementById("clubs");
+        const aboutSection = document.getElementById("about");
+        if (clubsSection && aboutSection) {
+          const clubsScrollY = clubsSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
+          const aboutScrollY = aboutSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
+          const sy = window.scrollY;
+
+          if (sy < clubsScrollY) {
+            phaseRef.current = "hero";
+            posT = clamp01(sy / Math.max(clubsScrollY, 1));
+            aboutT = 0;
+          } else if (sy < aboutScrollY) {
+            phaseRef.current = "clubs";
+            posT = 1;
+            aboutT = clamp01((sy - clubsScrollY) / Math.max(aboutScrollY - clubsScrollY, 1));
+          } else {
+            phaseRef.current = "about";
+            posT = 1;
+            aboutT = 1;
+
+            // Track scroll within About section for active timeline node
+            const aRect = aboutSection.getBoundingClientRect();
+            const sectionScrolled = -(aRect.top - HEADER_H);
+            const scrollableH = aboutSection.offsetHeight - window.innerHeight;
+            const subProg = clamp01(sectionScrolled / Math.max(scrollableH, 1));
+            const nodeIdx = subProg < 0.33 ? 0 : subProg < 0.66 ? 1 : 2;
+            activeAboutNodeRef.current = nodeIdx;
+
+            if (nodeIdx !== prevActiveNodeRef.current) {
+              prevActiveNodeRef.current = nodeIdx;
+              setActiveAboutNode(nodeIdx);
+              updateProjectorCoords();
+            }
+          }
+        }
+        atomProgressRef.current = posT;
+        aboutProgressRef.current = aboutT;
       }
 
-      /* ── Interpolate atom position between hero & clubs anchors ── */
+      /* ── Interpolate atom position between hero & clubs & about anchors ── */
       const heroRect = heroAnchor.getBoundingClientRect();
       const clubsRect = clubsAnchor.getBoundingClientRect();
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+      const aboutAnchor = isMobile ? mobileAboutAnchorRef.current : desktopAboutAnchorRef.current;
 
-      const fromCx = heroRect.left + heroRect.width / 2;
-      const fromCy = heroRect.top + heroRect.height / 2;
-      const toCx = clubsRect.left + clubsRect.width / 2;
-      const toCy = clubsRect.top + clubsRect.height / 2;
+      let cx = 0;
+      let cy = 0;
+      let size = 0;
 
-      const cx = lerp(fromCx, toCx, posT);
-      const cy = lerp(fromCy, toCy, posT);
-      const size = lerp(heroRect.width, clubsRect.width, posT);
+      if (aboutProgressRef.current > 0.001 && aboutAnchor) {
+        const aboutRect = aboutAnchor.getBoundingClientRect();
+        const fromCx = clubsRect.left + clubsRect.width / 2;
+        const fromCy = clubsRect.top + clubsRect.height / 2;
+        const toCx = aboutRect.left + aboutRect.width / 2;
+        const toCy = aboutRect.top + aboutRect.height / 2;
+
+        cx = lerp(fromCx, toCx, aboutProgressRef.current);
+        cy = lerp(fromCy, toCy, aboutProgressRef.current);
+        size = lerp(clubsRect.width, aboutRect.width, aboutProgressRef.current);
+      } else {
+        const fromCx = heroRect.left + heroRect.width / 2;
+        const fromCy = heroRect.top + heroRect.height / 2;
+        const toCx = clubsRect.left + clubsRect.width / 2;
+        const toCy = clubsRect.top + clubsRect.height / 2;
+
+        cx = lerp(fromCx, toCx, atomProgressRef.current);
+        cy = lerp(fromCy, toCy, atomProgressRef.current);
+        size = lerp(heroRect.width, clubsRect.width, atomProgressRef.current);
+      }
 
       floating.style.transform =
         `translate(${cx - CANVAS_INTRINSIC / 2}px, ${cy - CANVAS_INTRINSIC / 2}px)`;
@@ -659,23 +783,41 @@ export default function HomeScrollExperience() {
         return;
       }
 
+      const clubsSection = document.getElementById("clubs");
+      const aboutSection = document.getElementById("about");
+      if (!clubsSection) return;
+
+      const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
+      const clubsScrollY = clubsAbsTop - HEADER_H;
+
       // Hero → Clubs
       if (e.deltaY > 0 && phaseRef.current === "hero") {
         e.preventDefault();
-        if (Math.abs(e.deltaY) >= 10) startTransition("forward");
+        if (Math.abs(e.deltaY) >= 10) startTransition("clubs");
         return;
       }
 
-      // Clubs → Hero (only if at clubs section top)
-      if (e.deltaY < 0 && phaseRef.current === "clubs") {
-        const clubsSection = document.getElementById("clubs");
-        if (clubsSection) {
-          const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
-          const clubsScrollY = clubsAbsTop - HEADER_H;
+      // Clubs → Hero / Clubs → About
+      if (phaseRef.current === "clubs") {
+        if (e.deltaY < 0) {
           if (window.scrollY <= clubsScrollY + 15) {
             e.preventDefault();
-            if (Math.abs(e.deltaY) >= 10) startTransition("reverse");
+            if (Math.abs(e.deltaY) >= 10) startTransition("hero");
           }
+        } else if (e.deltaY > 0) {
+          e.preventDefault();
+          if (Math.abs(e.deltaY) >= 10) startTransition("about");
+        }
+        return;
+      }
+
+      // About → Clubs
+      if (e.deltaY < 0 && phaseRef.current === "about" && aboutSection) {
+        const aboutAbsTop = aboutSection.getBoundingClientRect().top + window.scrollY;
+        const aboutScrollY = aboutAbsTop - HEADER_H;
+        if (window.scrollY <= aboutScrollY + 15) {
+          e.preventDefault();
+          if (Math.abs(e.deltaY) >= 10) startTransition("clubs");
         }
       }
     };
@@ -693,23 +835,43 @@ export default function HomeScrollExperience() {
         return;
       }
 
+      const clubsSection = document.getElementById("clubs");
+      const aboutSection = document.getElementById("about");
+      if (!clubsSection) return;
+
+      const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
+      const clubsScrollY = clubsAbsTop - HEADER_H;
+
       if (deltaY > 0 && phaseRef.current === "hero") {
         e.preventDefault();
         if (Math.abs(deltaY) >= 20) {
-          startTransition("forward");
+          startTransition("clubs");
           touchStartRef.current = null;
         }
-      } else if (deltaY < 0 && phaseRef.current === "clubs") {
-        const clubsSection = document.getElementById("clubs");
-        if (clubsSection) {
-          const clubsAbsTop = clubsSection.getBoundingClientRect().top + window.scrollY;
-          const clubsScrollY = clubsAbsTop - HEADER_H;
+      } else if (phaseRef.current === "clubs") {
+        if (deltaY < 0) {
           if (window.scrollY <= clubsScrollY + 15) {
             e.preventDefault();
             if (Math.abs(deltaY) >= 20) {
-              startTransition("reverse");
+              startTransition("hero");
               touchStartRef.current = null;
             }
+          }
+        } else if (deltaY > 0) {
+          e.preventDefault();
+          if (Math.abs(deltaY) >= 20) {
+            startTransition("about");
+            touchStartRef.current = null;
+          }
+        }
+      } else if (deltaY < 0 && phaseRef.current === "about" && aboutSection) {
+        const aboutAbsTop = aboutSection.getBoundingClientRect().top + window.scrollY;
+        const aboutScrollY = aboutAbsTop - HEADER_H;
+        if (window.scrollY <= aboutScrollY + 15) {
+          e.preventDefault();
+          if (Math.abs(deltaY) >= 20) {
+            startTransition("clubs");
+            touchStartRef.current = null;
           }
         }
       }
@@ -864,6 +1026,25 @@ export default function HomeScrollExperience() {
         }
         .projector-edge-line {
           animation: edge-glow 2s ease-in-out infinite;
+        }
+
+        /* ═══ About Section Panel Animations ═══ */
+        .about-panel-active {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .about-panel-inactive {
+          opacity: 0.08;
+          transform: translateY(20px) scale(0.97);
+          transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+        @keyframes about-heading-glow {
+          0%, 100% { text-shadow: 0 0 20px rgba(120, 180, 255, 0.2); }
+          50% { text-shadow: 0 0 35px rgba(120, 180, 255, 0.35); }
+        }
+        .about-heading-glow {
+          animation: about-heading-glow 3s ease-in-out infinite;
         }
       `}} />
 
@@ -1103,6 +1284,212 @@ export default function HomeScrollExperience() {
         </div>
       </section>
 
+      {/* ═══ ABOUT SECTION — 3-Panel Interactive Timeline Narrative ═══ */}
+      <section
+        id="about"
+        className="relative scroll-mt-16 bg-white"
+      >
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="grid lg:grid-cols-2 gap-0 lg:gap-10">
+
+            {/* Left column – Sticky atom/timeline anchor */}
+            <div className="hidden lg:flex sticky top-16 h-[calc(100svh-4rem)] items-center justify-center px-6">
+              <div
+                ref={desktopAboutAnchorRef}
+                className="relative flex aspect-square w-[min(78vw,25rem)] items-center justify-center sm:w-[30rem] lg:w-[34rem]"
+              />
+            </div>
+
+            {/* Mobile atom anchor (non-sticky) */}
+            <div className="flex lg:hidden min-h-[42svh] items-center justify-center px-6 py-8">
+              <div
+                ref={mobileAboutAnchorRef}
+                className="relative flex aspect-square w-[min(78vw,25rem)] items-center justify-center sm:w-[30rem]"
+              />
+            </div>
+
+            {/* Right column – Scrollable narrative panels */}
+            <div className="flex flex-col px-6 sm:px-8 lg:px-4">
+
+              {/* ── Panel 0: Our Origin ── */}
+              <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center py-16">
+                <div
+                  data-node="0"
+                  className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
+                    activeAboutNode === 0 ? 'about-panel-active' : 'about-panel-inactive'
+                  }`}
+                >
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
+                  <div className="flex flex-col h-full justify-between gap-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2 opacity-95">
+                        <ClubIcon name="BookOpen" className="w-4 h-4 text-white/70" />
+                        <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
+                          History & Heritage
+                        </span>
+                      </div>
+                      <h3 className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
+                        activeAboutNode === 0 ? 'text-carved-dark about-heading-glow' : 'text-carved-dark'
+                      }`}>
+                        Our Origin
+                      </h3>
+                      <p className="text-sm text-white/50 font-body font-semibold mb-6">Where It All Began</p>
+                      <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium">
+                        Founded in the heart of our institution, NSS Clubs began as a small group of passionate students
+                        with a shared dream — to create a vibrant community where every talent finds its stage.
+                        What started as informal gatherings under the shade of the old banyan tree has grown into the
+                        largest student-run organization in the institution&apos;s history.
+                      </p>
+                      <p className="font-body text-slate-300/80 text-sm sm:text-base leading-relaxed font-medium mt-4">
+                        Our founders believed that education extends far beyond textbooks, and that belief still echoes
+                        in everything we do today. From the first cultural event to the establishment of six specialized
+                        clubs, every milestone was built on the foundation of curiosity, courage, and community.
+                      </p>
+                    </div>
+                    <div className="border-t border-white/10 pt-5 mt-auto">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Founded</div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">2018</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Founders</div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">12</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">First Event</div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">2019</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Panel 1: Our Vision ── */}
+              <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center py-16">
+                <div
+                  data-node="1"
+                  className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
+                    activeAboutNode === 1 ? 'about-panel-active' : 'about-panel-inactive'
+                  }`}
+                >
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
+                  <div className="flex flex-col h-full justify-between gap-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2 opacity-95">
+                        <ClubIcon name="Heart" className="w-4 h-4 text-white/70" />
+                        <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
+                          Mission & Purpose
+                        </span>
+                      </div>
+                      <h3 className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
+                        activeAboutNode === 1 ? 'text-carved-dark about-heading-glow' : 'text-carved-dark'
+                      }`}>
+                        Our Vision
+                      </h3>
+                      <p className="text-sm text-white/50 font-body font-semibold mb-6">What Drives Us Forward</p>
+                      <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium">
+                        We envision a campus where creativity knows no boundaries, where a scientist can paint,
+                        a dancer can code, and a writer can score goals. NSS Clubs exist to blur the lines between
+                        disciplines and build bridges between passions.
+                      </p>
+                      <p className="font-body text-slate-300/80 text-sm sm:text-base leading-relaxed font-medium mt-4">
+                        Our mission is simple yet powerful: to nurture well-rounded individuals who lead with empathy,
+                        create with purpose, and serve with dedication. Every event we host, every project we launch,
+                        is a step toward a future where student potential is limitless and every voice matters.
+                      </p>
+                    </div>
+                    <div className="border-t border-white/10 pt-5 mt-auto">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Clubs</div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">6</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Events/Year</div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">50+</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Impact</div>
+                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">1000+</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Panel 2: The Legacy (President's Message + Stats from Sanity) ── */}
+              <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center py-16">
+                <div
+                  ref={aboutCardRef}
+                  data-node="2"
+                  className={`about-panel metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden ${
+                    activeAboutNode === 2 ? 'about-panel-active' : 'about-panel-inactive'
+                  }`}
+                >
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
+                  <div className="flex flex-col h-full justify-between gap-6">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2 opacity-95">
+                        <ClubIcon name="Shield" className="w-4 h-4 text-white/70" />
+                        <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
+                          Leadership & Vision
+                        </span>
+                      </div>
+                      <h3 className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight ${
+                        activeAboutNode === 2 ? 'text-carved-dark about-heading-glow' : 'text-carved-dark'
+                      }`}>
+                        The Legacy
+                      </h3>
+                      <p className="text-sm text-white/50 font-body font-semibold mb-6">Building Tomorrow&apos;s Leaders</p>
+
+                      {/* President's Message & Photo */}
+                      <div className="flex flex-col sm:flex-row gap-6 items-start">
+                        {data?.presidentPhoto && (
+                          <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 shadow-sm bg-white/10">
+                            <Image
+                              src={urlFor(data.presidentPhoto).width(120).height(120).url()}
+                              alt="President Photo"
+                              width={120}
+                              height={120}
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                        )}
+                        <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium italic whitespace-pre-wrap">
+                          &ldquo;{data?.presidentMessage}&rdquo;
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Legacy Stats Grid */}
+                    {data?.legacyStats && data.legacyStats.length > 0 && (
+                      <div className="border-t border-white/10 pt-6 mt-auto">
+                        <div className="grid grid-cols-3 gap-4 text-center sm:text-left">
+                          {data.legacyStats.map((stat) => (
+                            <div key={stat._key}>
+                              <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                                {stat.label}
+                              </div>
+                              <div className="text-xl sm:text-2xl font-black font-display text-white mt-0.5">
+                                {stat.value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ═══ SINGLE FLOATING ATOM ═══ */}
       <div
         ref={floatingRef}
@@ -1125,6 +1512,8 @@ export default function HomeScrollExperience() {
               progressRef={atomProgressRef}
               rotationOffsetRef={rotationOffsetRef}
               nucleusSeparationRef={nucleusSeparationRef}
+              aboutProgressRef={aboutProgressRef}
+              activeAboutNodeRef={activeAboutNodeRef}
               onElectronClick={handleElectronClick}
             />
           </div>
@@ -1132,13 +1521,14 @@ export default function HomeScrollExperience() {
       </div>
 
       {/* ═══ PROJECTOR BEAM EFFECT ═══ */}
-      {projectorCoords && cardRevealVisible && (() => {
+      {projectorCoords && (cardRevealVisible || phaseRef.current === "about") && (() => {
         const activeClubData = CLUBS_DETAILS.find((c) => c.slug === selectedClub);
-        const connectorColor = activeClubData ? activeClubData.color : "#D4A373";
+        const connectorColor = activeClubData ? activeClubData.color : "#023B8E";
+        const isAboutProjector = phaseRef.current === "about";
         return (
           <svg
             className="fixed top-0 left-0 w-full h-full pointer-events-none z-40 transition-opacity duration-700 ease-out animate-flicker-in"
-            style={{ opacity: cardRevealVisible ? 1 : 0 }}
+            style={{ opacity: (cardRevealVisible || isAboutProjector) ? 1 : 0 }}
           >
             <defs>
               <linearGradient id="projector-beam-grad" x1="0%" y1="0%" x2="100%" y2="0%">
