@@ -1250,7 +1250,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid lg:grid-cols-2 gap-0 lg:gap-16">
             <div className="hidden lg:flex sticky top-16 h-[calc(100svh-4rem)] items-center justify-center px-6">
-              <div className="relative flex flex-col items-center w-full max-w-md h-full py-20">
+              <div     ref={desktopAboutAnchorRef}  className="relative flex flex-col items-center w-full max-w-md h-full py-20">
                 <div className="relative z-10 flex flex-col justify-between h-full w-full py-10">
                   {["Our Origin", "Our Vision", "The Legacy"].map(
                     (label, idx) => (
