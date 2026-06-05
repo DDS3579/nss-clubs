@@ -250,9 +250,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.fill();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       CONSTELLATION: Star Node & Lines
-    ════════════════════════════════════════════════════════════ */
     function drawConstellationNode(
       x: number,
       y: number,
@@ -263,7 +260,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       const activeIdx = activeAboutNodeRef?.current ?? -1;
       const isActive = activeIdx === nodeIdx && morphProgress > 0.7;
 
-      // 1. Deep ambient glow
       ctx!.save();
       const glowR = isActive ? 55 : 35;
       const glow = ctx!.createRadialGradient(x, y, 0, x, y, glowR);
@@ -279,7 +275,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.fill();
       ctx!.restore();
 
-      // 2. Star Core (Brilliant Gold/White)
       ctx!.save();
       ctx!.shadowColor = "#D4A373";
       ctx!.shadowBlur = isActive ? 15 : 8;
@@ -301,7 +296,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.fill();
       ctx!.restore();
 
-      // 3. Active Cross-flare (Lens flare effect)
       if (isActive) {
         ctx!.save();
         ctx!.globalAlpha = 0.7 + Math.sin(elapsed * 0.08) * 0.3;
@@ -334,7 +328,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.shadowColor = "#D4A373";
       ctx!.shadowBlur = 6 * lineAlpha;
 
-      // Lines from Nucleus to Nodes
       coords.forEach((pos, idx) => {
         ctx!.beginPath();
         ctx!.moveTo(CX, CY);
@@ -349,7 +342,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
         ctx!.stroke();
       });
 
-      // Outer constellation polygon
       ctx!.beginPath();
       ctx!.moveTo(coords[0].x, coords[0].y);
       ctx!.lineTo(coords[1].x, coords[1].y);
@@ -399,9 +391,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.restore();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       FRAME LOOP
-    ════════════════════════════════════════════════════════════ */
     function frame() {
       if (!ctx || !canvas || !container) return;
       const p = clamp01(progressRef?.current ?? 0);
@@ -440,7 +429,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
 
       if (sep > 0.001) ctx.restore();
 
-      // Nucleus stays visible and gains a glow as the constellation forms!
       if (sep < 0.99) {
         ctx.save();
         if (abP > 0.2) {
@@ -452,7 +440,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
         ctx.restore();
       }
 
-      // Pre-calculate coordinates for lines so they render cleanly BEHIND the nodes
       const preCalcCoords: { x: number; y: number }[] = [];
       if (abP > 0.05) {
         orbits.forEach((o, orbitIdx) => {
