@@ -5,6 +5,8 @@ interface HeroAtomProps {
   progressRef?: React.MutableRefObject<number>;
   rotationOffsetRef?: React.MutableRefObject<number>;
   nucleusSeparationRef?: React.MutableRefObject<number>;
+  aboutProgressRef?: React.MutableRefObject<number>;
+  activeAboutNodeRef?: React.MutableRefObject<number>;
   className?: string;
   onElectronClick?: (slug: string) => void;
   onElectronHover?: (slug: string | null) => void;
@@ -46,6 +48,12 @@ const CLUB_MAPPING = [
   { orbitIdx: 2, electronIdx: 1, slug: "social", name: "Social Club" },
 ];
 
+export const TIMELINE_NODES = [
+  { label: "Our Origin", targetY: CY - 180 },
+  { label: "Our Vision", targetY: CY },
+  { label: "The Legacy", targetY: CY + 180 },
+];
+
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
@@ -66,6 +74,8 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
   progressRef,
   rotationOffsetRef,
   nucleusSeparationRef,
+  aboutProgressRef,
+  activeAboutNodeRef,
   className,
   onElectronClick,
   onElectronHover,
@@ -240,6 +250,158 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.fill();
     }
 
+    /* ═══════════════════════════════════════════════════════════
+       CONSTELLATION: Star Node & Lines
+    ════════════════════════════════════════════════════════════ */
+    function drawConstellationNode(
+      x: number,
+      y: number,
+      nodeIdx: number,
+      morphProgress: number,
+    ) {
+      const r = lerp(14, 7, morphProgress);
+      const activeIdx = activeAboutNodeRef?.current ?? -1;
+      const isActive = activeIdx === nodeIdx && morphProgress > 0.7;
+
+      // 1. Deep ambient glow
+      ctx!.save();
+      const glowR = isActive ? 55 : 35;
+      const glow = ctx!.createRadialGradient(x, y, 0, x, y, glowR);
+      glow.addColorStop(
+        0,
+        isActive ? "rgba(212, 163, 115, 0.6)" : "rgba(212, 163, 115, 0.25)",
+      );
+      glow.addColorStop(0.5, "rgba(212, 163, 115, 0.08)");
+      glow.addColorStop(1, "rgba(212, 163, 115, 0)");
+      ctx!.fillStyle = glow;
+      ctx!.beginPath();
+      ctx!.arc(x, y, glowR, 0, 2 * Math.PI);
+      ctx!.fill();
+      ctx!.restore();
+
+      // 2. Star Core (Brilliant Gold/White)
+      ctx!.save();
+      ctx!.shadowColor = "#D4A373";
+      ctx!.shadowBlur = isActive ? 15 : 8;
+      ctx!.beginPath();
+      ctx!.arc(x, y, r, 0, 2 * Math.PI);
+      const coreGrad = ctx!.createRadialGradient(
+        x - r * 0.3,
+        y - r * 0.3,
+        0,
+        x,
+        y,
+        r,
+      );
+      coreGrad.addColorStop(0, "#ffffff");
+      coreGrad.addColorStop(0.4, "#fff8c0");
+      coreGrad.addColorStop(0.8, "#D4A373");
+      coreGrad.addColorStop(1, "#8a5e00");
+      ctx!.fillStyle = coreGrad;
+      ctx!.fill();
+      ctx!.restore();
+
+      // 3. Active Cross-flare (Lens flare effect)
+      if (isActive) {
+        ctx!.save();
+        ctx!.globalAlpha = 0.7 + Math.sin(elapsed * 0.08) * 0.3;
+        ctx!.strokeStyle = "#fff8c0";
+        ctx!.lineWidth = 1.5;
+        ctx!.shadowColor = "#D4A373";
+        ctx!.shadowBlur = 12;
+
+        ctx!.beginPath();
+        ctx!.moveTo(x, y - 24);
+        ctx!.lineTo(x, y + 24);
+        ctx!.stroke();
+        ctx!.beginPath();
+        ctx!.moveTo(x - 24, y);
+        ctx!.lineTo(x + 24, y);
+        ctx!.stroke();
+        ctx!.restore();
+      }
+    }
+
+    function drawConstellationLines(
+      coords: { x: number; y: number }[],
+      abP: number,
+    ) {
+      if (abP < 0.15 || coords.length < 3) return;
+      const lineAlpha = easeInOut(clamp01((abP - 0.15) / 0.6));
+      const activeIdx = activeAboutNodeRef?.current ?? -1;
+
+      ctx!.save();
+      ctx!.shadowColor = "#D4A373";
+      ctx!.shadowBlur = 6 * lineAlpha;
+
+      // Lines from Nucleus to Nodes
+      coords.forEach((pos, idx) => {
+        ctx!.beginPath();
+        ctx!.moveTo(CX, CY);
+        ctx!.lineTo(pos.x, pos.y);
+        if (idx === activeIdx) {
+          ctx!.strokeStyle = `rgba(255, 248, 192, ${lineAlpha})`;
+          ctx!.lineWidth = 2;
+        } else {
+          ctx!.strokeStyle = `rgba(212, 163, 115, ${lineAlpha * 0.7})`;
+          ctx!.lineWidth = 1.2;
+        }
+        ctx!.stroke();
+      });
+
+      // Outer constellation polygon
+      ctx!.beginPath();
+      ctx!.moveTo(coords[0].x, coords[0].y);
+      ctx!.lineTo(coords[1].x, coords[1].y);
+      ctx!.lineTo(coords[2].x, coords[2].y);
+      ctx!.closePath();
+      ctx!.strokeStyle = `rgba(212, 163, 115, ${lineAlpha * 0.35})`;
+      ctx!.lineWidth = 1;
+      ctx!.setLineDash([4, 4]);
+      ctx!.stroke();
+      ctx!.setLineDash([]);
+
+      ctx!.restore();
+    }
+
+    function drawNodeLabel(
+      nodeIdx: number,
+      x: number,
+      y: number,
+      alpha: number,
+    ) {
+      const node = TIMELINE_NODES[nodeIdx];
+      const activeIdx = activeAboutNodeRef?.current ?? -1;
+      const isActive = activeIdx === nodeIdx;
+
+      ctx!.save();
+      ctx!.globalAlpha = alpha;
+      ctx!.font = `600 13px 'Space Grotesk', sans-serif`;
+      ctx!.fillStyle = isActive ? "#D4A373" : "rgba(2, 59, 142, 0.65)";
+      ctx!.textAlign = "left";
+      ctx!.textBaseline = "middle";
+
+      const labelX = x + 35;
+      ctx!.shadowColor = "rgba(212, 163, 115, 0.3)";
+      ctx!.shadowBlur = isActive ? 8 : 0;
+      ctx!.fillText(node.label, labelX, y);
+
+      if (isActive) {
+        const tw = ctx!.measureText(node.label).width;
+        ctx!.beginPath();
+        ctx!.moveTo(labelX, y + 12);
+        ctx!.lineTo(labelX + tw, y + 12);
+        ctx!.strokeStyle = "#D4A373";
+        ctx!.lineWidth = 1.5;
+        ctx!.shadowBlur = 4;
+        ctx!.stroke();
+      }
+      ctx!.restore();
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       FRAME LOOP
+    ════════════════════════════════════════════════════════════ */
     function frame() {
       if (!ctx || !canvas || !container) return;
       const p = clamp01(progressRef?.current ?? 0);
@@ -261,6 +423,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
 
       const orbitShiftX = sep * -700;
       const orbitFade = 1 - sep;
+      const abP = clamp01(aboutProgressRef?.current ?? 0);
 
       if (sep > 0.001) {
         ctx.save();
@@ -268,16 +431,49 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
         ctx.translate(orbitShiftX, 0);
       }
 
-      orbits.forEach((o) => drawOrbit(o.rx, o.ry, o.angleDeg, orbitFade));
+      const orbitAlphaAbout = 1 - easeInOut(clamp01((abP - 0.05) / 0.35));
+      if (orbitAlphaAbout > 0.01) {
+        orbits.forEach((o) =>
+          drawOrbit(o.rx, o.ry, o.angleDeg, orbitFade * orbitAlphaAbout),
+        );
+      }
 
-      if (sep > 0.001) {
+      if (sep > 0.001) ctx.restore();
+
+      // Nucleus stays visible and gains a glow as the constellation forms!
+      if (sep < 0.99) {
+        ctx.save();
+        if (abP > 0.2) {
+          const nucGlowAlpha = easeInOut(clamp01((abP - 0.2) / 0.5));
+          ctx.shadowColor = "#D4A373";
+          ctx.shadowBlur = 20 * nucGlowAlpha;
+        }
+        drawNucleus();
         ctx.restore();
       }
 
-      ctx.save();
-      ctx.globalAlpha = 1;
-      drawNucleus();
-      ctx.restore();
+      // Pre-calculate coordinates for lines so they render cleanly BEHIND the nodes
+      const preCalcCoords: { x: number; y: number }[] = [];
+      if (abP > 0.05) {
+        orbits.forEach((o, orbitIdx) => {
+          const movingTheta = o.offsets[0] + elapsed * o.speed;
+          let theta = movingTheta;
+          if (p > 0.001 && abP < 0.1) {
+            theta = movingTheta + shortestAngle(movingTheta, 0) * settle;
+          }
+          const pos = getPos(o.rx, o.ry, o.angleDeg, theta);
+          const targetX = CX;
+          const targetY = TIMELINE_NODES[orbitIdx].targetY;
+          const easeAb = easeInOut(abP);
+          preCalcCoords.push({
+            x: lerp(pos.x, targetX, easeAb),
+            y: lerp(pos.y, targetY, easeAb),
+          });
+        });
+        if (preCalcCoords.length === 3) {
+          drawConstellationLines(preCalcCoords, abP);
+        }
+      }
 
       const newCoords: { x: number; y: number; slug: string; name: string }[] =
         [];
@@ -293,37 +489,86 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
           const movingTheta = off + elapsed * o.speed;
           let theta = movingTheta;
 
-          if (p > 0.001) {
+          if (p > 0.001 && abP < 0.1) {
             const target = idx === 0 ? 0 : Math.PI;
             theta = movingTheta + shortestAngle(movingTheta, target) * settle;
           }
 
           const pos = getPos(o.rx, o.ry, o.angleDeg, theta);
-          const drawX = pos.x;
-          const drawY = pos.y;
+          let drawX = pos.x;
+          let drawY = pos.y;
+
+          if (abP > 0.05) {
+            const targetX = CX;
+            const targetY = TIMELINE_NODES[orbitIdx].targetY;
+            const easeAb = easeInOut(abP);
+            drawX = lerp(pos.x, targetX, easeAb);
+            drawY = lerp(pos.y, targetY, easeAb);
+
+            if (idx === 1) {
+              const fadeProg = easeInOut(clamp01((abP - 0.15) / 0.4));
+              if (fadeProg < 0.99) {
+                ctx.save();
+                ctx.globalAlpha =
+                  (sep > 0.001 ? orbitFade : 1) * (1 - fadeProg);
+                drawElectron(drawX, drawY);
+                ctx.restore();
+              }
+            } else {
+              const nodeProg = easeInOut(clamp01((abP - 0.3) / 0.5));
+              if (nodeProg < 0.01) {
+                const map = CLUB_MAPPING.find(
+                  (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
+                );
+                const isHovered = map && map.slug === hoveredSlugRef.current;
+                if (isHovered && sep < 0.01) {
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.arc(
+                    drawX,
+                    drawY,
+                    22 + Math.sin(elapsed * 0.15) * 3,
+                    0,
+                    2 * Math.PI,
+                  );
+                  ctx.fillStyle = "rgba(2, 59, 142, 0.2)";
+                  ctx.fill();
+                  ctx.restore();
+                }
+                drawElectron(drawX, drawY);
+              } else {
+                drawConstellationNode(drawX, drawY, orbitIdx, nodeProg);
+                const labelAlpha = clamp01((abP - 0.6) / 0.4);
+                if (labelAlpha > 0.01) {
+                  drawNodeLabel(orbitIdx, drawX, drawY, labelAlpha);
+                }
+              }
+            }
+          } else {
+            const map = CLUB_MAPPING.find(
+              (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
+            );
+            const isHovered = map && map.slug === hoveredSlugRef.current;
+            if (isHovered && sep < 0.01) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(
+                drawX,
+                drawY,
+                22 + Math.sin(elapsed * 0.15) * 3,
+                0,
+                2 * Math.PI,
+              );
+              ctx.fillStyle = "rgba(2, 59, 142, 0.2)";
+              ctx.fill();
+              ctx.restore();
+            }
+            drawElectron(drawX, drawY);
+          }
 
           const map = CLUB_MAPPING.find(
             (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
           );
-          const isHovered = map && map.slug === hoveredSlugRef.current;
-
-          if (isHovered && sep < 0.01) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(
-              drawX,
-              drawY,
-              22 + Math.sin(elapsed * 0.15) * 3,
-              0,
-              2 * Math.PI,
-            );
-            ctx.fillStyle = "rgba(2, 59, 142, 0.2)";
-            ctx.fill();
-            ctx.restore();
-          }
-
-          drawElectron(drawX, drawY);
-
           if (map) {
             const visualX = sep > 0.001 ? drawX + orbitShiftX : drawX;
             newCoords.push({
@@ -488,6 +733,8 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     progressRef,
     rotationOffsetRef,
     nucleusSeparationRef,
+    aboutProgressRef,
+    activeAboutNodeRef,
     onElectronClick,
     onElectronHover,
   ]);
