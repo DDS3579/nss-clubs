@@ -3,13 +3,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Hero from "./Hero";
-import HeroAtom from "./HeroAtom";
+import HeroAtom, { TIMELINE_NODES } from "./HeroAtom";
 import { urlFor } from "@/sanity/lib/image";
 import type { HomepageData } from "@/sanity/lib/types";
 
 /* ─── constants ─── */
 const HEADER_H = 64;
-const TRANSITION_MS = 1600;
+const TRANSITION_MS_DEFAULT = 1600;
 const TRANSITION_MS_ABOUT = 2000;
 const CANVAS_INTRINSIC = 640;
 
@@ -335,46 +335,12 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     y3: number;
   } | null>(null);
 
-  // 🎥 VIDEO TRANSITION STATE & REFS
-  const [videoPhase, setVideoPhase] = useState<"none" | "v1" | "v2">("none");
-  const video1Ref = useRef<HTMLVideoElement>(null);
-  const video2Ref = useRef<HTMLVideoElement>(null);
-
-  /* ── 🎥 Video Playback Controller ── */
-  useEffect(() => {
-    if (videoPhase === "v1") {
-      if (video1Ref.current) {
-        video1Ref.current.currentTime = 0;
-        video1Ref.current.play().catch(() => {});
-      }
-      if (video2Ref.current) {
-        video2Ref.current.pause();
-      }
-    } else if (videoPhase === "v2") {
-      if (video1Ref.current) video1Ref.current.pause();
-      if (video2Ref.current) {
-        video2Ref.current.currentTime = 0;
-        video2Ref.current.play().catch(() => {});
-      }
-    } else {
-      if (video1Ref.current) video1Ref.current.pause();
-      if (video2Ref.current) video2Ref.current.pause();
-    }
-  }, [videoPhase]);
-
   /* ── Trigger a section-snap transition ── */
   const startTransition = useCallback(
     (targetPhase: "hero" | "clubs" | "about") => {
       if (phaseRef.current === "animating") return;
       if (phaseRef.current === "zooming" || phaseRef.current === "zoomed")
         return;
-
-      // 🎥 TRIGGER VIDEO PHASE
-      if (targetPhase === "about") {
-        setVideoPhase("v1");
-      } else {
-        setVideoPhase("none");
-      }
       let scrollTarget = 0;
       if (targetPhase === "hero") {
         scrollTarget = 0;
@@ -516,13 +482,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const anchorRect = aboutAnchor.getBoundingClientRect();
         const anchorCx = anchorRect.left + anchorRect.width / 2;
         const anchorCy = anchorRect.top + anchorRect.height / 2;
-
-        // Updated to originate from the center of the canvas anchor since DNA nodes are removed
+        const scale = anchorRect.width / CANVAS_INTRINSIC;
+        const halfC = CANVAS_INTRINSIC / 2;
+        const nodeIdx = activeAboutNodeRef.current;
+        const nodeCanvasY = TIMELINE_NODES[nodeIdx]?.targetY ?? halfC;
         const x1 = anchorCx;
-        const y1 = anchorCy;
-
+        const y1 = anchorCy + (nodeCanvasY - halfC) * scale;
         const activeCard = document.querySelector(
-          `.about-panel[data-node="${activeAboutNodeRef.current}"]`,
+          `.about-panel[data-node="${nodeIdx}"]`,
         );
         if (activeCard) {
           const cardRect = activeCard.getBoundingClientRect();
@@ -591,7 +558,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           aboutProgressRef.current = 1;
           prevShowTextRef.current = true;
           setClubsTextVisible(true);
-          setVideoPhase("v2");
         } else if (
           clubsSection &&
           window.scrollY >=
@@ -616,15 +582,12 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const anim = animRef.current;
         const elapsed = now - anim.startTime;
 
-        // 🎯 DYNAMIC DURATION: 2s for About transitions, 1.6s for Hero/Clubs
         const isAboutTransition =
           anim.targetPhase === "about" ||
-          (anim.targetPhase === "clubs" && anim.scrollStart > anim.scrollEnd); // Coming FROM about
-
+          (anim.targetPhase === "clubs" && anim.scrollStart > anim.scrollEnd);
         const duration = isAboutTransition
           ? TRANSITION_MS_ABOUT
-          : TRANSITION_MS;
-
+          : TRANSITION_MS_DEFAULT;
         const rawT = clamp01(elapsed / duration);
         const easedT = easeInOutQuart(rawT);
 
@@ -1019,15 +982,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             .about-panel-inactive { opacity: 0.08; transform: translateY(20px) scale(0.97); transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
             @keyframes about-heading-glow { 0%, 100% { text-shadow: 0 0 20px rgba(120, 180, 255, 0.2); } 50% { text-shadow: 0 0 35px rgba(120, 180, 255, 0.35); } }
             .about-heading-glow { animation: about-heading-glow 3s ease-in-out infinite; }
-            @keyframes spine-pulse { 0%, 100% { opacity: 0.3; transform: scaleY(1); } 50% { opacity: 0.6; transform: scaleY(1.05); } }
-            @keyframes node-glow { 0%, 100% { box-shadow: 0 0 15px rgba(212, 163, 115, 0.3), 0 0 30px rgba(212, 163, 115, 0.1); } 50% { box-shadow: 0 0 25px rgba(212, 163, 115, 0.6), 0 0 50px rgba(212, 163, 115, 0.2); } }
-            @keyframes draw-line { to { stroke-dashoffset: 0; } }
-            .kinetic-spine-node { transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-            .kinetic-spine-node.active { transform: scale(1.15); }
-            .kinetic-spine-node.active .node-core { background: linear-gradient(135deg, #fff8c0 0%, #D4A373 50%, #b07d10 100%); box-shadow: 0 0 20px rgba(212, 163, 115, 0.6), 0 0 40px rgba(212, 163, 115, 0.3); border-color: #fff8c0; }
-            .kinetic-spine-node.active .node-label { color: #D4A373; font-weight: 700; transform: translateX(8px); }
-            .connector-line { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; opacity: 0; }
-            .connector-line.active { stroke-dashoffset: 0; opacity: 1; }
           `,
         }}
       />
@@ -1249,43 +1203,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       <section id="about" className="relative bg-white overflow-hidden">
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid lg:grid-cols-2 gap-0 lg:gap-16">
+            {/* ── LEFT COLUMN: Sticky Anchor for Canvas Constellation ── */}
             <div className="hidden lg:flex sticky top-16 h-[calc(100svh-4rem)] items-center justify-center px-6">
-              <div     ref={desktopAboutAnchorRef}  className="relative flex flex-col items-center w-full max-w-md h-full py-20">
-                <div className="relative z-10 flex flex-col justify-between h-full w-full py-10">
-                  {["Our Origin", "Our Vision", "The Legacy"].map(
-                    (label, idx) => (
-                      <div
-                        key={label}
-                        className={`kinetic-spine-node flex items-center gap-4 ${activeAboutNode === idx ? "active" : ""}`}
-                      >
-                        <div className="node-core relative w-5 h-5 rounded-full border-2 border-slate-300 bg-white transition-all duration-500" />
-                        <span className="node-label text-sm font-display font-semibold text-slate-400 tracking-wide transition-all duration-500">
-                          {label}
-                        </span>
-                        <svg className="absolute left-6 top-2.5 w-40 h-4 pointer-events-none overflow-visible">
-                          <line
-                            x1="0"
-                            y1="0"
-                            x2="150"
-                            y2="0"
-                            stroke="#D4A373"
-                            strokeWidth="2"
-                            className={`connector-line ${activeAboutNode === idx ? "active" : ""}`}
-                          />
-                          <circle
-                            cx="150"
-                            cy="0"
-                            r="3"
-                            fill="#D4A373"
-                            className={`transition-opacity duration-500 ${activeAboutNode === idx ? "opacity-100" : "opacity-0"}`}
-                          />
-                        </svg>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </div>
+              <div
+                ref={desktopAboutAnchorRef}
+                className="relative flex aspect-square w-[min(78vw,25rem)] items-center justify-center sm:w-[30rem] lg:w-[34rem]"
+              />
             </div>
+
             <div className="flex flex-col px-6 sm:px-8 lg:px-4">
               <div
                 data-node="0"
@@ -1490,7 +1415,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         </div>
       </section>
 
-      {/* ═══ SINGLE FLOATING ATOM + VIDEO TRANSFORM ═══ */}
       <div
         ref={floatingRef}
         className="fixed top-0 left-0 z-50 pointer-events-none"
@@ -1510,52 +1434,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             willChange: "transform",
           }}
         >
-          {/* 1. The Canvas Atom (Fades out when video starts) */}
-          <div
-            className="pointer-events-auto"
-            style={{
-              opacity: videoPhase === "none" ? 1 : 0,
-              transition: "opacity 0.4s ease-in-out",
-            }}
-          >
+          <div className="pointer-events-auto">
             <HeroAtom
               progressRef={atomProgressRef}
               rotationOffsetRef={rotationOffsetRef}
               nucleusSeparationRef={nucleusSeparationRef}
+              aboutProgressRef={aboutProgressRef}
+              activeAboutNodeRef={activeAboutNodeRef}
               onElectronClick={handleElectronClick}
-            />
-          </div>
-
-          {/* 2. The Video Overlay (Fades in to replace the atom) */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              opacity: videoPhase !== "none" ? 1 : 0,
-              transition: "opacity 0.4s ease-in-out",
-            }}
-          >
-            {/* Transformation Video (Plays once during scroll + excess time) */}
-            <video
-              ref={video1Ref}
-              src="/videos/about/1.mp4"
-              className="w-full h-full object-cover absolute inset-0"
-              style={{ opacity: videoPhase === "v1" ? 1 : 0 }}
-              muted
-              playsInline
-              preload="auto"
-              onEnded={() => setVideoPhase("v2")}
-            />
-
-            {/* Looping DNA Video (Takes over seamlessly when Video 1 ends) */}
-            <video
-              ref={video2Ref}
-              src="/videos/about/2.mp4"
-              className="w-full h-full object-cover absolute inset-0"
-              style={{ opacity: videoPhase === "v2" ? 1 : 0 }}
-              muted
-              playsInline
-              loop
-              preload="auto"
             />
           </div>
         </div>
