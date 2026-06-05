@@ -485,8 +485,9 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const scale = anchorRect.width / CANVAS_INTRINSIC;
         const halfC = CANVAS_INTRINSIC / 2;
         const nodeIdx = activeAboutNodeRef.current;
+        const nodeCanvasX = TIMELINE_NODES[nodeIdx]?.targetX ?? halfC;
         const nodeCanvasY = TIMELINE_NODES[nodeIdx]?.targetY ?? halfC;
-        const x1 = anchorCx;
+        const x1 = anchorCx + (nodeCanvasX - halfC) * scale;
         const y1 = anchorCy + (nodeCanvasY - halfC) * scale;
         const activeCard = document.querySelector(
           `.about-panel[data-node="${nodeIdx}"]`,
@@ -980,7 +981,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             .projector-edge-line { animation: edge-glow 2s ease-in-out infinite; }
             .about-panel-active { opacity: 1; transform: translateY(0) scale(1); transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
             .about-panel-inactive { opacity: 0.08; transform: translateY(20px) scale(0.97); transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
-            @keyframes about-heading-glow { 0%, 100% { text-shadow: 0 0 20px rgba(120, 180, 255, 0.2); } 50% { text-shadow: 0 0 35px rgba(120, 180, 255, 0.35); } }
+            @keyframes about-heading-glow { 0%, 100% { text-shadow: 0 0 18px rgba(212, 163, 115, 0.34), 0 0 28px rgba(2, 59, 142, 0.22); } 50% { text-shadow: 0 0 26px rgba(212, 163, 115, 0.58), 0 0 42px rgba(2, 59, 142, 0.32); } }
             .about-heading-glow { animation: about-heading-glow 3s ease-in-out infinite; }
           `,
         }}
@@ -1200,32 +1201,41 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         </div>
       </section>
 
-      <section id="about" className="relative bg-white overflow-hidden">
-        <div className="mx-auto w-full max-w-7xl">
-          <div className="grid lg:grid-cols-2 gap-0 lg:gap-16">
+      <section
+        id="about"
+        className="relative overflow-hidden bg-white"
+      >
+        <div className="mx-auto w-full max-w-[92rem] px-0 lg:px-8">
+          <div className="lg:hidden flex min-h-[54svh] items-center justify-center px-6 pt-10">
+            <div
+              ref={mobileAboutAnchorRef}
+              className="relative flex aspect-square w-[min(88vw,28rem)] items-center justify-center"
+            />
+          </div>
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1.12fr)_minmax(28rem,0.88fr)] lg:gap-10 xl:gap-14">
             {/* ── LEFT COLUMN: Sticky Anchor for Canvas Constellation ── */}
-            <div className="hidden lg:flex sticky top-16 h-[calc(100svh-4rem)] items-center justify-center px-6">
+            <div className="hidden lg:flex sticky top-16 h-[calc(100svh-4rem)] items-center justify-center px-0">
               <div
                 ref={desktopAboutAnchorRef}
-                className="relative flex aspect-square w-[min(78vw,25rem)] items-center justify-center sm:w-[30rem] lg:w-[34rem]"
+                className="relative flex aspect-square w-[min(50vw,42rem)] items-center justify-center"
               />
             </div>
 
-            <div className="flex flex-col px-6 sm:px-8 lg:px-4">
+            <div className="flex flex-col px-6 sm:px-8 lg:px-0 lg:pr-4 xl:pr-8">
               <div
                 data-node="0"
                 className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
               >
                 <div
-                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 0 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
+                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 0 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
                 >
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
                   <div className="flex flex-col h-full justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-2 mb-2 opacity-95">
                         <ClubIcon
                           name="BookOpen"
-                          className="w-4 h-4 text-white/70"
+                          className="w-4 h-4 text-accent"
                         />
                         <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
                           History & Heritage
@@ -1282,15 +1292,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
               >
                 <div
-                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 1 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
+                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 1 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
                 >
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
                   <div className="flex flex-col h-full justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-2 mb-2 opacity-95">
                         <ClubIcon
                           name="Heart"
-                          className="w-4 h-4 text-white/70"
+                          className="w-4 h-4 text-accent"
                         />
                         <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
                           Mission & Purpose
@@ -1347,15 +1357,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
               >
                 <div
-                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-xl min-h-[420px] overflow-hidden transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 2 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
+                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 2 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
                 >
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-white/20" />
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
                   <div className="flex flex-col h-full justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-2 mb-2 opacity-95">
                         <ClubIcon
                           name="Shield"
-                          className="w-4 h-4 text-white/70"
+                          className="w-4 h-4 text-accent"
                         />
                         <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
                           Leadership & Vision
@@ -1453,10 +1463,12 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           const activeClubData = CLUBS_DETAILS.find(
             (c) => c.slug === selectedClub,
           );
-          const connectorColor = activeClubData
-            ? activeClubData.color
-            : "#023B8E";
           const isAboutProjector = phaseRef.current === "about";
+          const connectorColor = isAboutProjector
+            ? "#D4A373"
+            : activeClubData
+              ? activeClubData.color
+              : "#023B8E";
           return (
             <svg
               className="fixed top-0 left-0 w-full h-full pointer-events-none z-40 transition-opacity duration-700 ease-out animate-flicker-in"
@@ -1487,21 +1499,36 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                   />
                 </linearGradient>
               </defs>
-              <polygon
-                points={`${projectorCoords.x1},${projectorCoords.y1} ${projectorCoords.x2},${projectorCoords.y2} ${projectorCoords.x3},${projectorCoords.y3}`}
-                fill="url(#projector-beam-grad)"
-                className="projector-beam"
-              />
-              <line
-                x1={projectorCoords.x2}
-                y1={projectorCoords.y2}
-                x2={projectorCoords.x3}
-                y2={projectorCoords.y3}
-                stroke={connectorColor}
-                strokeWidth="2"
-                className="projector-edge-line"
-                opacity="0.85"
-              />
+              {isAboutProjector ? (
+                <line
+                  x1={projectorCoords.x1}
+                  y1={projectorCoords.y1}
+                  x2={projectorCoords.x2}
+                  y2={(projectorCoords.y2 + projectorCoords.y3) / 2}
+                  stroke={connectorColor}
+                  strokeWidth="1.2"
+                  className="projector-edge-line"
+                  opacity="0.55"
+                />
+              ) : (
+                <>
+                  <polygon
+                    points={`${projectorCoords.x1},${projectorCoords.y1} ${projectorCoords.x2},${projectorCoords.y2} ${projectorCoords.x3},${projectorCoords.y3}`}
+                    fill="url(#projector-beam-grad)"
+                    className="projector-beam"
+                  />
+                  <line
+                    x1={projectorCoords.x2}
+                    y1={projectorCoords.y2}
+                    x2={projectorCoords.x3}
+                    y2={projectorCoords.y3}
+                    stroke={connectorColor}
+                    strokeWidth="2"
+                    className="projector-edge-line"
+                    opacity="0.85"
+                  />
+                </>
+              )}
               <circle
                 cx={projectorCoords.x1}
                 cy={projectorCoords.y1}
