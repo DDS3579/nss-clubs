@@ -10,6 +10,7 @@ import type { HomepageData } from "@/sanity/lib/types";
 /* ─── constants ─── */
 const HEADER_H = 64;
 const TRANSITION_MS = 1600;
+const TRANSITION_MS_ABOUT = 2000;
 const CANVAS_INTRINSIC = 640;
 
 const CLUBS_DETAILS = [
@@ -334,12 +335,46 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     y3: number;
   } | null>(null);
 
+  // 🎥 VIDEO TRANSITION STATE & REFS
+  const [videoPhase, setVideoPhase] = useState<"none" | "v1" | "v2">("none");
+  const video1Ref = useRef<HTMLVideoElement>(null);
+  const video2Ref = useRef<HTMLVideoElement>(null);
+
+  /* ── 🎥 Video Playback Controller ── */
+  useEffect(() => {
+    if (videoPhase === "v1") {
+      if (video1Ref.current) {
+        video1Ref.current.currentTime = 0;
+        video1Ref.current.play().catch(() => {});
+      }
+      if (video2Ref.current) {
+        video2Ref.current.pause();
+      }
+    } else if (videoPhase === "v2") {
+      if (video1Ref.current) video1Ref.current.pause();
+      if (video2Ref.current) {
+        video2Ref.current.currentTime = 0;
+        video2Ref.current.play().catch(() => {});
+      }
+    } else {
+      if (video1Ref.current) video1Ref.current.pause();
+      if (video2Ref.current) video2Ref.current.pause();
+    }
+  }, [videoPhase]);
+
   /* ── Trigger a section-snap transition ── */
   const startTransition = useCallback(
     (targetPhase: "hero" | "clubs" | "about") => {
       if (phaseRef.current === "animating") return;
       if (phaseRef.current === "zooming" || phaseRef.current === "zoomed")
         return;
+
+      // 🎥 TRIGGER VIDEO PHASE
+      if (targetPhase === "about") {
+        setVideoPhase("v1");
+      } else {
+        setVideoPhase("none");
+      }
       let scrollTarget = 0;
       if (targetPhase === "hero") {
         scrollTarget = 0;
@@ -556,6 +591,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           aboutProgressRef.current = 1;
           prevShowTextRef.current = true;
           setClubsTextVisible(true);
+          setVideoPhase("v2");
         } else if (
           clubsSection &&
           window.scrollY >=
@@ -579,7 +615,17 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       if (phaseRef.current === "animating" && animRef.current) {
         const anim = animRef.current;
         const elapsed = now - anim.startTime;
-        const rawT = clamp01(elapsed / TRANSITION_MS);
+
+        // 🎯 DYNAMIC DURATION: 2s for About transitions, 1.6s for Hero/Clubs
+        const isAboutTransition =
+          anim.targetPhase === "about" ||
+          (anim.targetPhase === "clubs" && anim.scrollStart > anim.scrollEnd); // Coming FROM about
+
+        const duration = isAboutTransition
+          ? TRANSITION_MS_ABOUT
+          : TRANSITION_MS;
+
+        const rawT = clamp01(elapsed / duration);
         const easedT = easeInOutQuart(rawT);
 
         if (anim.targetPhase === "clubs") {
@@ -1444,6 +1490,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         </div>
       </section>
 
+      {/* ═══ SINGLE FLOATING ATOM + VIDEO TRANSFORM ═══ */}
       <div
         ref={floatingRef}
         className="fixed top-0 left-0 z-50 pointer-events-none"
@@ -1463,12 +1510,52 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             willChange: "transform",
           }}
         >
-          <div className="pointer-events-auto">
+          {/* 1. The Canvas Atom (Fades out when video starts) */}
+          <div
+            className="pointer-events-auto"
+            style={{
+              opacity: videoPhase === "none" ? 1 : 0,
+              transition: "opacity 0.4s ease-in-out",
+            }}
+          >
             <HeroAtom
               progressRef={atomProgressRef}
               rotationOffsetRef={rotationOffsetRef}
               nucleusSeparationRef={nucleusSeparationRef}
               onElectronClick={handleElectronClick}
+            />
+          </div>
+
+          {/* 2. The Video Overlay (Fades in to replace the atom) */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              opacity: videoPhase !== "none" ? 1 : 0,
+              transition: "opacity 0.4s ease-in-out",
+            }}
+          >
+            {/* Transformation Video (Plays once during scroll + excess time) */}
+            <video
+              ref={video1Ref}
+              src="/videos/about/1.mp4"
+              className="w-full h-full object-cover absolute inset-0"
+              style={{ opacity: videoPhase === "v1" ? 1 : 0 }}
+              muted
+              playsInline
+              preload="auto"
+              onEnded={() => setVideoPhase("v2")}
+            />
+
+            {/* Looping DNA Video (Takes over seamlessly when Video 1 ends) */}
+            <video
+              ref={video2Ref}
+              src="/videos/about/2.mp4"
+              className="w-full h-full object-cover absolute inset-0"
+              style={{ opacity: videoPhase === "v2" ? 1 : 0 }}
+              muted
+              playsInline
+              loop
+              preload="auto"
             />
           </div>
         </div>
