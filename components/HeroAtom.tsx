@@ -52,10 +52,11 @@ const CLUB_MAPPING = [
   { orbitIdx: 2, electronIdx: 1, slug: "social", name: "Social Club" },
 ];
 
+// Updated to point to the new vertical Solar System layout
 export const TIMELINE_NODES = [
-  { label: "Our Origin", targetX: CX - 130, targetY: CY - 168 },
-  { label: "Our Vision", targetX: CX + 142, targetY: CY - 42 },
-  { label: "The Legacy", targetX: CX - 84, targetY: CY + 168 },
+  { label: "Our Origin", targetX: 240, targetY: 120 }, // Points to Planet 2
+  { label: "Our Vision", targetX: 320, targetY: 120 }, // Points to the Sun (Centerpiece)
+  { label: "The Legacy", targetX: 400, targetY: 120 }, // Points to Planet 3
 ];
 
 export const MINOR_NODES = [
@@ -266,6 +267,133 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     }
 
     /* ═══════════════════════════════════════════════════════════
+       THE SUN (Morphed Nucleus)
+    ════════════════════════════════════════════════════════════ */
+    function drawSun(x: number, y: number, r: number, morphT: number) {
+      ctx!.save();
+
+      // Subtle pulsing effect
+      const pulse = 1 + Math.sin(elapsed * 0.05) * 0.03;
+      const drawR = r * pulse;
+
+      // Massive Solar Glow
+      ctx!.shadowColor = "#FF8C00";
+      ctx!.shadowBlur = 60 + morphT * 40;
+
+      // Sun Gradient
+      const sunGrad = ctx!.createRadialGradient(
+        x - drawR * 0.3,
+        y - drawR * 0.3,
+        0,
+        x,
+        y,
+        drawR,
+      );
+      sunGrad.addColorStop(0, "#FFF5E1");
+      sunGrad.addColorStop(0.3, "#FFD700");
+      sunGrad.addColorStop(0.7, "#FF8C00");
+      sunGrad.addColorStop(1, "#D35400");
+
+      ctx!.beginPath();
+      ctx!.arc(x, y, drawR, 0, 2 * Math.PI);
+      ctx!.fillStyle = sunGrad;
+      ctx!.fill();
+
+      // Solar Corona Spikes
+      if (morphT > 0.5) {
+        const spikeAlpha = (morphT - 0.5) * 2;
+        ctx!.save();
+        ctx!.translate(x, y);
+        ctx!.rotate(elapsed * 0.002);
+        for (let i = 0; i < 12; i++) {
+          ctx!.rotate(Math.PI / 6);
+          ctx!.beginPath();
+          ctx!.moveTo(0, -drawR * 0.9);
+          ctx!.lineTo(4, -drawR * 1.4);
+          ctx!.lineTo(-4, -drawR * 1.4);
+          ctx!.closePath();
+          ctx!.fillStyle = `rgba(255, 200, 50, ${spikeAlpha * 0.6})`;
+          ctx!.fill();
+        }
+        ctx!.restore();
+      }
+
+      // Specular Highlight
+      ctx!.shadowBlur = 0;
+      ctx!.beginPath();
+      ctx!.arc(x - drawR * 0.3, y - drawR * 0.3, drawR * 0.25, 0, 2 * Math.PI);
+      ctx!.fillStyle = "rgba(255,255,255,0.8)";
+      ctx!.fill();
+
+      ctx!.restore();
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       THE PLANETS (Morphed Electrons)
+    ════════════════════════════════════════════════════════════ */
+    function drawPlanet(
+      x: number,
+      y: number,
+      r: number,
+      color: string,
+      alpha: number,
+      hasRing: boolean = false,
+    ) {
+      ctx!.save();
+      ctx!.globalAlpha = alpha;
+
+      // Deep space shadow
+      ctx!.shadowColor = "rgba(0,0,0,0.6)";
+      ctx!.shadowBlur = 20;
+      ctx!.shadowOffsetY = 8;
+
+      // Base Planet Color
+      ctx!.beginPath();
+      ctx!.arc(x, y, r, 0, 2 * Math.PI);
+      ctx!.fillStyle = color;
+      ctx!.fill();
+
+      // 3D Spherical Shading
+      ctx!.shadowColor = "transparent";
+      const shade = ctx!.createRadialGradient(
+        x - r * 0.4,
+        y - r * 0.4,
+        0,
+        x,
+        y,
+        r,
+      );
+      shade.addColorStop(0, "rgba(255,255,255,0.35)");
+      shade.addColorStop(0.4, "rgba(255,255,255,0.05)");
+      shade.addColorStop(1, "rgba(0,0,0,0.65)");
+      ctx!.beginPath();
+      ctx!.arc(x, y, r, 0, 2 * Math.PI);
+      ctx!.fillStyle = shade;
+      ctx!.fill();
+
+      // Saturn-like Ring for Jupiter
+      if (hasRing) {
+        ctx!.save();
+        ctx!.translate(x, y);
+        ctx!.rotate(-Math.PI / 8);
+        ctx!.beginPath();
+        ctx!.ellipse(0, 0, r * 1.7, r * 0.35, 0, 0, 2 * Math.PI);
+        ctx!.strokeStyle = `rgba(232, 168, 124, ${alpha * 0.8})`;
+        ctx!.lineWidth = 3;
+        ctx!.stroke();
+
+        ctx!.beginPath();
+        ctx!.ellipse(0, 0, r * 1.4, r * 0.25, 0, 0, 2 * Math.PI);
+        ctx!.strokeStyle = `rgba(255, 220, 180, ${alpha * 0.5})`;
+        ctx!.lineWidth = 1.5;
+        ctx!.stroke();
+        ctx!.restore();
+      }
+
+      ctx!.restore();
+    }
+
+    /* ═══════════════════════════════════════════════════════════
        TWINKLING BACKGROUND STARS
     ════════════════════════════════════════════════════════════ */
     function drawBackgroundStars(alpha: number) {
@@ -290,7 +418,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.save();
       ctx!.strokeStyle = `rgba(255, 248, 192, ${alpha * 0.85})`;
       ctx!.lineWidth = 0.9;
-      
+
       // Draw a vertical and horizontal cross
       ctx!.beginPath();
       ctx!.moveTo(x, y - r);
@@ -526,7 +654,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.globalAlpha = alpha;
       ctx!.font = `700 15px 'Space Grotesk', sans-serif`;
       ctx!.fillStyle = isActive ? ACCENT_GOLD : "rgba(2, 59, 142, 0.78)";
-      
+
       const alignLeft = x < CX;
       ctx!.textAlign = alignLeft ? "left" : "right";
       ctx!.textBaseline = "middle";
@@ -588,8 +716,8 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
         ctx.translate(orbitShiftX, 0);
       }
 
-      // 1. Orbits elegantly fade out as constellation forms
-      const orbitAlphaAbout = 1 - easeInOutQuart(clamp01((abP - 0.05) / 0.4));
+      // 1. Orbits elegantly fade out as solar system forms
+      const orbitAlphaAbout = 1 - easeInOutQuart(clamp01((abP - 0.05) / 0.3));
       if (orbitAlphaAbout > 0.01) {
         orbits.forEach((o) =>
           drawOrbit(o.rx, o.ry, o.angleDeg, orbitFade * orbitAlphaAbout),
@@ -598,47 +726,18 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
 
       if (sep > 0.001) ctx.restore();
 
-      // 2. Nucleus stays, but gains a warm golden glow as it becomes the constellation center
-      drawNucleus(morphT);
+      // 2. Nucleus -> Sun Morphing (Horizontal Centerpiece)
+      if (morphT > 0.01) {
+        const sunX = lerp(CX, 320, morphT); // Stays centered horizontally
+        const sunY = lerp(CY, 120, morphT); // Moves to the top
+        const sunR = lerp(34, 55, morphT); // Enlarges slightly less to fit horizontally
+        drawSun(sunX, sunY, sunR, morphT);
+      } else {
+        drawNucleus(0);
+      }
 
       // 2b. Twinkling background stars
       drawBackgroundStars(morphT);
-
-      // Pre-calculate node positions for line drawing (so lines render BEHIND nodes)
-      const majorPositions: { x: number; y: number }[] = [];
-      const minorPositions: { x: number; y: number }[] = [];
-      if (morphT > 0.01) {
-        orbits.forEach((o, orbitIdx) => {
-          // Electron 0 (Major Node)
-          const movingTheta0 = o.offsets[0] + elapsed * o.speed;
-          let theta0 = movingTheta0;
-          if (p > 0.001 && abP < 0.15) {
-            theta0 = movingTheta0 + shortestAngle(movingTheta0, 0) * settle;
-          }
-          const pos0 = getPos(o.rx, o.ry, o.angleDeg, theta0);
-          const targetX0 = TIMELINE_NODES[orbitIdx].targetX ?? CX;
-          const targetY0 = TIMELINE_NODES[orbitIdx].targetY;
-          majorPositions.push({
-            x: lerp(pos0.x, targetX0, morphT),
-            y: lerp(pos0.y, targetY0, morphT),
-          });
-
-          // Electron 1 (Minor Node)
-          const movingTheta1 = o.offsets[1] + elapsed * o.speed;
-          let theta1 = movingTheta1;
-          if (p > 0.001 && abP < 0.15) {
-            theta1 = movingTheta1 + shortestAngle(movingTheta1, Math.PI) * settle;
-          }
-          const pos1 = getPos(o.rx, o.ry, o.angleDeg, theta1);
-          const targetX1 = MINOR_NODES[orbitIdx].targetX;
-          const targetY1 = MINOR_NODES[orbitIdx].targetY;
-          minorPositions.push({
-            x: lerp(pos1.x, targetX1, morphT),
-            y: lerp(pos1.y, targetY1, morphT),
-          });
-        });
-        drawConstellationLines(majorPositions, minorPositions, morphT);
-      }
 
       const newCoords: { x: number; y: number; slug: string; name: string }[] =
         [];
@@ -664,60 +763,38 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
           let drawX = pos.x;
           let drawY = pos.y;
 
+          // Map to Horizontal Planet Targets (Fanning out from the center Sun)
+          const planetIdx = orbitIdx * 2 + idx;
+          const planetTargets = [
+            { x: 80, y: 120, r: 20, color: "#E27D60", hasRing: false }, // Far Left
+            { x: 170, y: 120, r: 24, color: "#41B3A3", hasRing: false }, // Mid Left
+            { x: 240, y: 120, r: 28, color: "#8E44AD", hasRing: false }, // Inner Left (Origin)
+            { x: 400, y: 120, r: 22, color: "#C38D9E", hasRing: false }, // Inner Right (Legacy)
+            { x: 490, y: 120, r: 34, color: "#E8A87C", hasRing: true }, // Mid Right (Jupiter)
+            { x: 580, y: 120, r: 18, color: "#3498DB", hasRing: false }, // Far Right
+          ];
+          const target = planetTargets[planetIdx];
+
           if (morphT > 0.01) {
-            let targetX = CX;
-            let targetY = CY;
-            if (idx === 0) {
-              targetX = TIMELINE_NODES[orbitIdx].targetX ?? CX;
-              targetY = TIMELINE_NODES[orbitIdx].targetY;
-            } else {
-              targetX = MINOR_NODES[orbitIdx].targetX;
-              targetY = MINOR_NODES[orbitIdx].targetY;
+            // Morph into Solar System
+            drawX = lerp(pos.x, target.x, morphT);
+            drawY = lerp(pos.y, target.y, morphT);
+            const drawR = lerp(14, target.r, morphT);
+
+            // Crossfade: Electron fades out, Planet fades in
+            if (morphT < 0.5) {
+              drawElectron(drawX, drawY, 1 - morphT * 2);
             }
-            drawX = lerp(pos.x, targetX, morphT);
-            drawY = lerp(pos.y, targetY, morphT);
-
-            if (idx === 1) {
-              // SECOND ELECTRON: Morphs into minor star node
-              const nodeProg = easeInOutQuart(clamp01((morphT - 0.2) / 0.8));
-              if (morphT < 0.3) {
-                drawElectron(drawX, drawY);
-              } else {
-                drawMinorConstellationNode(drawX, drawY, orbitIdx, nodeProg);
-              }
-            } else {
-              // FIRST ELECTRON: Morphs into premium timeline star node
-              if (morphT < 0.3) {
-                // Still looks like an electron
-                const map = CLUB_MAPPING.find(
-                  (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
-                );
-                const isHovered = map && map.slug === hoveredSlugRef.current;
-                if (isHovered && sep < 0.01) {
-                  ctx.save();
-                  ctx.beginPath();
-                  ctx.arc(
-                    drawX,
-                    drawY,
-                    22 + Math.sin(elapsed * 0.15) * 3,
-                    0,
-                    2 * Math.PI,
-                  );
-                  ctx.fillStyle = "rgba(2, 59, 142, 0.2)";
-                  ctx.fill();
-                  ctx.restore();
-                }
-                drawElectron(drawX, drawY);
-              } else {
-                // Fully morphed into Major Node
-                const nodeProg = easeInOutQuart(clamp01((morphT - 0.3) / 0.5));
-                drawConstellationNode(drawX, drawY, orbitIdx, nodeProg);
-
-                const labelAlpha = clamp01((morphT - 0.6) / 0.4);
-                if (labelAlpha > 0.01) {
-                  drawNodeLabel(orbitIdx, drawX, drawY, labelAlpha);
-                }
-              }
+            if (morphT > 0.3) {
+              const planetAlpha = clamp01((morphT - 0.3) / 0.4);
+              drawPlanet(
+                drawX,
+                drawY,
+                drawR,
+                target.color,
+                planetAlpha,
+                target.hasRing,
+              );
             }
           } else {
             // Normal Atom Mode

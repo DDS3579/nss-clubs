@@ -341,24 +341,38 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       if (phaseRef.current === "animating") return;
       if (phaseRef.current === "zooming" || phaseRef.current === "zoomed")
         return;
+
       let scrollTarget = 0;
       if (targetPhase === "hero") {
         scrollTarget = 0;
       } else if (targetPhase === "clubs") {
         const clubsSection = document.getElementById("clubs");
-        if (clubsSection)
+        if (clubsSection) {
           scrollTarget =
             clubsSection.getBoundingClientRect().top +
             window.scrollY -
             HEADER_H;
+        }
       } else if (targetPhase === "about") {
         const aboutSection = document.getElementById("about");
-        if (aboutSection)
+        if (aboutSection) {
           scrollTarget =
             aboutSection.getBoundingClientRect().top +
             window.scrollY -
             HEADER_H;
+        } else {
+          // 🛡️ FALLBACK: If #about is missing, scroll down 80% of a viewport from clubs
+          const clubsSection = document.getElementById("clubs");
+          if (clubsSection) {
+            scrollTarget =
+              clubsSection.getBoundingClientRect().top +
+              window.scrollY +
+              window.innerHeight * 0.8 -
+              HEADER_H;
+          }
+        }
       }
+
       phaseRef.current = "animating";
       animRef.current = {
         targetPhase,
@@ -633,15 +647,18 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       } else {
         const clubsSection = document.getElementById("clubs");
         const aboutSection = document.getElementById("about");
-        if (clubsSection && aboutSection) {
-          const clubsScrollY =
-            clubsSection.getBoundingClientRect().top +
-            window.scrollY -
-            HEADER_H;
-          const aboutScrollY =
-            aboutSection.getBoundingClientRect().top +
-            window.scrollY -
-            HEADER_H;
+
+        if (clubsSection) {
+          const clubsRect = clubsSection.getBoundingClientRect();
+          const clubsScrollY = clubsRect.top + window.scrollY - HEADER_H;
+
+          // 🛡️ FALLBACK: If #about is missing, use a safe distance below clubs
+          const aboutScrollY = aboutSection
+            ? aboutSection.getBoundingClientRect().top +
+              window.scrollY -
+              HEADER_H
+            : clubsScrollY + window.innerHeight * 0.8;
+
           const sy = window.scrollY;
 
           if (sy < clubsScrollY) {
@@ -658,16 +675,22 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             phaseRef.current = "about";
             posT = 1;
             aboutT = 1;
-            const aRect = aboutSection.getBoundingClientRect();
-            const sectionScrolled = -(aRect.top - HEADER_H);
-            const scrollableH = aboutSection.offsetHeight - window.innerHeight;
-            const subProg = clamp01(sectionScrolled / Math.max(scrollableH, 1));
-            const nodeIdx = subProg < 0.33 ? 0 : subProg < 0.66 ? 1 : 2;
-            activeAboutNodeRef.current = nodeIdx;
-            if (nodeIdx !== prevActiveNodeRef.current) {
-              prevActiveNodeRef.current = nodeIdx;
-              setActiveAboutNode(nodeIdx);
-              updateProjectorCoords();
+
+            if (aboutSection) {
+              const aRect = aboutSection.getBoundingClientRect();
+              const sectionScrolled = -(aRect.top - HEADER_H);
+              const scrollableH =
+                aboutSection.offsetHeight - window.innerHeight;
+              const subProg = clamp01(
+                sectionScrolled / Math.max(scrollableH, 1),
+              );
+              const nodeIdx = subProg < 0.33 ? 0 : subProg < 0.66 ? 1 : 2;
+              activeAboutNodeRef.current = nodeIdx;
+              if (nodeIdx !== prevActiveNodeRef.current) {
+                prevActiveNodeRef.current = nodeIdx;
+                setActiveAboutNode(nodeIdx);
+                updateProjectorCoords();
+              }
             }
           }
         }
@@ -687,14 +710,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         cy = 0,
         size = 0;
       if (aboutProgressRef.current > 0.001 && aboutAnchor) {
-        const aboutRect = aboutAnchor.getBoundingClientRect();
+        // 🎯 Target: Top-center of viewport for horizontal solar system
+        const targetX = window.innerWidth / 2;
+        const targetY = HEADER_H + 60; // 60px below header for perfect top alignment
         const fromCx = clubsRect.left + clubsRect.width / 2;
         const fromCy = clubsRect.top + clubsRect.height / 2;
-        const toCx = aboutRect.left + aboutRect.width / 2;
-        const toCy = aboutRect.top + aboutRect.height / 2;
-        cx = lerp(fromCx, toCx, aboutProgressRef.current);
-        cy = lerp(fromCy, toCy, aboutProgressRef.current);
-        size = lerp(clubsRect.width, aboutRect.width, aboutProgressRef.current);
+
+        cx = lerp(fromCx, targetX, aboutProgressRef.current);
+        cy = lerp(fromCy, targetY, aboutProgressRef.current);
+        size = lerp(clubsRect.width, 640, aboutProgressRef.current); // Keep canvas at full 640px width
       } else {
         const fromCx = heroRect.left + heroRect.width / 2;
         const fromCy = heroRect.top + heroRect.height / 2;
@@ -1201,25 +1225,24 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         </div>
       </section>
 
-            <section
+      <section
         id="about"
         className="relative overflow-hidden bg-slate-50 py-20 lg:py-32"
       >
         <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-8">
-
           {/* ── Section Header ── */}
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl md:text-5xl font-black text-primary tracking-tight">
               Our Journey & <span className="text-accent">Impact</span>
             </h2>
             <p className="mt-4 font-body text-slate-500 max-w-2xl mx-auto text-lg">
-              From a small spark to a blazing constellation of student leadership.
+              From a small spark to a blazing constellation of student
+              leadership.
             </p>
           </div>
 
           {/* ── Main Grid: 3 Columns on Desktop ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
-
             {/* ── COLUMN 1: Our Origin ── */}
             <div data-node="0" className="about-panel flex">
               <div
@@ -1233,7 +1256,10 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 <div className="flex flex-col flex-grow gap-6">
                   <div>
                     <div className="flex items-center gap-2 mb-3 opacity-95">
-                      <ClubIcon name="BookOpen" className="w-4 h-4 text-accent" />
+                      <ClubIcon
+                        name="BookOpen"
+                        className="w-4 h-4 text-accent"
+                      />
                       <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
                         History & Heritage
                       </span>
@@ -1258,16 +1284,28 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                   <div className="border-t border-white/10 pt-5 mt-auto">
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Founded</div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">2018</div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Founded
+                        </div>
+                        <div className="text-xl font-black font-display text-white mt-0.5">
+                          2018
+                        </div>
                       </div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Founders</div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">12</div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Founders
+                        </div>
+                        <div className="text-xl font-black font-display text-white mt-0.5">
+                          12
+                        </div>
                       </div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">First Event</div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">2019</div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          First Event
+                        </div>
+                        <div className="text-xl font-black font-display text-white mt-0.5">
+                          2019
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1276,7 +1314,10 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             </div>
 
             {/* ── COLUMN 2: President's Message (Centerpiece) ── */}
-            <div data-node="1" className="about-panel flex md:col-span-2 lg:col-span-1">
+            <div
+              data-node="1"
+              className="about-panel flex md:col-span-2 lg:col-span-1"
+            >
               <div
                 className={`metallic-card relative flex flex-col h-full w-full pt-8 pb-6 px-6 rounded-3xl bg-white border-2 border-accent shadow-xl transition-all duration-500 ease-out ${
                   activeAboutNode === 1
@@ -1288,7 +1329,10 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 <div className="flex flex-col flex-grow gap-6">
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <ClubIcon name="Shield" className="w-4 h-4 text-primary" />
+                      <ClubIcon
+                        name="Shield"
+                        className="w-4 h-4 text-primary"
+                      />
                       <span className="text-[11px] font-bold tracking-[0.2em] text-primary/60 uppercase font-body">
                         Leadership & Vision
                       </span>
@@ -1298,7 +1342,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                         activeAboutNode === 1 ? "about-heading-glow" : ""
                       }`}
                     >
-                      A Message from <br/> the President
+                      A Message from <br /> the President
                     </h3>
                   </div>
 
@@ -1306,7 +1350,12 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                     {data?.presidentPhoto && (
                       <div className="relative w-28 h-28 flex-shrink-0 overflow-hidden rounded-full border-4 border-accent/30 shadow-lg bg-slate-100">
                         <Image
-                          src={urlFor(data.presidentPhoto).width(256).height(256).fit("crop").auto("format").url()}
+                          src={urlFor(data.presidentPhoto)
+                            .width(256)
+                            .height(256)
+                            .fit("crop")
+                            .auto("format")
+                            .url()}
                           alt="President Photo"
                           width={128}
                           height={128}
@@ -1315,12 +1364,17 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                       </div>
                     )}
                     <p className="font-body text-slate-700 text-base leading-relaxed font-medium italic text-center max-w-sm">
-                      &ldquo;{data?.presidentMessage || 'Empowering the next generation of leaders through passion, service, and innovation.'}&rdquo;
+                      &ldquo;
+                      {data?.presidentMessage ||
+                        "Empowering the next generation of leaders through passion, service, and innovation."}
+                      &rdquo;
                     </p>
                   </div>
 
                   <div className="mt-auto text-center pt-4 border-t border-slate-200">
-                     <p className="text-xs font-bold uppercase tracking-widest text-primary/80">NSS President</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-primary/80">
+                      NSS President
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1355,52 +1409,62 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                       What Drives Us Forward
                     </p>
                     <p className="font-body text-slate-200/90 text-sm leading-relaxed font-medium">
-                      We envision a campus where creativity knows no
-                      boundaries, where a scientist can paint, a dancer can
-                      code, and a writer can score goals. NSS Clubs exist to
-                      blur the lines between disciplines.
+                      We envision a campus where creativity knows no boundaries,
+                      where a scientist can paint, a dancer can code, and a
+                      writer can score goals. NSS Clubs exist to blur the lines
+                      between disciplines.
                     </p>
                   </div>
                   <div className="border-t border-white/10 pt-5 mt-auto">
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Clubs</div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">6</div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Clubs
+                        </div>
+                        <div className="text-xl font-black font-display text-white mt-0.5">
+                          6
+                        </div>
                       </div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Events/Year</div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">50+</div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Events/Year
+                        </div>
+                        <div className="text-xl font-black font-display text-white mt-0.5">
+                          50+
+                        </div>
                       </div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">Impact</div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">1000+</div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Impact
+                        </div>
+                        <div className="text-xl font-black font-display text-white mt-0.5">
+                          1000+
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* ── BOTTOM ROW: The Legacy (Stats Banner) ── */}
           {data?.legacyStats && data.legacyStats.length > 0 && (
             <div className="mt-12 metallic-card metallic-card-standard relative w-full pt-10 pb-10 px-8 rounded-3xl bg-primary border border-accent/20 shadow-lg">
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                  {data.legacyStats.map((stat) => (
-                    <div key={stat._key} className="flex flex-col items-center">
-                      <div className="text-3xl md:text-4xl font-black font-display text-accent mt-0.5">
-                        {stat.value}
-                      </div>
-                      <div className="text-[11px] uppercase tracking-widest text-white/60 font-body font-semibold mt-2">
-                        {stat.label}
-                      </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                {data.legacyStats.map((stat) => (
+                  <div key={stat._key} className="flex flex-col items-center">
+                    <div className="text-3xl md:text-4xl font-black font-display text-accent mt-0.5">
+                      {stat.value}
                     </div>
-                  ))}
-               </div>
+                    <div className="text-[11px] uppercase tracking-widest text-white/60 font-body font-semibold mt-2">
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-
         </div>
       </section>
 
