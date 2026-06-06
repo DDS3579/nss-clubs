@@ -1203,224 +1203,217 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       <section
         id="about"
-        className="relative overflow-hidden bg-white"
+        className="relative overflow-hidden bg-white py-16"
       >
-        <div className="mx-auto w-full max-w-[92rem] px-0 lg:px-8">
-          <div className="lg:hidden flex min-h-[54svh] items-center justify-center px-6 pt-10">
+        <div className="mx-auto w-full max-w-4xl px-6 sm:px-8 lg:px-8">
+          
+          {/* Clean, single-column flex layout for the cards */}
+          <div className="flex flex-col gap-24">
+            
+            {/* ── CARD 1: Our Origin ── */}
             <div
-              ref={mobileAboutAnchorRef}
-              className="relative flex aspect-square w-[min(88vw,28rem)] items-center justify-center"
-            />
-          </div>
-          <div className="grid gap-0 lg:grid-cols-[minmax(0,1.12fr)_minmax(28rem,0.88fr)] lg:gap-10 xl:gap-14">
-            {/* ── LEFT COLUMN: Sticky Anchor for Canvas Constellation ── */}
-            <div className="hidden lg:flex sticky top-16 h-[calc(100svh-4rem)] items-center justify-center px-0">
+              data-node="0"
+              className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
+            >
               <div
-                ref={desktopAboutAnchorRef}
-                className="relative flex aspect-square w-[min(50vw,42rem)] items-center justify-center"
-              />
+                className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 0 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
+              >
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
+                <div className="flex flex-col h-full justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 opacity-95">
+                      <ClubIcon
+                        name="BookOpen"
+                        className="w-4 h-4 text-accent"
+                      />
+                      <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
+                        History & Heritage
+                      </span>
+                    </div>
+                    <h3
+                      className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 0 ? "about-heading-glow" : ""}`}
+                    >
+                      Our Origin
+                    </h3>
+                    <p className="text-sm text-white/50 font-body font-semibold mb-6">
+                      Where It All Began
+                    </p>
+                    <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium">
+                      Founded in the heart of our institution, NSS Clubs began
+                      as a small group of passionate students with a shared
+                      dream — to create a vibrant community where every talent
+                      finds its stage.
+                    </p>
+                  </div>
+                  <div className="border-t border-white/10 pt-5 mt-auto">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Founded
+                        </div>
+                        <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                          2018
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Founders
+                        </div>
+                        <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                          12
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          First Event
+                        </div>
+                        <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                          2019
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col px-6 sm:px-8 lg:px-0 lg:pr-4 xl:pr-8">
+            {/* ── CARD 2: Our Vision ── */}
+            <div
+              data-node="1"
+              className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
+            >
               <div
-                data-node="0"
-                className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
+                className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 1 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
               >
-                <div
-                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 0 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
-                >
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
-                  <div className="flex flex-col h-full justify-between gap-6">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2 opacity-95">
-                        <ClubIcon
-                          name="BookOpen"
-                          className="w-4 h-4 text-accent"
-                        />
-                        <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
-                          History & Heritage
-                        </span>
-                      </div>
-                      <h3
-                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 0 ? "about-heading-glow" : ""}`}
-                      >
-                        Our Origin
-                      </h3>
-                      <p className="text-sm text-white/50 font-body font-semibold mb-6">
-                        Where It All Began
-                      </p>
-                      <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium">
-                        Founded in the heart of our institution, NSS Clubs began
-                        as a small group of passionate students with a shared
-                        dream — to create a vibrant community where every talent
-                        finds its stage.
-                      </p>
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
+                <div className="flex flex-col h-full justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 opacity-95">
+                      <ClubIcon
+                        name="Heart"
+                        className="w-4 h-4 text-accent"
+                      />
+                      <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
+                        Mission & Purpose
+                      </span>
                     </div>
-                    <div className="border-t border-white/10 pt-5 mt-auto">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                            Founded
-                          </div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
-                            2018
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                            Founders
-                          </div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
-                            12
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                            First Event
-                          </div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
-                            2019
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <h3
+                      className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 1 ? "about-heading-glow" : ""}`}
+                    >
+                      Our Vision
+                    </h3>
+                    <p className="text-sm text-white/50 font-body font-semibold mb-6">
+                      What Drives Us Forward
+                    </p>
+                    <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium">
+                      We envision a campus where creativity knows no
+                      boundaries, where a scientist can paint, a dancer can
+                      code, and a writer can score goals. NSS Clubs exist to
+                      blur the lines between disciplines.
+                    </p>
                   </div>
-                </div>
-              </div>
-              <div
-                data-node="1"
-                className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
-              >
-                <div
-                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 1 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
-                >
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
-                  <div className="flex flex-col h-full justify-between gap-6">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2 opacity-95">
-                        <ClubIcon
-                          name="Heart"
-                          className="w-4 h-4 text-accent"
-                        />
-                        <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
-                          Mission & Purpose
-                        </span>
+                  <div className="border-t border-white/10 pt-5 mt-auto">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Clubs
+                        </div>
+                        <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                          6
+                        </div>
                       </div>
-                      <h3
-                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 1 ? "about-heading-glow" : ""}`}
-                      >
-                        Our Vision
-                      </h3>
-                      <p className="text-sm text-white/50 font-body font-semibold mb-6">
-                        What Drives Us Forward
-                      </p>
-                      <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium">
-                        We envision a campus where creativity knows no
-                        boundaries, where a scientist can paint, a dancer can
-                        code, and a writer can score goals. NSS Clubs exist to
-                        blur the lines between disciplines.
-                      </p>
-                    </div>
-                    <div className="border-t border-white/10 pt-5 mt-auto">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                            Clubs
-                          </div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
-                            6
-                          </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Events/Year
                         </div>
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                            Events/Year
-                          </div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
-                            50+
-                          </div>
+                        <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                          50+
                         </div>
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                            Impact
-                          </div>
-                          <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
-                            1000+
-                          </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                          Impact
+                        </div>
+                        <div className="text-sm sm:text-base font-black font-display text-white mt-0.5">
+                          1000+
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                data-node="2"
-                className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
-              >
-                <div
-                  className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 2 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
-                >
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
-                  <div className="flex flex-col h-full justify-between gap-6">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2 opacity-95">
-                        <ClubIcon
-                          name="Shield"
-                          className="w-4 h-4 text-accent"
-                        />
-                        <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
-                          Leadership & Vision
-                        </span>
-                      </div>
-                      <h3
-                        className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 2 ? "about-heading-glow" : ""}`}
-                      >
-                        The Legacy
-                      </h3>
-                      <p className="text-sm text-white/50 font-body font-semibold mb-6">
-                        Building Tomorrow's Leaders
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-6 items-start">
-                        {data?.presidentPhoto && (
-                          <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 shadow-sm bg-white/10">
-                            <Image
-                              src={urlFor(data.presidentPhoto)
-                                .width(256)
-                                .height(256)
-                                .fit("crop")
-                                .auto("format")
-                                .url()}
-                              alt="President Photo"
-                              width={128}
-                              height={128}
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                        )}
-                        <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium italic whitespace-pre-wrap">
-                          &ldquo;{data?.presidentMessage}&rdquo;
-                        </p>
-                      </div>
-                    </div>
-                    {data?.legacyStats && data.legacyStats.length > 0 && (
-                      <div className="border-t border-white/10 pt-6 mt-auto">
-                        <div className="grid grid-cols-3 gap-4 text-center sm:text-left">
-                          {data.legacyStats.map((stat) => (
-                            <div key={stat._key}>
-                              <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                                {stat.label}
-                              </div>
-                              <div className="text-xl sm:text-2xl font-black font-display text-white mt-0.5">
-                                {stat.value}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* ── CARD 3: The Legacy ── */}
+            <div
+              data-node="2"
+              className="about-panel min-h-[calc(100svh-4rem)] flex items-center justify-center py-16"
+            >
+              <div
+                className={`metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-8 px-8 sm:px-10 rounded-3xl bg-primary w-full max-w-[34rem] min-h-[440px] overflow-hidden border border-accent/20 shadow-[0_24px_60px_-28px_rgba(2,59,142,0.9)] transition-all duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${activeAboutNode === 2 ? "opacity-100 translate-y-0 scale-100" : "opacity-40 translate-y-8 scale-[0.98]"}`}
+              >
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80" />
+                <div className="flex flex-col h-full justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 opacity-95">
+                      <ClubIcon
+                        name="Shield"
+                        className="w-4 h-4 text-accent"
+                      />
+                      <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
+                        Leadership & Vision
+                      </span>
+                    </div>
+                    <h3
+                      className={`font-display text-3xl sm:text-4xl font-black mb-2 tracking-tight text-carved-dark ${activeAboutNode === 2 ? "about-heading-glow" : ""}`}
+                    >
+                      The Legacy
+                    </h3>
+                    <p className="text-sm text-white/50 font-body font-semibold mb-6">
+                      Building Tomorrow's Leaders
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-6 items-start">
+                      {data?.presidentPhoto && (
+                        <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 shadow-sm bg-white/10">
+                          <Image
+                            src={urlFor(data.presidentPhoto)
+                              .width(256)
+                              .height(256)
+                              .fit("crop")
+                              .auto("format")
+                              .url()}
+                            alt="President Photo"
+                            width={128}
+                            height={128}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                      )}
+                      <p className="font-body text-slate-200/90 text-sm sm:text-base leading-relaxed font-medium italic whitespace-pre-wrap">
+                        &ldquo;{data?.presidentMessage}&rdquo;
+                      </p>
+                    </div>
+                  </div>
+                  {data?.legacyStats && data.legacyStats.length > 0 && (
+                    <div className="border-t border-white/10 pt-6 mt-auto">
+                      <div className="grid grid-cols-3 gap-4 text-center sm:text-left">
+                        {data.legacyStats.map((stat) => (
+                          <div key={stat._key}>
+                            <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
+                              {stat.label}
+                            </div>
+                            <div className="text-xl sm:text-2xl font-black font-display text-white mt-0.5">
+                              {stat.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
