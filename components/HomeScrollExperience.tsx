@@ -299,8 +299,7 @@ interface ZoomAnimState {
 export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   /* ── refs ── */
   const clubsAnchorRef = useRef<HTMLDivElement>(null);
-  const desktopAboutAnchorRef = useRef<HTMLDivElement>(null);
-  const mobileAboutAnchorRef = useRef<HTMLDivElement>(null);
+  const aboutAnchorRef = useRef<HTMLDivElement>(null);
   const aboutCardRef = useRef<HTMLDivElement>(null);
   const floatingRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
@@ -475,9 +474,9 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     };
   }, [selectedClub]);
 
-  /* ── Holographic Projector Coordinate Updater ── */
+  /* ── Holographic Projector Coordinate Updater (Club zoom only) ── */
   const updateProjectorCoords = useCallback(() => {
-    if (selectedClub && cardWrapperRef.current) {
+    if (selectedClub && cardWrapperRef.current && phaseRef.current !== "about") {
       const cardRect = cardWrapperRef.current.getBoundingClientRect();
       const x1 = window.innerWidth * 0.18;
       const y1 = window.innerHeight * 0.5;
@@ -486,48 +485,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       const x3 = cardRect.left;
       const y3 = cardRect.bottom;
       setProjectorCoords({ x1, y1, x2, y2, x3, y3 });
-    } else if (phaseRef.current === "about") {
-      const isMobile =
-        typeof window !== "undefined" && window.innerWidth < 1024;
-      const aboutAnchor = isMobile
-        ? mobileAboutAnchorRef.current
-        : desktopAboutAnchorRef.current;
-      if (aboutAnchor) {
-        const anchorRect = aboutAnchor.getBoundingClientRect();
-        const anchorCx = anchorRect.left + anchorRect.width / 2;
-        const anchorCy = anchorRect.top + anchorRect.height / 2;
-        const scale = anchorRect.width / CANVAS_INTRINSIC;
-        const halfC = CANVAS_INTRINSIC / 2;
-        const nodeIdx = activeAboutNodeRef.current;
-        const nodeCanvasX = TIMELINE_NODES[nodeIdx]?.targetX ?? halfC;
-        const nodeCanvasY = TIMELINE_NODES[nodeIdx]?.targetY ?? halfC;
-        const x1 = anchorCx + (nodeCanvasX - halfC) * scale;
-        const y1 = anchorCy + (nodeCanvasY - halfC) * scale;
-        const activeCard = document.querySelector(
-          `.about-panel[data-node="${nodeIdx}"]`,
-        );
-        if (activeCard) {
-          const cardRect = activeCard.getBoundingClientRect();
-          setProjectorCoords({
-            x1,
-            y1,
-            x2: cardRect.left,
-            y2: cardRect.top,
-            x3: cardRect.left,
-            y3: cardRect.bottom,
-          });
-        } else {
-          setProjectorCoords(null);
-        }
-      }
     } else {
       setProjectorCoords(null);
     }
   }, [selectedClub]);
 
   useEffect(() => {
-    const active = cardRevealVisible || phaseRef.current === "about";
-    if (active) {
+    if (cardRevealVisible && phaseRef.current !== "about") {
       const timer = setTimeout(() => {
         updateProjectorCoords();
       }, 50);
@@ -700,25 +664,24 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       const heroRect = heroAnchor.getBoundingClientRect();
       const clubsRect = clubsAnchor.getBoundingClientRect();
-      const isMobile =
-        typeof window !== "undefined" && window.innerWidth < 1024;
-      const aboutAnchor = isMobile
-        ? mobileAboutAnchorRef.current
-        : desktopAboutAnchorRef.current;
+      const aboutAnchor = aboutAnchorRef.current;
 
       let cx = 0,
         cy = 0,
         size = 0;
       if (aboutProgressRef.current > 0.001 && aboutAnchor) {
-        // 🎯 Target: Top-center of viewport for horizontal solar system
-        const targetX = window.innerWidth / 2;
-        const targetY = HEADER_H + 60; // 60px below header for perfect top alignment
+        // Calculate target positions dynamically based on the bounding rect of the about anchor element
+        const anchorRect = aboutAnchor.getBoundingClientRect();
+        const targetX = anchorRect.left + anchorRect.width / 2;
+        const targetY = anchorRect.top + anchorRect.height / 2;
+        const targetSize = anchorRect.width;
+
         const fromCx = clubsRect.left + clubsRect.width / 2;
         const fromCy = clubsRect.top + clubsRect.height / 2;
 
         cx = lerp(fromCx, targetX, aboutProgressRef.current);
         cy = lerp(fromCy, targetY, aboutProgressRef.current);
-        size = lerp(clubsRect.width, 640, aboutProgressRef.current); // Keep canvas at full 640px width
+        size = lerp(clubsRect.width, targetSize, aboutProgressRef.current);
       } else {
         const fromCx = heroRect.left + heroRect.width / 2;
         const fromCy = heroRect.top + heroRect.height / 2;
@@ -1227,22 +1190,30 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       <section
         id="about"
-        className="relative overflow-hidden bg-slate-50 py-20 lg:py-32"
+        className="relative overflow-hidden bg-slate-50 py-24 lg:py-40"
       >
-        <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-10">
           {/* ── Section Header ── */}
-          <div className="text-center mb-16">
-            <h2 className="font-display text-4xl md:text-5xl font-black text-primary tracking-tight">
+          <div className="text-center mb-12 lg:mb-20">
+            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-black text-primary tracking-tight">
               Our Journey & <span className="text-accent">Impact</span>
             </h2>
-            <p className="mt-4 font-body text-slate-500 max-w-2xl mx-auto text-lg">
+            <p className="mt-5 font-body text-slate-500 max-w-2xl mx-auto text-lg leading-relaxed">
               From a small spark to a blazing constellation of student
               leadership.
             </p>
           </div>
 
+          {/* ── Solar System Anchor ── */}
+          <div className="relative w-full flex justify-center mb-20 lg:mb-28 mt-4">
+            <div
+              ref={aboutAnchorRef}
+              className="w-full max-w-[340px] lg:max-w-[660px] h-[140px] lg:h-[260px] pointer-events-none"
+            />
+          </div>
+
           {/* ── Main Grid: 3 Columns on Desktop ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-12 items-stretch">
             {/* ── COLUMN 1: Our Origin ── */}
             <div data-node="0" className="about-panel flex">
               <div
@@ -1450,7 +1421,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
           {/* ── BOTTOM ROW: The Legacy (Stats Banner) ── */}
           {data?.legacyStats && data.legacyStats.length > 0 && (
-            <div className="mt-12 metallic-card metallic-card-standard relative w-full pt-10 pb-10 px-8 rounded-3xl bg-primary border border-accent/20 shadow-lg">
+            <div className="mt-16 lg:mt-20 metallic-card metallic-card-standard relative w-full pt-10 pb-10 px-8 rounded-3xl bg-primary border border-accent/20 shadow-lg">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 {data.legacyStats.map((stat) => (
                   <div key={stat._key} className="flex flex-col items-center">
@@ -1500,22 +1471,21 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         </div>
       </div>
 
+      {/* Projector beam only during club zoom, NOT during about section */}
       {projectorCoords &&
-        (cardRevealVisible || phaseRef.current === "about") &&
+        cardRevealVisible &&
+        phaseRef.current !== "about" &&
         (() => {
           const activeClubData = CLUBS_DETAILS.find(
             (c) => c.slug === selectedClub,
           );
-          const isAboutProjector = phaseRef.current === "about";
-          const connectorColor = isAboutProjector
-            ? "#D4A373"
-            : activeClubData
-              ? activeClubData.color
-              : "#023B8E";
+          const connectorColor = activeClubData
+            ? activeClubData.color
+            : "#023B8E";
           return (
             <svg
               className="fixed top-0 left-0 w-full h-full pointer-events-none z-40 transition-opacity duration-700 ease-out animate-flicker-in"
-              style={{ opacity: cardRevealVisible || isAboutProjector ? 1 : 0 }}
+              style={{ opacity: cardRevealVisible ? 1 : 0 }}
             >
               <defs>
                 <linearGradient
@@ -1542,36 +1512,21 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                   />
                 </linearGradient>
               </defs>
-              {isAboutProjector ? (
-                <line
-                  x1={projectorCoords.x1}
-                  y1={projectorCoords.y1}
-                  x2={projectorCoords.x2}
-                  y2={(projectorCoords.y2 + projectorCoords.y3) / 2}
-                  stroke={connectorColor}
-                  strokeWidth="1.2"
-                  className="projector-edge-line"
-                  opacity="0.55"
-                />
-              ) : (
-                <>
-                  <polygon
-                    points={`${projectorCoords.x1},${projectorCoords.y1} ${projectorCoords.x2},${projectorCoords.y2} ${projectorCoords.x3},${projectorCoords.y3}`}
-                    fill="url(#projector-beam-grad)"
-                    className="projector-beam"
-                  />
-                  <line
-                    x1={projectorCoords.x2}
-                    y1={projectorCoords.y2}
-                    x2={projectorCoords.x3}
-                    y2={projectorCoords.y3}
-                    stroke={connectorColor}
-                    strokeWidth="2"
-                    className="projector-edge-line"
-                    opacity="0.85"
-                  />
-                </>
-              )}
+              <polygon
+                points={`${projectorCoords.x1},${projectorCoords.y1} ${projectorCoords.x2},${projectorCoords.y2} ${projectorCoords.x3},${projectorCoords.y3}`}
+                fill="url(#projector-beam-grad)"
+                className="projector-beam"
+              />
+              <line
+                x1={projectorCoords.x2}
+                y1={projectorCoords.y2}
+                x2={projectorCoords.x3}
+                y2={projectorCoords.y3}
+                stroke={connectorColor}
+                strokeWidth="2"
+                className="projector-edge-line"
+                opacity="0.85"
+              />
               <circle
                 cx={projectorCoords.x1}
                 cy={projectorCoords.y1}
