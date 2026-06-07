@@ -14,7 +14,7 @@ import type { FeaturedEvent } from "@/sanity/lib/types";
    Background dots are stardust that crystallizes between them.
    ════════════════════════════════════════════════════════════ */
 
-interface ConstellationDot {
+export interface ConstellationDot {
   id: number;
   cx: number; // viewBox x (0–1000)
   cy: number; // viewBox y (0–600)
@@ -27,35 +27,35 @@ interface ConstellationDot {
 
 // Dots distributed: top 30% (y 0–180), middle 40% (y 180–420), bottom 30% (y 420–600)
 // Center column (~330–670 x) is sparser; edges denser
-const DOTS: ConstellationDot[] = [
+export const DOTS: ConstellationDot[] = [
   // ── ANCHOR DOTS (4) — planet echoes near corners, r=2.8 ──
-  { id: 0,  cx: 80,  cy: 72,  r: 2.8, opacity: 0.32, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
-  { id: 1,  cx: 910, cy: 48,  r: 2.8, opacity: 0.32, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
-  { id: 2,  cx: 60,  cy: 528, r: 2.8, opacity: 0.32, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
-  { id: 3,  cx: 930, cy: 546, r: 2.8, opacity: 0.32, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
+  { id: 0,  cx: 60,  cy: 80,  r: 2.8, opacity: 0.55, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
+  { id: 1,  cx: 920, cy: 60,  r: 2.8, opacity: 0.55, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
+  { id: 2,  cx: 70,  cy: 550, r: 2.8, opacity: 0.55, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
+  { id: 3,  cx: 910, cy: 560, r: 2.8, opacity: 0.55, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
 
   // ── GOLD DOT (1) — sun echo, upper-right quadrant, r=2 ──
-  { id: 4,  cx: 780, cy: 108, r: 2.0, opacity: 0.4,  fill: "#c8903a", kind: "gold",   isMobileVisible: true },
+  { id: 4,  cx: 840, cy: 150, r: 2.0, opacity: 0.75, fill: "#c8903a", kind: "gold",   isMobileVisible: true },
 
   // ── BACKGROUND DOTS (13) — stardust, r=1.5 ──
   // Top band (y 0–180)
-  { id: 5,  cx: 220, cy: 36,  r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 6,  cx: 680, cy: 24,  r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 7,  cx: 140, cy: 144, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 8,  cx: 850, cy: 132, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 5,  cx: 200, cy: 120, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 6,  cx: 730, cy: 100, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 7,  cx: 120, cy: 190, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 8,  cx: 680, cy: 240, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
 
   // Middle band (y 180–420)
-  { id: 9,  cx: 40,  cy: 288, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 10, cx: 960, cy: 252, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 11, cx: 180, cy: 348, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 12, cx: 820, cy: 372, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 13, cx: 250, cy: 240, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 9,  cx: 50,  cy: 320, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 10, cx: 940, cy: 290, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 11, cx: 190, cy: 400, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 12, cx: 760, cy: 370, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 13, cx: 260, cy: 260, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
 
   // Bottom band (y 420–600)
-  { id: 14, cx: 120, cy: 456, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 15, cx: 880, cy: 468, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 16, cx: 300, cy: 552, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 17, cx: 720, cy: 510, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 14, cx: 110, cy: 460, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 15, cx: 880, cy: 440, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 16, cx: 240, cy: 520, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 17, cx: 700, cy: 510, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: false },
 ];
 
 /* ═══════════════════════════════════════════════════════════
@@ -70,17 +70,29 @@ interface ConstellationLine {
 }
 
 const LINES: ConstellationLine[] = [
-  { from: 0, to: 5,  isMobileVisible: true },   // top-left anchor → nearby star
-  { from: 5, to: 7,  isMobileVisible: true },   // left edge chain
-  { from: 7, to: 13, isMobileVisible: true },   // descend left
-  { from: 13, to: 9, isMobileVisible: true },   // across to far left
-  { from: 9, to: 2,  isMobileVisible: true },   // down to bottom-left anchor
-  { from: 1, to: 4,  isMobileVisible: true },   // top-right anchor → gold dot
-  { from: 4, to: 6,  isMobileVisible: false },  // gold → nearby top star
-  { from: 6, to: 1,  isMobileVisible: false },  // triangle top-right
-  { from: 12, to: 3, isMobileVisible: false },  // right mid → bottom-right anchor
-  { from: 11, to: 14, isMobileVisible: false }, // left mid → left bottom
-  { from: 15, to: 3, isMobileVisible: false },  // right bottom → anchor
+  // Left chain
+  { from: 0, to: 5,  isMobileVisible: true },
+  { from: 5, to: 7,  isMobileVisible: true },
+  { from: 7, to: 9,  isMobileVisible: true },
+  { from: 9, to: 13, isMobileVisible: true },
+  { from: 13, to: 11, isMobileVisible: false },
+  { from: 11, to: 14, isMobileVisible: false },
+  { from: 14, to: 16, isMobileVisible: false },
+  { from: 16, to: 2,  isMobileVisible: false },
+  // Left mobile connector (connecting 14 to 2 on mobile since 16 is not mobile visible)
+  { from: 14, to: 2,  isMobileVisible: true },
+
+  // Right chain
+  { from: 1, to: 6,  isMobileVisible: true },
+  { from: 6, to: 4,  isMobileVisible: true },
+  { from: 4, to: 8,  isMobileVisible: true },
+  { from: 8, to: 10, isMobileVisible: true },
+  { from: 10, to: 12, isMobileVisible: true },
+  { from: 12, to: 15, isMobileVisible: false },
+  { from: 15, to: 17, isMobileVisible: false },
+  { from: 17, to: 3,  isMobileVisible: false },
+  // Right mobile connector (connecting 12 to 3 on mobile since 15, 17 are not mobile visible)
+  { from: 12, to: 3,  isMobileVisible: true },
 ];
 
 // Pre-compute line lengths for stroke-dasharray
@@ -126,11 +138,16 @@ const LINE_START_MOBILE = 0.6; // 60% of 10 mobile dots = 6th, at 5×60ms = 0.3s
 
 interface EventsConstellationProps {
   events: FeaturedEvent[];
+  morphedDotIds?: number[];
 }
 
-export default function EventsConstellation({ events }: EventsConstellationProps) {
+export default function EventsConstellation({
+  events,
+  morphedDotIds = [],
+}: EventsConstellationProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const [hasAnimated, setHasAnimated] = useState(false);
+  const morphedDotSet = new Set(morphedDotIds);
 
   /* ── IntersectionObserver: trigger once at threshold 0.15 ── */
   useEffect(() => {
@@ -259,6 +276,11 @@ export default function EventsConstellation({ events }: EventsConstellationProps
           transform-box: fill-box;
           will-change: opacity, transform;
         }
+        #events .ec-dot-pre-visible {
+          opacity: var(--ec-target-op);
+          transform: scale(1);
+          animation: none !important;
+        }
 
         /* ── Triggered state: run entrance once ── */
         #events.ec-animated .ec-dot-bg {
@@ -276,8 +298,8 @@ export default function EventsConstellation({ events }: EventsConstellationProps
            stroke-dashoffset from full dash to 0
         ═══════════════════════════════════════ */
         @keyframes ec-line-draw {
-          from { stroke-dashoffset: var(--ec-dash-len); opacity: 0.08; }
-          to   { stroke-dashoffset: 0; opacity: 0.08; }
+          from { stroke-dashoffset: var(--ec-dash-len); opacity: 0.22; }
+          to   { stroke-dashoffset: 0; opacity: 0.22; }
         }
 
         #events .ec-line {
@@ -296,8 +318,8 @@ export default function EventsConstellation({ events }: EventsConstellationProps
 
           /* Lines quieter on mobile */
           @keyframes ec-line-draw-mobile {
-            from { stroke-dashoffset: var(--ec-dash-len); opacity: 0.05; }
-            to   { stroke-dashoffset: 0; opacity: 0.05; }
+            from { stroke-dashoffset: var(--ec-dash-len); opacity: 0.14; }
+            to   { stroke-dashoffset: 0; opacity: 0.14; }
           }
           #events.ec-animated .ec-line {
             animation-name: ec-line-draw-mobile;
@@ -515,10 +537,10 @@ export default function EventsConstellation({ events }: EventsConstellationProps
             - bg: quiet crystallization (stardust) */}
         {DOTS.map((dot, i) => {
           const desktopDelay = DOT_DELAYS[i];
-          const mobileDelay = DOT_MOBILE_DELAYS[i];
           const kindClass = dot.kind === "anchor" ? "ec-dot-anchor"
             : dot.kind === "gold" ? "ec-dot-gold"
             : "ec-dot-bg";
+          const isMorphed = morphedDotSet.has(dot.id);
 
           return (
             <circle
@@ -528,7 +550,7 @@ export default function EventsConstellation({ events }: EventsConstellationProps
               cy={dot.cy}
               r={dot.r}
               fill={dot.fill}
-              className={`ec-dot ${kindClass}${!dot.isMobileVisible ? " ec-desktop-only" : ""}`}
+              className={`ec-dot ${kindClass}${isMorphed ? " ec-dot-pre-visible" : ""}${!dot.isMobileVisible ? " ec-desktop-only" : ""}`}
               style={{
                 "--ec-target-op": dot.opacity,
                 animationDelay: `${desktopDelay}s`,
