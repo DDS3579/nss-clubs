@@ -8,6 +8,10 @@ import type { FeaturedEvent } from "@/sanity/lib/types";
 /* ═══════════════════════════════════════════════════════════
    CONSTELLATION DOT DEFINITIONS — 18 total, hardcoded
    14 background dots (r=1.5), 4 anchor dots (r=2.8), 1 gold dot (r=2)
+
+   The anchor dots are "planet echoes" — they hold the structure.
+   The gold dot is the "sun echo" — a single warm callback.
+   Background dots are stardust that crystallizes between them.
    ════════════════════════════════════════════════════════════ */
 
 interface ConstellationDot {
@@ -17,41 +21,41 @@ interface ConstellationDot {
   r: number;
   opacity: number;
   fill: string;
-  isAnchor: boolean;
+  kind: "anchor" | "gold" | "bg"; // for animation variants
   isMobileVisible: boolean;
 }
 
 // Dots distributed: top 30% (y 0–180), middle 40% (y 180–420), bottom 30% (y 420–600)
 // Center column (~330–670 x) is sparser; edges denser
 const DOTS: ConstellationDot[] = [
-  // ── ANCHOR DOTS (4) — near corners, r=2.8 ──
-  { id: 0,  cx: 80,  cy: 72,  r: 2.8, opacity: 0.32, fill: "#1a3378", isAnchor: true,  isMobileVisible: true },
-  { id: 1,  cx: 910, cy: 48,  r: 2.8, opacity: 0.32, fill: "#1a3378", isAnchor: true,  isMobileVisible: true },
-  { id: 2,  cx: 60,  cy: 528, r: 2.8, opacity: 0.32, fill: "#1a3378", isAnchor: true,  isMobileVisible: true },
-  { id: 3,  cx: 930, cy: 546, r: 2.8, opacity: 0.32, fill: "#1a3378", isAnchor: true,  isMobileVisible: true },
+  // ── ANCHOR DOTS (4) — planet echoes near corners, r=2.8 ──
+  { id: 0,  cx: 80,  cy: 72,  r: 2.8, opacity: 0.32, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
+  { id: 1,  cx: 910, cy: 48,  r: 2.8, opacity: 0.32, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
+  { id: 2,  cx: 60,  cy: 528, r: 2.8, opacity: 0.32, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
+  { id: 3,  cx: 930, cy: 546, r: 2.8, opacity: 0.32, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
 
-  // ── GOLD DOT (1) — upper-right quadrant, r=2 ──
-  { id: 4,  cx: 780, cy: 108, r: 2.0, opacity: 0.4,  fill: "#c8903a", isAnchor: false, isMobileVisible: true },
+  // ── GOLD DOT (1) — sun echo, upper-right quadrant, r=2 ──
+  { id: 4,  cx: 780, cy: 108, r: 2.0, opacity: 0.4,  fill: "#c8903a", kind: "gold",   isMobileVisible: true },
 
-  // ── BACKGROUND DOTS (13) — r=1.5, spread across section ──
+  // ── BACKGROUND DOTS (13) — stardust, r=1.5 ──
   // Top band (y 0–180)
-  { id: 5,  cx: 220, cy: 36,  r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: true },
-  { id: 6,  cx: 680, cy: 24,  r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: true },
-  { id: 7,  cx: 140, cy: 144, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: true },
-  { id: 8,  cx: 850, cy: 132, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: false },
+  { id: 5,  cx: 220, cy: 36,  r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 6,  cx: 680, cy: 24,  r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 7,  cx: 140, cy: 144, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 8,  cx: 850, cy: 132, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
 
   // Middle band (y 180–420)
-  { id: 9,  cx: 40,  cy: 288, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: true },
-  { id: 10, cx: 960, cy: 252, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: false },
-  { id: 11, cx: 180, cy: 348, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: false },
-  { id: 12, cx: 820, cy: 372, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: false },
-  { id: 13, cx: 250, cy: 240, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: true },
+  { id: 9,  cx: 40,  cy: 288, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
+  { id: 10, cx: 960, cy: 252, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 11, cx: 180, cy: 348, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 12, cx: 820, cy: 372, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 13, cx: 250, cy: 240, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: true },
 
   // Bottom band (y 420–600)
-  { id: 14, cx: 120, cy: 456, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: false },
-  { id: 15, cx: 880, cy: 468, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: false },
-  { id: 16, cx: 300, cy: 552, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: false },
-  { id: 17, cx: 720, cy: 510, r: 1.5, opacity: 0.18, fill: "#1a3378", isAnchor: false, isMobileVisible: false },
+  { id: 14, cx: 120, cy: 456, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 15, cx: 880, cy: 468, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 16, cx: 300, cy: 552, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  { id: 17, cx: 720, cy: 510, r: 1.5, opacity: 0.18, fill: "#1a3378", kind: "bg", isMobileVisible: false },
 ];
 
 /* ═══════════════════════════════════════════════════════════
@@ -85,6 +89,36 @@ const LINE_LENGTHS = LINES.map((line) => {
   const to = DOTS[line.to];
   return Math.sqrt((to.cx - from.cx) ** 2 + (to.cy - from.cy) ** 2);
 });
+
+/* ═══════════════════════════════════════════════════════════
+   DELAY COMPUTATION — Y-position-based for "exhale" cascade
+   Top dots (nearest the solar system above) emerge first,
+   cascading downward like planetary energy dispersing.
+   ════════════════════════════════════════════════════════════ */
+
+// Sort dot indices by Y position (ascending = top-first)
+const SORTED_INDICES = DOTS
+  .map((d, i) => ({ idx: i, cy: d.cy }))
+  .sort((a, b) => a.cy - b.cy)
+  .map(({ idx }) => idx);
+
+// Assign delays: each 120ms stagger, ordered by Y position
+const DOT_DELAYS: number[] = new Array(DOTS.length);
+SORTED_INDICES.forEach((dotIdx, sortedPos) => {
+  DOT_DELAYS[dotIdx] = sortedPos * 0.12; // 120ms stagger
+});
+
+// Mobile delays: only mobile-visible dots, 60ms stagger
+const MOBILE_VISIBLE_SORTED = SORTED_INDICES.filter(i => DOTS[i].isMobileVisible);
+const DOT_MOBILE_DELAYS: number[] = new Array(DOTS.length).fill(0);
+MOBILE_VISIBLE_SORTED.forEach((dotIdx, sortedPos) => {
+  DOT_MOBILE_DELAYS[dotIdx] = sortedPos * 0.06; // 60ms stagger
+});
+
+// Line delays: start after 60% of dots visible
+// Desktop: 60% of 18 = ~11 dots. 11th sorted dot starts at 10 × 120ms = 1.2s
+const LINE_START_DESKTOP = 1.2;
+const LINE_START_MOBILE = 0.6; // 60% of 10 mobile dots = 6th, at 5×60ms = 0.3s + buffer
 
 /* ═══════════════════════════════════════════════════════════
    COMPONENT
@@ -126,6 +160,7 @@ export default function EventsConstellation({ events }: EventsConstellationProps
       <style dangerouslySetInnerHTML={{ __html: `
         /* ═══════════════════════════════════════════════════════════
            EVENTS CONSTELLATION — ALL STYLES SCOPED TO #events
+           Solar System → Constellation transition motif
         ════════════════════════════════════════════════════════════ */
         #events.events-constellation-section {
           position: relative;
@@ -143,44 +178,141 @@ export default function EventsConstellation({ events }: EventsConstellationProps
           pointer-events: none;
         }
 
-        /* ── Dot entrance animation ── */
-        @keyframes ec-dot-fade-in {
-          from { opacity: 0; }
-          to   { opacity: var(--ec-target-opacity); }
+        /* ═══════════════════════════════════════
+           DOT ENTRANCE ANIMATIONS
+           Three variants for the "exhale" feeling:
+           - Anchor dots: dramatic pop (planet echoes)
+           - Gold dot: warm glow pulse (sun echo)  
+           - Background dots: quiet crystallization
+           Uses transform: scale() for cross-browser SVG support.
+        ═══════════════════════════════════════ */
+
+        /* Background dots — quiet fade + scale from nothing */
+        @keyframes ec-bg-emerge {
+          0% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          50% {
+            opacity: calc(var(--ec-target-op) * 0.7);
+          }
+          100% {
+            opacity: var(--ec-target-op);
+            transform: scale(1);
+          }
         }
 
+        /* Anchor dots — planet echo, dramatic scale with overshoot */
+        @keyframes ec-anchor-emerge {
+          0% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          35% {
+            opacity: calc(var(--ec-target-op) * 0.5);
+            transform: scale(0.4);
+          }
+          65% {
+            opacity: var(--ec-target-op);
+            transform: scale(1.4);
+          }
+          85% {
+            transform: scale(0.9);
+          }
+          100% {
+            opacity: var(--ec-target-op);
+            transform: scale(1);
+          }
+        }
+
+        /* Gold dot — sun echo, warm glow pulse */
+        @keyframes ec-gold-emerge {
+          0% {
+            opacity: 0;
+            transform: scale(0);
+            filter: drop-shadow(0 0 0px rgba(200, 144, 58, 0));
+          }
+          30% {
+            opacity: 0.2;
+            transform: scale(0.5);
+          }
+          55% {
+            opacity: var(--ec-target-op);
+            transform: scale(1.6);
+            filter: drop-shadow(0 0 8px rgba(200, 144, 58, 0.6));
+          }
+          80% {
+            transform: scale(0.85);
+            filter: drop-shadow(0 0 3px rgba(200, 144, 58, 0.2));
+          }
+          100% {
+            opacity: var(--ec-target-op);
+            transform: scale(1);
+            filter: drop-shadow(0 0 0px rgba(200, 144, 58, 0));
+          }
+        }
+
+        /* Default state: invisible, centered transform origin for SVG */
         #events .ec-dot {
           opacity: 0;
-        }
-        #events.ec-animated .ec-dot {
-          animation: ec-dot-fade-in 0.5s ease-out forwards;
+          transform-origin: center;
+          transform-box: fill-box;
+          will-change: opacity, transform;
         }
 
-        /* ── Line draw animation (stroke-dashoffset) ── */
+        /* ── Triggered state: run entrance once ── */
+        #events.ec-animated .ec-dot-bg {
+          animation: ec-bg-emerge 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        #events.ec-animated .ec-dot-anchor {
+          animation: ec-anchor-emerge 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        #events.ec-animated .ec-dot-gold {
+          animation: ec-gold-emerge 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* ═══════════════════════════════════════
+           LINE DRAW ANIMATION
+           stroke-dashoffset from full dash to 0
+        ═══════════════════════════════════════ */
         @keyframes ec-line-draw {
-          from { stroke-dashoffset: var(--ec-dash-length); }
-          to   { stroke-dashoffset: 0; }
+          from { stroke-dashoffset: var(--ec-dash-len); opacity: 0.08; }
+          to   { stroke-dashoffset: 0; opacity: 0.08; }
         }
 
         #events .ec-line {
           opacity: 0;
+          will-change: stroke-dashoffset, opacity;
         }
         #events.ec-animated .ec-line {
-          opacity: 1;
-          stroke-dashoffset: var(--ec-dash-length);
-          animation: ec-line-draw 0.8s ease-out forwards;
+          animation: ec-line-draw 0.65s ease-out forwards;
         }
 
-        /* ── Mobile: hide desktop-only elements, quieter lines, faster animation ── */
+        /* ═══════════════════════════════════════
+           MOBILE OVERRIDES — quieter, faster
+        ═══════════════════════════════════════ */
         @media (max-width: 767px) {
           #events .ec-desktop-only { display: none; }
 
-          #events.ec-animated .ec-line {
-            stroke-opacity: 0.05;
-            animation-duration: 0.55s;
+          /* Lines quieter on mobile */
+          @keyframes ec-line-draw-mobile {
+            from { stroke-dashoffset: var(--ec-dash-len); opacity: 0.05; }
+            to   { stroke-dashoffset: 0; opacity: 0.05; }
           }
-          #events.ec-animated .ec-dot {
-            animation-duration: 0.35s;
+          #events.ec-animated .ec-line {
+            animation-name: ec-line-draw-mobile;
+            animation-duration: 0.45s;
+          }
+
+          /* Dots faster on mobile */
+          #events.ec-animated .ec-dot-bg {
+            animation-duration: 0.4s;
+          }
+          #events.ec-animated .ec-dot-anchor {
+            animation-duration: 0.5s;
+          }
+          #events.ec-animated .ec-dot-gold {
+            animation-duration: 0.6s;
           }
 
           #events.events-constellation-section {
@@ -343,20 +475,18 @@ export default function EventsConstellation({ events }: EventsConstellationProps
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        {/* Lines — drawn after dots are 60% visible
-            Desktop: dots take ~2.16s (18×120ms). 60% ≈ 1.32s. Lines start at 1.32s, each +80ms.
-            Mobile: dots take ~0.6s (10×60ms). Lines start at 0.72s, each +40ms.
-            Total desktop: ~2.2s. Total mobile: ~1.2s. */}
+        {/* Lines — drawn after 60% of dots have started their entrance
+            Desktop: line start at ~1.2s, each +70ms. Line animation 0.65s.
+            Last line finishes at 1.2 + 10×0.07 + 0.65 = 2.55s (visual tail, main impact by 2.2s)
+            Mobile: line start at 0.6s, each +40ms. */}
         {LINES.map((line, i) => {
           const from = DOTS[line.from];
           const to = DOTS[line.to];
           const len = LINE_LENGTHS[i];
 
-          // Desktop: start at 1.32s, stagger 80ms per line
-          const desktopDelay = 1.32 + i * 0.08;
-          // Mobile: start at 0.72s, stagger 40ms per line (only mobile-visible lines count)
-          const mobileVisibleIndex = LINES.slice(0, i + 1).filter(l => l.isMobileVisible).length - 1;
-          const mobileDelay = line.isMobileVisible ? 0.72 + mobileVisibleIndex * 0.04 : desktopDelay;
+          const desktopDelay = LINE_START_DESKTOP + i * 0.07;
+          const mobileVisIdx = LINES.slice(0, i + 1).filter(l => l.isMobileVisible).length - 1;
+          const mobileDelay = line.isMobileVisible ? LINE_START_MOBILE + mobileVisIdx * 0.04 : desktopDelay;
 
           return (
             <line
@@ -368,22 +498,27 @@ export default function EventsConstellation({ events }: EventsConstellationProps
               y2={to.cy}
               stroke="#1a3378"
               strokeWidth="0.6"
-              strokeOpacity="0.08"
               strokeDasharray={len}
               className={`ec-line${!line.isMobileVisible ? " ec-desktop-only" : ""}`}
               style={{
-                "--ec-dash-length": len,
+                "--ec-dash-len": len,
                 animationDelay: `${desktopDelay}s`,
               } as React.CSSProperties}
             />
           );
         })}
 
-        {/* Dots — staggered fade-in, each 120ms apart (60ms on mobile) */}
+        {/* Dots — staggered by Y position (top-first = solar system exhale)
+            Each dot uses a variant animation based on its kind:
+            - anchor: dramatic pop with overshoot (planet echoes)
+            - gold: warm glow pulse (sun echo)
+            - bg: quiet crystallization (stardust) */}
         {DOTS.map((dot, i) => {
-          const desktopDelay = i * 0.12;
-          const mobileVisibleIndex = DOTS.slice(0, i + 1).filter(d => d.isMobileVisible).length - 1;
-          const mobileDelay = dot.isMobileVisible ? mobileVisibleIndex * 0.06 : desktopDelay;
+          const desktopDelay = DOT_DELAYS[i];
+          const mobileDelay = DOT_MOBILE_DELAYS[i];
+          const kindClass = dot.kind === "anchor" ? "ec-dot-anchor"
+            : dot.kind === "gold" ? "ec-dot-gold"
+            : "ec-dot-bg";
 
           return (
             <circle
@@ -393,9 +528,9 @@ export default function EventsConstellation({ events }: EventsConstellationProps
               cy={dot.cy}
               r={dot.r}
               fill={dot.fill}
-              className={`ec-dot${!dot.isMobileVisible ? " ec-desktop-only" : ""}`}
+              className={`ec-dot ${kindClass}${!dot.isMobileVisible ? " ec-desktop-only" : ""}`}
               style={{
-                "--ec-target-opacity": dot.opacity,
+                "--ec-target-op": dot.opacity,
                 animationDelay: `${desktopDelay}s`,
               } as React.CSSProperties}
             />
@@ -467,17 +602,15 @@ export default function EventsConstellation({ events }: EventsConstellationProps
         </Link>
       </div>
 
-      {/* ── Mobile animation delay overrides ── */}
+      {/* ── Mobile animation delay overrides (faster timings) ── */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 767px) {
-          ${DOTS.filter(d => d.isMobileVisible).map((d, mi) => {
-            return `#events .ec-dot[data-dot-id="${d.id}"] { animation-delay: ${mi * 0.06}s; }`;
-          }).join("\n          ")}
-          ${LINES.map((l, i) => {
-            if (!l.isMobileVisible) return "";
-            const mi = LINES.slice(0, i + 1).filter(x => x.isMobileVisible).length - 1;
-            return `#events .ec-line[data-line-id="${i}"] { animation-delay: ${0.72 + mi * 0.04}s; }`;
-          }).filter(Boolean).join("\n          ")}
+          ${DOTS.filter(d => d.isMobileVisible).map(d =>
+            `#events .ec-dot[data-dot-id="${d.id}"] { animation-delay: ${DOT_MOBILE_DELAYS[d.id]}s; }`
+          ).join("\n          ")}
+          ${LINES.filter(l => l.isMobileVisible).map((l, mi) =>
+            `#events .ec-line[data-line-id="${LINES.indexOf(l)}"] { animation-delay: ${LINE_START_MOBILE + mi * 0.04}s; }`
+          ).join("\n          ")}
         }
       ` }} />
     </section>
