@@ -69,13 +69,18 @@ const BACKGROUND_STARS = Array.from({ length: 30 }, (_, i) => ({
 }));
 
 // Planet definitions for the solar system
+// Layout (canvas is 640×640, sun column ~50% = 320, side columns flank it):
+//   Left card (Our Origin)  → 3 inner planets at x ≈ 90, 170, 250
+//   Center (Sun)            → nucleus morphs to sun at (50, 320); sun also drawn at column center
+//   Right card (Our Vision) → 3 outer planets at x ≈ 390, 470, 550
+// y=320 keeps them on a single horizontal row aligned with the sun's center.
 const PLANET_DEFS = [
-  { x: 150, y: 320, r: 12, baseColor: "#4A90D9", accent: "#6BB5FF", name: "Mercury", hasRing: false, glowColor: "rgba(74,144,217,0.3)" },
-  { x: 238, y: 320, r: 15, baseColor: "#E27D60", accent: "#FF9E80", name: "Venus", hasRing: false, glowColor: "rgba(226,125,96,0.3)" },
-  { x: 326, y: 320, r: 18, baseColor: "#41B3A3", accent: "#6DE0CF", name: "Earth", hasRing: false, glowColor: "rgba(65,179,163,0.3)" },
-  { x: 414, y: 320, r: 14, baseColor: "#C38D9E", accent: "#E8B4C4", name: "Mars", hasRing: false, glowColor: "rgba(195,141,158,0.3)" },
-  { x: 502, y: 320, r: 22, baseColor: "#E8A87C", accent: "#FFD4B0", name: "Jupiter", hasRing: true, glowColor: "rgba(232,168,124,0.4)" },
-  { x: 590, y: 320, r: 11, baseColor: "#5B8DEF", accent: "#8BB4FF", name: "Neptune", hasRing: false, glowColor: "rgba(91,141,239,0.3)" },
+  { x: 90,  y: 320, r: 12, baseColor: "#4A90D9", accent: "#6BB5FF", name: "Mercury", hasRing: false, glowColor: "rgba(74,144,217,0.3)" },
+  { x: 170, y: 320, r: 15, baseColor: "#E27D60", accent: "#FF9E80", name: "Venus",   hasRing: false, glowColor: "rgba(226,125,96,0.3)" },
+  { x: 250, y: 320, r: 18, baseColor: "#41B3A3", accent: "#6DE0CF", name: "Earth",   hasRing: false, glowColor: "rgba(65,179,163,0.3)" },
+  { x: 390, y: 320, r: 14, baseColor: "#C38D9E", accent: "#E8B4C4", name: "Mars",    hasRing: false, glowColor: "rgba(195,141,158,0.3)" },
+  { x: 470, y: 320, r: 22, baseColor: "#E8A87C", accent: "#FFD4B0", name: "Jupiter", hasRing: true,  glowColor: "rgba(232,168,124,0.4)" },
+  { x: 550, y: 320, r: 11, baseColor: "#5B8DEF", accent: "#8BB4FF", name: "Neptune", hasRing: false, glowColor: "rgba(91,141,239,0.3)" },
 ];
 
 // 🎬 Easing Functions
@@ -602,7 +607,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
 
       const orbitShiftX = sep * -700;
       const orbitFade = 1 - sep;
-      const abP = clamp01(aboutProgressRef?.current ?? 0);
+      const abP = 0; // Disable morphing in canvas atom, fade-out handled by container
 
       /* ── STAGED MORPH TIMING ──
          Stage 1 (abP 0.00-0.15): Electron trails stretch, orbits start widening

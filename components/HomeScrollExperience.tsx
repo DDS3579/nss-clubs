@@ -695,6 +695,30 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       floating.style.transform = `translate(${cx - CANVAS_INTRINSIC / 2}px, ${cy - CANVAS_INTRINSIC / 2}px)`;
       canvasWrap.style.transform = `scale(${size / CANVAS_INTRINSIC})`;
 
+      // Fade canvas out during the about transition so the HTML solar system takes over
+      // The atom morph animation in HeroAtom handles the visual transformation (nucleus→sun, electrons→planets)
+      // while this opacity crossfade ensures a seamless handoff to the static HTML planets
+      if (aboutProgressRef.current > 0.001) {
+        const fadeOut = 1 - clamp01((aboutProgressRef.current - 0.55) / 0.35);
+        floating.style.opacity = `${fadeOut}`;
+      } else {
+        floating.style.opacity = '1';
+      }
+
+      // Add/remove .revealed class on #about section for responsive CSS burst animations
+      const aboutSection = document.getElementById("about");
+      if (aboutSection) {
+        if (aboutProgressRef.current > 0.45) {
+          if (!aboutSection.classList.contains("revealed")) {
+            aboutSection.classList.add("revealed");
+          }
+        } else if (aboutProgressRef.current < 0.15) {
+          if (aboutSection.classList.contains("revealed")) {
+            aboutSection.classList.remove("revealed");
+          }
+        }
+      }
+
       if (
         (phaseRef.current === "zooming" || phaseRef.current === "zoomed") &&
         zoomAnimRef.current
@@ -1192,10 +1216,17 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         id="about"
         className="about-solar-section"
       >
-        {/* Hidden anchor for canvas animation system — keeps canvas shrinking to invisible */}
+        {/* Anchor positioned over the sun in the solar system layout so the canvas atom
+            morphs visually into the sun/planets before fading out */}
         <div
           ref={aboutAnchorRef}
-          style={{ width: 1, height: 1, position: 'absolute' as const, top: 0, left: 0, opacity: 0, pointerEvents: 'none' as const }}
+          className="about-sun-anchor"
+          style={{
+            position: 'absolute' as const,
+            pointerEvents: 'none' as const,
+            opacity: 0,
+            zIndex: 0,
+          }}
         />
 
         <style dangerouslySetInnerHTML={{ __html: `
@@ -1207,6 +1238,19 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             padding: 100px 0 80px;
           }
 
+          /* ── Sun anchor for canvas morph target ── */
+          #about .about-sun-anchor {
+            width: 110px; height: 110px;
+            top: 100px; left: 50%;
+            transform: translateX(-50%);
+          }
+          @media (min-width: 769px) {
+            #about .about-sun-anchor {
+              /* Align with the center column sun sphere on desktop */
+              top: 220px;
+            }
+          }
+
           /* ── Title ── */
           #about .as-title { text-align: center; margin: 0 auto 60px; max-width: 800px; padding: 0 24px; }
           #about .as-title h2 {
@@ -1216,83 +1260,403 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           #about .as-title h2 em { font-style: italic; color: #c8903a; }
           #about .as-subtitle { margin-top: 16px; font-size: 14px; color: #94a3b8; line-height: 1.6; }
 
+          /* ── Desktop Base / Unrevealed States (Fly back to sun, glow fades back in) ── */
+          #about .solar-desktop .orbit-line-h {
+            opacity: 0; transform: scaleX(0);
+            transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s, opacity 0.8s ease 0.3s;
+          }
+          #about .solar-desktop .p-sun {
+            opacity: 0; transform: scale(0);
+            transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s, opacity 0.5s ease 0.4s;
+          }
+          #about .solar-desktop .p-sun::after {
+            opacity: 1; filter: drop-shadow(0 0 16px #D4A373);
+            transition: opacity 0.7s ease 0.4s;
+          }
+          #about .solar-desktop .as-card {
+            opacity: 0; transform: translateY(24px);
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+          }
+
+          /* Left Planets Base Transitions (Reverse delays) */
+          #about .solar-desktop .p-mercury {
+            --burst-x: 160px;
+            opacity: 0; transform: translate(var(--burst-x), 0) scale(0);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s, opacity 0.5s ease 0.3s;
+          }
+          #about .solar-desktop .p-mercury::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.75s ease 0.3s, transform 0.75s ease 0.3s;
+          }
+          #about .solar-desktop .p-venus {
+            --burst-x: 220px;
+            opacity: 0; transform: translate(var(--burst-x), 0) scale(0);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s, opacity 0.5s ease 0.2s;
+          }
+          #about .solar-desktop .p-venus::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.75s ease 0.2s, transform 0.75s ease 0.2s;
+          }
+          #about .solar-desktop .p-earth {
+            --burst-x: 280px;
+            opacity: 0; transform: translate(var(--burst-x), 0) scale(0);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s, opacity 0.5s ease 0.1s;
+          }
+          #about .solar-desktop .p-earth::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.75s ease 0.1s, transform 0.75s ease 0.1s;
+          }
+
+          /* Right Planets Base Transitions (Reverse delays) */
+          #about .solar-desktop .p-mars {
+            --burst-x: -160px;
+            opacity: 0; transform: translate(var(--burst-x), 0) scale(0);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s, opacity 0.5s ease 0.35s;
+          }
+          #about .solar-desktop .p-mars::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.75s ease 0.35s, transform 0.75s ease 0.35s;
+          }
+          #about .solar-desktop .p-jupiter {
+            --burst-x: -220px;
+            opacity: 0; transform: translate(var(--burst-x), 0) scale(0);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s, opacity 0.5s ease 0.25s;
+          }
+          #about .solar-desktop .p-jupiter::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.75s ease 0.25s, transform 0.75s ease 0.25s;
+          }
+          #about .solar-desktop .p-saturn-wrap {
+            --burst-x: -280px;
+            opacity: 0; transform: translate(var(--burst-x), 0) scale(0);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s, opacity 0.5s ease 0.15s;
+          }
+          #about .solar-desktop .p-saturn-wrap::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.75s ease 0.15s, transform 0.75s ease 0.15s;
+          }
+          #about .solar-desktop .p-neptune {
+            --burst-x: -340px;
+            opacity: 0; transform: translate(var(--burst-x), 0) scale(0);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s, opacity 0.5s ease 0.05s;
+          }
+          #about .solar-desktop .p-neptune::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.75s ease 0.05s, transform 0.75s ease 0.05s;
+          }
+
+          /* ── Mobile Base / Unrevealed States (Reverse delays) ── */
+          #about .solar-mobile .mob-spine {
+            opacity: 0; transform: scaleY(0); transform-origin: top;
+            transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+          }
+          #about .solar-mobile .mob-sun {
+            opacity: 0; transform: scale(0);
+            transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s, opacity 0.5s ease 0.8s;
+          }
+          #about .solar-mobile .mob-sun::after {
+            opacity: 1; filter: drop-shadow(0 0 16px #D4A373);
+            transition: opacity 0.8s ease 0.8s;
+          }
+          #about .solar-mobile .mob-sun + .mob-connector {
+            opacity: 0; transform: scaleY(0); transform-origin: top;
+            transition: transform 0.5s ease 0.75s, opacity 0.5s ease 0.75s;
+          }
+          #about .solar-mobile .mob-card[data-node="0"] {
+            opacity: 0; transform: scale(0.85) translateY(24px);
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.7s, opacity 0.7s ease 0.7s;
+          }
+          #about .solar-mobile .mob-card[data-node="0"] + .mob-connector {
+            opacity: 0; transform: scaleY(0); transform-origin: top;
+            transition: transform 0.5s ease 0.55s, opacity 0.5s ease 0.55s;
+          }
+          #about .solar-mobile .mob-dot-earth {
+            opacity: 0; transform: scale(0);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s, opacity 0.6s ease 0.5s;
+          }
+          #about .solar-mobile .mob-dot-earth::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.6s ease 0.5s, transform 0.6s ease 0.5s;
+          }
+          #about .solar-mobile .mob-dot-earth + .mob-connector {
+            opacity: 0; transform: scaleY(0); transform-origin: top;
+            transition: transform 0.5s ease 0.45s, opacity 0.5s ease 0.45s;
+          }
+          #about .solar-mobile .mob-card[data-node="1"] {
+            opacity: 0; transform: scale(0.85) translateY(24px);
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.4s, opacity 0.7s ease 0.4s;
+          }
+          #about .solar-mobile .mob-card[data-node="1"] + .mob-connector {
+            opacity: 0; transform: scaleY(0); transform-origin: top;
+            transition: transform 0.5s ease 0.25s, opacity 0.5s ease 0.25s;
+          }
+          #about .solar-mobile .mob-dot-jupiter {
+            opacity: 0; transform: scale(0);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s, opacity 0.6s ease 0.2s;
+          }
+          #about .solar-mobile .mob-dot-jupiter::after {
+            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
+            transition: opacity 0.6s ease 0.2s, transform 0.6s ease 0.2s;
+          }
+          #about .solar-mobile .mob-dot-jupiter + .mob-connector {
+            opacity: 0; transform: scaleY(0); transform-origin: top;
+            transition: transform 0.5s ease 0.15s, opacity 0.5s ease 0.15s;
+          }
+          #about .solar-mobile .mob-card[data-node="2"] {
+            opacity: 0; transform: scale(0.85) translateY(24px);
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.7s ease;
+          }
+
+          /* ── Relative positioning helpers for pseudo overlays ── */
+          #about .p-sphere { position: relative; }
+          #about .mob-dot { position: relative; }
+
+          #about .p-sphere::after,
+          #about .p-saturn-wrap::after,
+          #about .mob-sun::after,
+          #about .mob-dot::after {
+            content: ''; position: absolute; inset: 0; border-radius: 50%;
+            pointer-events: none; opacity: 0; z-index: 10;
+          }
+          #about .p-saturn-wrap::after {
+            width: 70px; height: 70px; top: 0; left: 0;
+          }
+          #about .p-sphere::after,
+          #about .p-saturn-wrap::after,
+          #about .mob-dot::after {
+            background: radial-gradient(circle at 35% 35%, #ffffff 0%, #00d2ff 45%, rgba(2, 59, 142, 0.8) 75%, transparent 100%);
+          }
+          #about .p-sun::after,
+          #about .mob-sun::after {
+            background: radial-gradient(circle at 38% 38%, #fff7d4 0%, #ffd54f 25%, #d4a373 60%, #a06800 100%);
+          }
+
+          /* ── Desktop Revealed States (Forward delays) ── */
+          #about.revealed .solar-desktop .orbit-line-h {
+            opacity: 0.14; transform: scaleX(1);
+            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s, opacity 1.2s ease 0.3s;
+          }
+          #about.revealed .solar-desktop .p-sun {
+            opacity: 1; transform: scale(1);
+            transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s, opacity 0.5s ease 0.05s;
+          }
+          #about.revealed .solar-desktop .p-sun::after {
+            opacity: 0; filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.8s ease 0.05s;
+          }
+          #about.revealed .solar-desktop .as-card {
+            opacity: 1; transform: translateY(0);
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s, opacity 0.8s ease 0.5s;
+          }
+
+          /* Left Planets Revealed Transitions (Forward delays) */
+          #about.revealed .solar-desktop .p-mercury {
+            opacity: 1; transform: translate(0, 0) scale(1);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s, opacity 0.5s ease 0.15s;
+          }
+          #about.revealed .solar-desktop .p-mercury::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.75s ease 0.15s, transform 0.75s ease 0.15s;
+          }
+          #about.revealed .solar-desktop .p-venus {
+            opacity: 1; transform: translate(0, 0) scale(1);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s, opacity 0.5s ease 0.25s;
+          }
+          #about.revealed .solar-desktop .p-venus::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.75s ease 0.25s, transform 0.75s ease 0.25s;
+          }
+          #about.revealed .solar-desktop .p-earth {
+            opacity: 1; transform: translate(0, 0) scale(1);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s, opacity 0.5s ease 0.35s;
+          }
+          #about.revealed .solar-desktop .p-earth::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.75s ease 0.35s, transform 0.75s ease 0.35s;
+          }
+
+          /* Right Planets Revealed Transitions (Forward delays) */
+          #about.revealed .solar-desktop .p-mars {
+            opacity: 1; transform: translate(0, 0) scale(1);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s, opacity 0.5s ease 0.2s;
+          }
+          #about.revealed .solar-desktop .p-mars::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.75s ease 0.2s, transform 0.75s ease 0.2s;
+          }
+          #about.revealed .solar-desktop .p-jupiter {
+            opacity: 1; transform: translate(0, 0) scale(1);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s, opacity 0.5s ease 0.3s;
+          }
+          #about.revealed .solar-desktop .p-jupiter::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.75s ease 0.3s, transform 0.75s ease 0.3s;
+          }
+          #about.revealed .solar-desktop .p-saturn-wrap {
+            opacity: 1; transform: translate(0, 0) scale(1);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s, opacity 0.5s ease 0.4s;
+          }
+          #about.revealed .solar-desktop .p-saturn-wrap::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.75s ease 0.4s, transform 0.75s ease 0.4s;
+          }
+          #about.revealed .solar-desktop .p-neptune {
+            opacity: 1; transform: translate(0, 0) scale(1);
+            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s, opacity 0.5s ease 0.45s;
+          }
+          #about.revealed .solar-desktop .p-neptune::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.75s ease 0.45s, transform 0.75s ease 0.45s;
+          }
+
+          /* ── Mobile Revealed States (Forward delays) ── */
+          #about.revealed .solar-mobile .mob-spine {
+            opacity: 1; transform: scaleY(1); transform-origin: top;
+            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s ease;
+          }
+          #about.revealed .solar-mobile .mob-sun {
+            opacity: 1; transform: scale(1);
+            transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
+          }
+          #about.revealed .solar-mobile .mob-sun::after {
+            opacity: 0; filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.8s ease;
+          }
+          #about.revealed .solar-mobile .mob-sun + .mob-connector {
+            opacity: 1; transform: scaleY(1); transform-origin: top;
+            transition: transform 0.5s ease 0.15s, opacity 0.5s ease 0.15s;
+          }
+          #about.revealed .solar-mobile .mob-card[data-node="0"] {
+            opacity: 1; transform: scale(1) translateY(0);
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s, opacity 0.7s ease 0.2s;
+          }
+          #about.revealed .solar-mobile .mob-card[data-node="0"] + .mob-connector {
+            opacity: 1; transform: scaleY(1); transform-origin: top;
+            transition: transform 0.5s ease 0.35s, opacity 0.5s ease 0.35s;
+          }
+          #about.revealed .solar-mobile .mob-dot-earth {
+            opacity: 1; transform: scale(1);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s, opacity 0.6s ease 0.4s;
+          }
+          #about.revealed .solar-mobile .mob-dot-earth::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.6s ease 0.4s, transform 0.6s ease 0.4s;
+          }
+          #about.revealed .solar-mobile .mob-dot-earth + .mob-connector {
+            opacity: 1; transform: scaleY(1); transform-origin: top;
+            transition: transform 0.5s ease 0.45s, opacity 0.5s ease 0.45s;
+          }
+          #about.revealed .solar-mobile .mob-card[data-node="1"] {
+            opacity: 1; transform: scale(1) translateY(0);
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s, opacity 0.7s ease 0.5s;
+          }
+          #about.revealed .solar-mobile .mob-card[data-node="1"] + .mob-connector {
+            opacity: 1; transform: scaleY(1); transform-origin: top;
+            transition: transform 0.5s ease 0.65s, opacity 0.5s ease 0.65s;
+          }
+          #about.revealed .solar-mobile .mob-dot-jupiter {
+            opacity: 1; transform: scale(1);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s, opacity 0.6s ease 0.7s;
+          }
+          #about.revealed .solar-mobile .mob-dot-jupiter::after {
+            opacity: 0; transform: scale(1); filter: drop-shadow(0 0 0px transparent);
+            transition: opacity 0.6s ease 0.7s, transform 0.6s ease 0.7s;
+          }
+          #about.revealed .solar-mobile .mob-dot-jupiter + .mob-connector {
+            opacity: 1; transform: scaleY(1); transform-origin: top;
+            transition: transform 0.5s ease 0.75s, opacity 0.5s ease 0.75s;
+          }
+          #about.revealed .solar-mobile .mob-card[data-node="2"] {
+            opacity: 1; transform: scale(1) translateY(0);
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.8s, opacity 0.7s ease 0.8s;
+          }
+
           /* ── Desktop Solar System ── */
           #about .solar-desktop {
-            display: flex; position: relative; max-width: 1280px;
-            margin: 0 auto; padding: 0 32px; align-items: flex-start;
+            display: grid; position: relative; max-width: 1400px;
+            margin: 0 auto; padding: 0 32px;
+            grid-template-columns: 1fr 1.4fr 1fr;
+            gap: 32px; align-items: start;
           }
           #about .solar-mobile { display: none; }
 
-          /* ── Orbit Line ── */
+          /* ── Orbit Line (single horizontal line through all planets) ── */
           #about .orbit-line-h {
-            position: absolute; top: 46px; left: 8%; right: 8%;
-            height: 1.5px; opacity: 0.12; pointer-events: none; z-index: 0;
-            background: linear-gradient(to right, transparent 0%, #0d2460 8%, #0d2460 92%, transparent 100%);
+            position: absolute; top: 56px; left: 6%; right: 6%;
+            height: 1.5px; opacity: 0.14; pointer-events: none; z-index: 0;
+            background: linear-gradient(to right, transparent 0%, #0d2460 6%, #0d2460 94%, transparent 100%);
           }
 
           /* ── Planet Columns ── */
           #about .p-col {
-            flex: 1; display: flex; flex-direction: column;
-            align-items: center; position: relative; z-index: 1;
+            display: flex; flex-direction: column;
+            align-items: stretch; position: relative; z-index: 1;
           }
-          #about .p-col-sun { flex: 1.6; }
+          #about .p-col-sun { align-items: center; }
 
           /* ── Planet Zone (fixed height aligns card tops) ── */
           #about .p-zone {
-            display: flex; flex-direction: column; align-items: center;
-            min-height: 130px; width: 100%;
+            display: flex; flex-direction: row; align-items: center;
+            justify-content: center; gap: 18px;
+            min-height: 140px; width: 100%;
           }
+          /* Center column has no planet row — sun only */
+          #about .p-col-sun .p-zone { flex-direction: column; gap: 0; }
 
           /* ── Planet Spheres (3D radial gradient) ── */
           #about .p-sphere { border-radius: 50%; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
 
           #about .p-mercury {
-            width: 28px; height: 28px; margin-top: 32px;
+            width: 38px; height: 38px;
             background: radial-gradient(circle at 35% 35%, #c7d3e3 0%, #8a9db8 40%, #5d6e85 75%, #3a4a5c 100%);
           }
           #about .p-venus {
-            width: 40px; height: 40px; margin-top: 14px;
+            width: 54px; height: 54px;
             background: radial-gradient(circle at 35% 35%, #fce0b0 0%, #e8a952 40%, #c47b2a 75%, #8a4e10 100%);
           }
           #about .p-earth {
-            width: 44px; height: 44px; margin-top: 18px;
+            width: 60px; height: 60px;
             background: radial-gradient(circle at 35% 35%, #7ec8e3 0%, #3e8fb0 35%, #1a8b57 65%, #0d4b3e 100%);
           }
           #about .p-sun {
-            width: 92px; height: 92px; margin-top: 0;
+            width: 110px; height: 110px; margin-top: 0;
             background: radial-gradient(circle at 38% 38%, #fff7d4 0%, #ffd54f 25%, #ffab00 50%, #e65100 80%, #bf360c 100%);
-            box-shadow: 0 0 0 4px rgba(255,171,0,0.15), 0 0 0 10px rgba(255,171,0,0.08), 0 0 30px rgba(255,171,0,0.2);
+            box-shadow: 0 0 0 5px rgba(255,171,0,0.15), 0 0 0 12px rgba(255,171,0,0.08), 0 0 36px rgba(255,171,0,0.22);
+          }
+          #about .p-mars {
+            width: 48px; height: 48px;
+            background: radial-gradient(circle at 35% 35%, #e8a89a 0%, #c97a6a 40%, #9a4a3a 75%, #6a2a1c 100%);
           }
           #about .p-jupiter {
-            width: 68px; height: 68px; margin-top: 12px;
+            width: 84px; height: 84px;
             background: radial-gradient(circle at 35% 35%, #f0c88a 0%, #d4924c 35%, #a0603a 65%, #6d3a25 100%);
           }
-          #about .p-saturn-wrap { position: relative; margin-top: 6px; }
+          #about .p-saturn-wrap { position: relative; }
           #about .p-saturn {
-            width: 56px; height: 56px;
+            width: 70px; height: 70px;
             background: radial-gradient(circle at 35% 35%, #f5e6c8 0%, #c9a96e 40%, #9e7c4a 70%, #6b5030 100%);
           }
           #about .p-saturn-ring {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%) rotateX(70deg);
-            width: 84px; height: 24px;
+            width: 104px; height: 30px;
             border: 2px solid rgba(201,169,110,0.3); border-radius: 50%;
             pointer-events: none; box-shadow: 0 2px 6px rgba(107,80,48,0.1);
           }
           #about .p-neptune {
-            width: 48px; height: 48px; margin-top: 20px;
+            width: 62px; height: 62px;
             background: radial-gradient(circle at 35% 35%, #7bb8e0 0%, #4a82c7 40%, #2a4fa0 70%, #1a3070 100%);
           }
 
-          /* ── Connectors ── */
+          /* ── Connectors (sun → president card only; side cards have no connector) ── */
           #about .p-connector {
-            width: 1px; flex-grow: 1; min-height: 30px;
-            background: linear-gradient(to bottom, rgba(13,36,96,0.2) 0%, rgba(13,36,96,0) 100%);
+            width: 1px; height: 36px;
+            background: linear-gradient(to bottom, rgba(13,36,96,0.22) 0%, rgba(13,36,96,0) 100%);
           }
 
-          /* ── Cards ── */
+          /* ── Cards (expanded) ── */
           #about .as-card {
-            width: 100%; border-radius: 16px; padding: 20px 18px;
+            width: 100%; border-radius: 18px; padding: 32px 30px;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
           }
           #about .as-card:hover { transform: translateY(-2px); }
@@ -1308,62 +1672,62 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           }
           #about .as-card-light:hover { box-shadow: 0 8px 30px rgba(200,144,58,0.18); }
 
-          #about .as-card-cat { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
-          #about .as-card-cat-icon { width: 14px; height: 14px; }
+          #about .as-card-cat { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+          #about .as-card-cat-icon { width: 16px; height: 16px; }
           #about .as-card-dark .as-card-cat-icon { color: rgba(255,255,255,0.55); }
           #about .as-card-light .as-card-cat-icon { color: rgba(13,36,96,0.5); }
           #about .as-card-cat-label {
-            font-size: 10px; font-weight: 700; letter-spacing: 0.15em;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
             text-transform: uppercase;
           }
           #about .as-card-dark .as-card-cat-label { color: rgba(255,255,255,0.5); }
           #about .as-card-light .as-card-cat-label { color: rgba(13,36,96,0.5); }
 
           #about .as-card h3 {
-            font-size: 18px; font-weight: 900; margin: 0 0 8px;
-            line-height: 1.2; letter-spacing: -0.01em;
+            font-size: 26px; font-weight: 900; margin: 0 0 14px;
+            line-height: 1.18; letter-spacing: -0.015em;
           }
           #about .as-card-dark h3 { color: rgba(255,255,255,0.95); }
           #about .as-card-light h3 { color: #0d2460; }
 
           #about .as-card-body {
-            font-size: 13px; line-height: 1.6; margin: 0;
+            font-size: 15px; line-height: 1.7; margin: 0;
           }
-          #about .as-card-dark .as-card-body { color: rgba(255,255,255,0.7); }
+          #about .as-card-dark .as-card-body { color: rgba(255,255,255,0.72); }
           #about .as-card-light .as-card-body { color: #475569; }
 
           #about .as-card-stats {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-            margin-top: 14px; padding-top: 12px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+            margin-top: 22px; padding-top: 18px;
           }
           #about .as-card-dark .as-card-stats { border-top: 1px solid rgba(255,255,255,0.1); }
           #about .as-card-light .as-card-stats { border-top: 1px solid rgba(0,0,0,0.08); }
           #about .as-stat-label {
-            font-size: 9px; text-transform: uppercase;
-            letter-spacing: 0.1em; font-weight: 600;
+            font-size: 10px; text-transform: uppercase;
+            letter-spacing: 0.12em; font-weight: 600;
           }
           #about .as-card-dark .as-stat-label { color: rgba(255,255,255,0.4); }
           #about .as-card-light .as-stat-label { color: rgba(13,36,96,0.4); }
-          #about .as-stat-value { font-size: 16px; font-weight: 900; margin-top: 2px; }
+          #about .as-stat-value { font-size: 22px; font-weight: 900; margin-top: 4px; }
           #about .as-card-dark .as-stat-value { color: #fff; }
           #about .as-card-light .as-stat-value { color: #0d2460; }
 
           /* ── President Card Specifics ── */
           #about .as-pres-photo {
-            width: 72px; height: 72px; border-radius: 50%; overflow: hidden;
-            border: 3px solid rgba(200,144,58,0.3); margin: 4px auto 8px;
+            width: 88px; height: 88px; border-radius: 50%; overflow: hidden;
+            border: 3px solid rgba(200,144,58,0.3); margin: 6px auto 14px;
             flex-shrink: 0;
           }
           #about .as-pres-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
           #about .as-pres-quote {
             font-style: italic; text-align: center;
-            font-size: 13px; line-height: 1.6; color: #475569;
-            margin: 6px 0 0;
+            font-size: 15px; line-height: 1.7; color: #475569;
+            margin: 8px 0 0;
           }
           #about .as-pres-footer {
             text-align: center; font-size: 10px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.15em;
-            color: rgba(13,36,96,0.5); margin-top: 12px; padding-top: 10px;
+            text-transform: uppercase; letter-spacing: 0.18em;
+            color: rgba(13,36,96,0.5); margin-top: 16px; padding-top: 12px;
             border-top: 1px solid rgba(0,0,0,0.08);
           }
 
@@ -1382,9 +1746,67 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           }
 
           /* ═══════════════════════════════════════════════════════════
-             MOBILE — max-width: 768px
+             SMALL MOBILE — max-width: 480px
           ════════════════════════════════════════════════════════════ */
-          @media (max-width: 768px) {
+          @media (max-width: 480px) {
+            #about.about-solar-section { padding: 48px 16px 60px; }
+            #about .as-title { margin-bottom: 32px; padding: 0 12px; }
+            #about .as-title h2 { font-size: 24px; }
+            #about .as-subtitle { font-size: 12px; }
+            #about .solar-desktop { display: none; }
+            #about .solar-mobile {
+              display: flex; flex-direction: column; align-items: center;
+              position: relative; max-width: 100%; margin: 0 auto;
+              padding: 0;
+            }
+            #about .mob-spine {
+              position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+              background: linear-gradient(to bottom, transparent 0%, rgba(13,36,96,0.1) 8%, rgba(13,36,96,0.1) 92%, transparent 100%);
+              transform: translateX(-50%); z-index: 0;
+            }
+            #about .mob-sun {
+              width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+              background: radial-gradient(circle at 38% 38%, #fff7d4 0%, #ffd54f 25%, #ffab00 50%, #e65100 80%, #bf360c 100%);
+              box-shadow: 0 0 0 3px rgba(255,171,0,0.15), 0 0 0 7px rgba(255,171,0,0.08), 0 0 16px rgba(255,171,0,0.2);
+              position: relative; z-index: 1;
+            }
+            #about .mob-dot-earth {
+              background: radial-gradient(circle at 35% 35%, #7ec8e3 0%, #3e8fb0 50%, #0d4b3e 100%);
+            }
+            #about .mob-dot-jupiter {
+              background: radial-gradient(circle at 35% 35%, #f0c88a 0%, #d4924c 50%, #6d3a25 100%);
+            }
+            #about .mob-card-gap { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+            #about .mob-connector {
+              width: 1px; height: 28px; flex-shrink: 0; z-index: 1;
+              background: linear-gradient(to bottom, rgba(13,36,96,0.15) 0%, rgba(13,36,96,0) 100%);
+            }
+            #about .mob-dot {
+              width: 16px; height: 16px; border-radius: 50%;
+              flex-shrink: 0; z-index: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            }
+            #about .mob-card {
+              width: 100%; border-radius: 12px !important; padding: 16px !important;
+            }
+            #about .as-card h3 { font-size: 18px; margin-bottom: 10px; }
+            #about .as-card-body { font-size: 13px; line-height: 1.6; }
+            #about .as-card-stats { gap: 8px; margin-top: 16px; padding-top: 14px; }
+            #about .as-stat-value { font-size: 18px; }
+            #about .as-stat-label { font-size: 9px; }
+            #about .as-pres-photo { width: 64px; height: 64px; }
+            #about .as-pres-quote { font-size: 13px; }
+            #about .as-legacy { margin-top: 32px; padding: 0; }
+            #about .as-legacy-inner { padding: 22px 16px; border-radius: 14px; }
+            #about .as-legacy-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+            #about .as-legacy-val { font-size: 20px; }
+            #about .as-legacy-label { font-size: 9px; }
+            #about .about-sun-anchor { width: 52px; height: 52px; top: 80px; }
+          }
+
+          /* ═══════════════════════════════════════════════════════════
+             MOBILE — 481px to 768px
+          ════════════════════════════════════════════════════════════ */
+          @media (min-width: 481px) and (max-width: 768px) {
             #about.about-solar-section { padding: 60px 20px; }
             #about .as-title { margin-bottom: 40px; }
             #about .as-title h2 { font-size: 28px; }
@@ -1426,36 +1848,49 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             #about .as-legacy { padding: 0; margin-top: 40px; }
             #about .as-legacy-grid { grid-template-columns: repeat(2, 1fr); }
             #about .as-legacy-inner { padding: 28px 20px; }
+            #about .about-sun-anchor { width: 64px; height: 64px; top: 90px; }
           }
 
           /* ═══════════════════════════════════════════════════════════
              TABLET — 769px to 1024px
           ════════════════════════════════════════════════════════════ */
           @media (min-width: 769px) and (max-width: 1024px) {
-            #about .p-mercury { width: 20px; height: 20px; }
-            #about .p-venus { width: 28px; height: 28px; }
-            #about .p-earth { width: 31px; height: 31px; }
+            #about .p-mercury { width: 26px; height: 26px; }
+            #about .p-venus { width: 36px; height: 36px; }
+            #about .p-earth { width: 40px; height: 40px; }
             #about .p-sun {
-              width: 64px; height: 64px;
-              box-shadow: 0 0 0 3px rgba(255,171,0,0.15), 0 0 0 7px rgba(255,171,0,0.08);
+              width: 76px; height: 76px;
+              box-shadow: 0 0 0 3px rgba(255,171,0,0.15), 0 0 0 8px rgba(255,171,0,0.08);
             }
-            #about .p-jupiter { width: 48px; height: 48px; }
-            #about .p-saturn { width: 39px; height: 39px; }
-            #about .p-saturn-ring { width: 59px; height: 17px; }
-            #about .p-neptune { width: 34px; height: 34px; }
-            #about .p-zone { min-height: 100px; }
-            #about .orbit-line-h { top: 32px; }
-            #about .as-card h3 { font-size: 16px; }
-            #about .as-card-body { font-size: 11px; }
-            #about .as-card { overflow: hidden; }
+            #about .p-mars { width: 32px; height: 32px; }
+            #about .p-jupiter { width: 56px; height: 56px; }
+            #about .p-saturn { width: 46px; height: 46px; }
+            #about .p-saturn-ring { width: 68px; height: 20px; }
+            #about .p-neptune { width: 42px; height: 42px; }
+            #about .p-zone { min-height: 110px; gap: 12px; }
+            #about .orbit-line-h { top: 38px; }
+            #about .as-card h3 { font-size: 20px; }
+            #about .as-card-body { font-size: 13px; }
+            #about .as-card { padding: 24px 22px; }
             #about .as-card h3 {
               display: -webkit-box; -webkit-line-clamp: 2;
               -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;
             }
-            #about .as-pres-photo { width: 56px; height: 56px; }
-            #about .as-pres-quote { font-size: 11px; }
-            #about .solar-desktop { padding: 0 20px; }
+            #about .as-pres-photo { width: 64px; height: 64px; }
+            #about .as-pres-quote { font-size: 12px; }
+            #about .solar-desktop { padding: 0 20px; gap: 20px; }
             #about .as-legacy { padding: 0 20px; }
+            #about .about-sun-anchor { width: 76px; height: 76px; top: 200px; }
+          }
+
+          /* ═══════════════════════════════════════════════════════════
+             LARGE DESKTOP — min-width: 1400px
+          ════════════════════════════════════════════════════════════ */
+          @media (min-width: 1400px) {
+            #about .solar-desktop { max-width: 1500px; gap: 40px; }
+            #about .as-card { padding: 36px 34px; }
+            #about .as-card h3 { font-size: 28px; }
+            #about .as-card-body { font-size: 16px; }
           }
         ` }} />
 
@@ -1473,25 +1908,12 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         <div className="solar-desktop">
           <div className="orbit-line-h" />
 
-          {/* Mercury (no card) */}
-          <div className="p-col">
-            <div className="p-zone">
-              <div className="p-sphere p-mercury" />
-            </div>
-          </div>
-
-          {/* Venus (no card) */}
-          <div className="p-col">
-            <div className="p-zone">
-              <div className="p-sphere p-venus" />
-            </div>
-          </div>
-
-          {/* Earth + Our Origin Card */}
+          {/* ═══════ LEFT COLUMN: 3 inner planets + Our Origin card ═══════ */}
           <div className="p-col" data-node="0">
             <div className="p-zone">
+              <div className="p-sphere p-mercury" />
+              <div className="p-sphere p-venus" />
               <div className="p-sphere p-earth" />
-              <div className="p-connector" />
             </div>
             <div className="as-card as-card-dark about-panel">
               <div className="as-card-cat">
@@ -1521,7 +1943,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             </div>
           </div>
 
-          {/* Sun + President Card (center) */}
+          {/* ═══════ CENTER COLUMN: Sun + President card ═══════ */}
           <div className="p-col p-col-sun" data-node="1">
             <div className="p-zone">
               <div className="p-sphere p-sun" />
@@ -1551,11 +1973,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             </div>
           </div>
 
-          {/* Jupiter + Our Vision Card */}
+          {/* ═══════ RIGHT COLUMN: 3 outer planets + Our Vision card ═══════ */}
           <div className="p-col" data-node="2">
             <div className="p-zone">
+              <div className="p-sphere p-mars" />
               <div className="p-sphere p-jupiter" />
-              <div className="p-connector" />
+              <div className="p-saturn-wrap">
+                <div className="p-sphere p-saturn" />
+                <div className="p-saturn-ring" />
+              </div>
             </div>
             <div className="as-card as-card-dark about-panel">
               <div className="as-card-cat">
@@ -1582,23 +2008,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                   <div className="as-stat-value font-display">1000+</div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Saturn (no card) */}
-          <div className="p-col">
-            <div className="p-zone">
-              <div className="p-saturn-wrap">
-                <div className="p-sphere p-saturn" />
-                <div className="p-saturn-ring" />
-              </div>
-            </div>
-          </div>
-
-          {/* Neptune (no card) */}
-          <div className="p-col">
-            <div className="p-zone">
-              <div className="p-sphere p-neptune" />
             </div>
           </div>
         </div>
