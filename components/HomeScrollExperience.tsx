@@ -4,14 +4,15 @@ import Link from "next/link";
 import Image from "next/image";
 import Hero from "./Hero";
 import HeroAtom, { TIMELINE_NODES } from "./HeroAtom";
-import EventsConstellation from "./EventsConstellation";
+import EventsConstellation, { DOTS } from "./EventsConstellation";
 import { urlFor } from "@/sanity/lib/image";
 import type { HomepageData } from "@/sanity/lib/types";
 
 /* ─── constants ─── */
 const HEADER_H = 64;
-const TRANSITION_MS_DEFAULT = 1600;
-const TRANSITION_MS_ABOUT = 2000;
+const TRANSITION_MS_DEFAULT = 950;
+const TRANSITION_MS_ABOUT = 1200;
+const TRANSITION_MS_EVENTS = 2400;
 const CANVAS_INTRINSIC = 640;
 
 const CLUBS_DETAILS = [
@@ -269,6 +270,25 @@ function easeInOutQuart(t: number) {
   return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
 }
 
+function hexToRgb(hex: string) {
+  const normalized = hex.replace("#", "");
+  const value = parseInt(normalized, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixHex(a: string, b: string, t: number) {
+  const ca = hexToRgb(a);
+  const cb = hexToRgb(b);
+  const r = Math.round(lerp(ca.r, cb.r, t));
+  const g = Math.round(lerp(ca.g, cb.g, t));
+  const blue = Math.round(lerp(ca.b, cb.b, t));
+  return `rgb(${r}, ${g}, ${blue})`;
+}
+
 function getLayoutElement(selector: string): HTMLElement | null {
   const els = document.querySelectorAll<HTMLElement>(selector);
   for (const el of els) {
@@ -278,9 +298,97 @@ function getLayoutElement(selector: string): HTMLElement | null {
   return null;
 }
 
-type Phase = "hero" | "animating" | "clubs" | "zooming" | "zoomed" | "about";
+function getAboutEventsTriggerPoint(aboutSection: HTMLElement) {
+  const scrollableH = Math.max(aboutSection.offsetHeight - window.innerHeight, 1);
+  const progressTrigger = scrollableH * ABOUT_EVENTS_TRIGGER_RATIO;
+  const viewportLeadTrigger = scrollableH - window.innerHeight * 0.28;
+  return Math.max(
+    0,
+    Math.min(scrollableH - 5, Math.max(progressTrigger, viewportLeadTrigger)),
+  );
+}
+
+type MorphPoint = {
+  x: number;
+  y: number;
+  size: number;
+};
+
+type PlanetDotMorph = {
+  key: string;
+  selectors: string[];
+  dotId: number;
+  fromColor: string;
+  toColor: string;
+  stagger: number;
+};
+
+const PLANET_DOT_MORPHS: PlanetDotMorph[] = [
+  {
+    key: "mercury",
+    selectors: ["#about .solar-desktop .p-mercury"],
+    dotId: 0,
+    fromColor: "#b8c0c9",
+    toColor: "#1a3378",
+    stagger: 0,
+  },
+  {
+    key: "venus",
+    selectors: ["#about .solar-desktop .p-venus"],
+    dotId: 5,
+    fromColor: "#d9a763",
+    toColor: "#1a3378",
+    stagger: 0.06,
+  },
+  {
+    key: "earth",
+    selectors: ["#about .solar-desktop .p-earth", "#about .solar-mobile .mob-dot-earth"],
+    dotId: 2,
+    fromColor: "#3e8fb0",
+    toColor: "#1a3378",
+    stagger: 0.12,
+  },
+  {
+    key: "sun",
+    selectors: ["#about .solar-desktop .p-sun", "#about .solar-mobile .mob-sun"],
+    dotId: 4,
+    fromColor: "#ffb703",
+    toColor: "#c8903a",
+    stagger: 0.3,
+  },
+  {
+    key: "mars",
+    selectors: ["#about .solar-desktop .p-mars"],
+    dotId: 1,
+    fromColor: "#cf5a3c",
+    toColor: "#1a3378",
+    stagger: 0.18,
+  },
+  {
+    key: "jupiter",
+    selectors: ["#about .solar-desktop .p-jupiter", "#about .solar-mobile .mob-dot-jupiter"],
+    dotId: 3,
+    fromColor: "#d4924c",
+    toColor: "#1a3378",
+    stagger: 0.24,
+  },
+  {
+    key: "saturn",
+    selectors: ["#about .solar-desktop .p-saturn-wrap"],
+    dotId: 12,
+    fromColor: "#d0a45f",
+    toColor: "#1a3378",
+    stagger: 0.28,
+  },
+];
+
+const MORPH_DURATION_FRACTION = 0.7;
+const MORPH_DOT_IDS = PLANET_DOT_MORPHS.map((item) => item.dotId);
+const ABOUT_EVENTS_TRIGGER_RATIO = 0.68;
+
+type Phase = "hero" | "animating" | "clubs" | "zooming" | "zoomed" | "about" | "events";
 interface AnimState {
-  targetPhase: "hero" | "clubs" | "about";
+  targetPhase: "hero" | "clubs" | "about" | "events";
   startTime: number;
   scrollStart: number;
   scrollEnd: number;
@@ -319,11 +427,16 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   const initZoomRef = useRef<(slug: string) => void>(() => {});
   const activeAboutNodeRef = useRef(0);
   const prevActiveNodeRef = useRef(-1);
+  const lastTransitionTimeRef = useRef(0);
+  const eventsMorphRef = useRef(0);
+  const morphGhostRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const morphedDotsVisibleRef = useRef(false);
 
   const [clubsTextVisible, setClubsTextVisible] = useState(false);
   const [selectedClub, setSelectedClub] = useState<string | null>(null);
   const [cardRevealVisible, setCardRevealVisible] = useState(false);
   const [activeAboutNode, setActiveAboutNode] = useState(0);
+  const [morphedDotIds, setMorphedDotIds] = useState<number[]>([]);
   const cardWrapperRef = useRef<HTMLDivElement>(null);
 
   const [projectorCoords, setProjectorCoords] = useState<{
@@ -337,7 +450,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
   /* ── Trigger a section-snap transition ── */
   const startTransition = useCallback(
-    (targetPhase: "hero" | "clubs" | "about") => {
+    (targetPhase: "hero" | "clubs" | "about" | "events") => {
       if (phaseRef.current === "animating") return;
       if (phaseRef.current === "zooming" || phaseRef.current === "zoomed")
         return;
@@ -371,6 +484,24 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               HEADER_H;
           }
         }
+      } else if (targetPhase === "events") {
+        const eventsSection = document.getElementById("events");
+        if (eventsSection) {
+          scrollTarget =
+            eventsSection.getBoundingClientRect().top +
+            window.scrollY -
+            HEADER_H;
+        } else {
+          // 🛡️ FALLBACK: If #events is missing, scroll down 80% of a viewport from about
+          const aboutSection = document.getElementById("about");
+          if (aboutSection) {
+            scrollTarget =
+              aboutSection.getBoundingClientRect().top +
+              window.scrollY +
+              aboutSection.offsetHeight -
+              HEADER_H;
+          }
+        }
       }
 
       phaseRef.current = "animating";
@@ -385,7 +516,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   );
 
   /* ── Zoom initialization ── */
-  initZoomRef.current = (slug: string) => {
+  const initZoom = useCallback((slug: string) => {
     const clubsAnchor = clubsAnchorRef.current;
     if (!clubsAnchor) return;
     const clubsRect = clubsAnchor.getBoundingClientRect();
@@ -417,7 +548,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       clubsFloatY,
       clubsScale,
     };
-  };
+  }, []);
+
+  useEffect(() => {
+    initZoomRef.current = initZoom;
+  }, [initZoom]);
 
   /* ── Electron & Nucleus Click Handler ── */
   const handleElectronClick = useCallback(
@@ -491,6 +626,85 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     }
   }, [selectedClub]);
 
+  const syncMorphedDots = (visible: boolean) => {
+    if (morphedDotsVisibleRef.current === visible) return;
+    morphedDotsVisibleRef.current = visible;
+    setMorphedDotIds(visible ? MORPH_DOT_IDS : []);
+  };
+
+  const getMorphElementPoint = (selectors: string[]): MorphPoint | null => {
+    for (const selector of selectors) {
+      const el = getLayoutElement(selector);
+      if (!el) continue;
+
+      const rect = el.getBoundingClientRect();
+      return {
+        x: rect.left + window.scrollX + rect.width / 2,
+        y: rect.top + window.scrollY + rect.height / 2,
+        size: Math.max(rect.width, rect.height),
+      };
+    }
+
+    return null;
+  };
+
+  const getConstellationDotPoint = (dotId: number): MorphPoint | null => {
+    const svg = document.querySelector<SVGSVGElement>("#events .ec-constellation-svg");
+    const dot = DOTS.find((item) => item.id === dotId);
+    if (!svg || !dot) return null;
+
+    const rect = svg.getBoundingClientRect();
+    const scaleX = rect.width / 1000;
+    const scaleY = rect.height / 600;
+
+    return {
+      x: rect.left + window.scrollX + dot.cx * scaleX,
+      y: rect.top + window.scrollY + dot.cy * scaleY,
+      size: Math.max(5, dot.r * 2 * Math.min(scaleX, scaleY)),
+    };
+  };
+
+  const updateMorphGhosts = (progress: number) => {
+    const active = progress > 0.001 && progress < 0.999;
+    syncMorphedDots(progress > 0.08);
+
+    PLANET_DOT_MORPHS.forEach((morph, index) => {
+      const ghost = morphGhostRefs.current[index];
+      if (!ghost) return;
+
+      if (!active) {
+        ghost.style.opacity = "0";
+        ghost.style.transform = "translate3d(-50%, -50%, 0) scale(0.6)";
+        return;
+      }
+
+      const from = getMorphElementPoint(morph.selectors);
+      const to = getConstellationDotPoint(morph.dotId);
+      if (!from || !to) {
+        ghost.style.opacity = "0";
+        return;
+      }
+
+      const localT = clamp01((progress - morph.stagger) / MORPH_DURATION_FRACTION);
+      const easedT = easeInOutQuart(localT);
+      const x = lerp(from.x, to.x, easedT) - window.scrollX;
+      const y = lerp(from.y, to.y, easedT) - window.scrollY;
+      const size = lerp(from.size, to.size, easedT);
+      const color = mixHex(morph.fromColor, morph.toColor, easedT);
+      const shine = mixHex("#ffffff", color, 0.52 + easedT * 0.24);
+      const glow = 0.28 + Math.sin(Math.PI * localT) * 0.34;
+
+      ghost.style.opacity = "1";
+      ghost.style.left = `${x}px`;
+      ghost.style.top = `${y}px`;
+      ghost.style.width = `${size}px`;
+      ghost.style.height = `${size}px`;
+      ghost.style.transform = "translate3d(-50%, -50%, 0) scale(1)";
+      ghost.style.background = `radial-gradient(circle at 32% 30%, ${shine} 0%, ${color} 52%, ${morph.toColor} 100%)`;
+      ghost.style.boxShadow = `0 0 ${Math.max(12, size * 0.45)}px rgba(26, 51, 120, ${glow})`;
+    });
+  };
+
   useEffect(() => {
     if (cardRevealVisible && phaseRef.current !== "about") {
       const timer = setTimeout(() => {
@@ -525,7 +739,22 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         initializedRef.current = true;
         const clubsSection = document.getElementById("clubs");
         const aboutSection = document.getElementById("about");
+        const eventsSection = document.getElementById("events");
         if (
+          eventsSection &&
+          window.scrollY >=
+            eventsSection.getBoundingClientRect().top +
+              window.scrollY -
+              HEADER_H -
+              50
+        ) {
+          phaseRef.current = "events";
+          atomProgressRef.current = 1;
+          aboutProgressRef.current = 1;
+          eventsMorphRef.current = 1;
+          prevShowTextRef.current = true;
+          setClubsTextVisible(true);
+        } else if (
           aboutSection &&
           window.scrollY >=
             aboutSection.getBoundingClientRect().top +
@@ -536,6 +765,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           phaseRef.current = "about";
           atomProgressRef.current = 1;
           aboutProgressRef.current = 1;
+          eventsMorphRef.current = 0;
           prevShowTextRef.current = true;
           setClubsTextVisible(true);
         } else if (
@@ -549,6 +779,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           phaseRef.current = "clubs";
           atomProgressRef.current = 1;
           aboutProgressRef.current = 0;
+          eventsMorphRef.current = 0;
           prevShowTextRef.current = true;
           setClubsTextVisible(true);
         }
@@ -565,7 +796,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const isAboutTransition =
           anim.targetPhase === "about" ||
           (anim.targetPhase === "clubs" && anim.scrollStart > anim.scrollEnd);
-        const duration = isAboutTransition
+        const isEventsMorphTransition =
+          anim.targetPhase === "events" ||
+          (anim.targetPhase === "about" &&
+            anim.scrollStart > anim.scrollEnd &&
+            eventsMorphRef.current > 0.1);
+        const duration = isEventsMorphTransition
+          ? TRANSITION_MS_EVENTS
+          : isAboutTransition
           ? TRANSITION_MS_ABOUT
           : TRANSITION_MS_DEFAULT;
         const rawT = clamp01(elapsed / duration);
@@ -584,7 +822,22 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           aboutT = 0;
         } else if (anim.targetPhase === "about") {
           posT = 1;
-          aboutT = easedT;
+          if (anim.scrollStart < anim.scrollEnd) {
+            aboutT = easedT;
+          } else {
+            aboutT = 1;
+          }
+        } else if (anim.targetPhase === "events") {
+          posT = 1;
+          aboutT = 1;
+        }
+
+        if (anim.targetPhase === "events") {
+          eventsMorphRef.current = easedT;
+        } else if (anim.targetPhase === "about" && anim.scrollStart > anim.scrollEnd) {
+          eventsMorphRef.current = 1 - easedT;
+        } else {
+          eventsMorphRef.current = 0;
         }
 
         atomProgressRef.current = posT;
@@ -594,6 +847,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         if (rawT >= 1) {
           phaseRef.current = anim.targetPhase;
           animRef.current = null;
+          lastTransitionTimeRef.current = performance.now();
           updateProjectorCoords();
           if (phaseRef.current === "clubs" && pendingZoomSlugRef.current) {
             const slug = pendingZoomSlugRef.current;
@@ -607,11 +861,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       ) {
         posT = 1;
         aboutT = 0;
+        eventsMorphRef.current = 0;
         atomProgressRef.current = 1;
         aboutProgressRef.current = 0;
       } else {
         const clubsSection = document.getElementById("clubs");
         const aboutSection = document.getElementById("about");
+        const eventsSection = document.getElementById("events");
 
         if (clubsSection) {
           const clubsRect = clubsSection.getBoundingClientRect();
@@ -624,22 +880,32 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               HEADER_H
             : clubsScrollY + window.innerHeight * 0.8;
 
+          // 🛡️ FALLBACK: If #events is missing, use a safe distance below about
+          const eventsScrollY = eventsSection
+            ? eventsSection.getBoundingClientRect().top +
+              window.scrollY -
+              HEADER_H
+            : aboutScrollY + (aboutSection ? aboutSection.offsetHeight : window.innerHeight * 0.8);
+
           const sy = window.scrollY;
 
           if (sy < clubsScrollY) {
             phaseRef.current = "hero";
             posT = clamp01(sy / Math.max(clubsScrollY, 1));
             aboutT = 0;
+            eventsMorphRef.current = 0;
           } else if (sy < aboutScrollY) {
             phaseRef.current = "clubs";
             posT = 1;
             aboutT = clamp01(
               (sy - clubsScrollY) / Math.max(aboutScrollY - clubsScrollY, 1),
             );
-          } else {
+            eventsMorphRef.current = 0;
+          } else if (sy < eventsScrollY) {
             phaseRef.current = "about";
             posT = 1;
             aboutT = 1;
+            eventsMorphRef.current = 0;
 
             if (aboutSection) {
               const aRect = aboutSection.getBoundingClientRect();
@@ -657,6 +923,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 updateProjectorCoords();
               }
             }
+          } else {
+            phaseRef.current = "events";
+            posT = 1;
+            aboutT = 1;
+            eventsMorphRef.current = 1;
           }
         }
         atomProgressRef.current = posT;
@@ -706,19 +977,37 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         floating.style.opacity = '1';
       }
 
-      // Add/remove .revealed class on #about section for responsive CSS burst animations
+      // Add/remove .revealed and .exhaled classes on #about section for responsive CSS burst animations
       const aboutSection = document.getElementById("about");
       if (aboutSection) {
-        if (aboutProgressRef.current > 0.45) {
+        const isTransitioningToEvents = phaseRef.current === "animating" && animRef.current?.targetPhase === "events";
+        const isEvents = phaseRef.current === "events" || isTransitioningToEvents;
+
+        if (isEvents) {
+          if (!aboutSection.classList.contains("exhaled")) {
+            aboutSection.classList.add("exhaled");
+          }
+          if (aboutSection.classList.contains("revealed")) {
+            aboutSection.classList.remove("revealed");
+          }
+        } else if (aboutProgressRef.current > 0.45) {
           if (!aboutSection.classList.contains("revealed")) {
             aboutSection.classList.add("revealed");
+          }
+          if (aboutSection.classList.contains("exhaled")) {
+            aboutSection.classList.remove("exhaled");
           }
         } else if (aboutProgressRef.current < 0.15) {
           if (aboutSection.classList.contains("revealed")) {
             aboutSection.classList.remove("revealed");
           }
+          if (aboutSection.classList.contains("exhaled")) {
+            aboutSection.classList.remove("exhaled");
+          }
         }
       }
+
+      updateMorphGhosts(eventsMorphRef.current);
 
       if (
         (phaseRef.current === "zooming" || phaseRef.current === "zoomed") &&
@@ -837,8 +1126,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         e.preventDefault();
         return;
       }
+
+      // Snapping transition cooldown: block new snapping transitions within 700ms of the last one completing
+      const isCooldown = performance.now() - lastTransitionTimeRef.current < 700;
+
       const clubsSection = document.getElementById("clubs");
       const aboutSection = document.getElementById("about");
+      const eventsSection = document.getElementById("events");
       if (!clubsSection) return;
       const clubsAbsTop =
         clubsSection.getBoundingClientRect().top + window.scrollY;
@@ -846,27 +1140,53 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       if (e.deltaY > 0 && phaseRef.current === "hero") {
         e.preventDefault();
-        if (Math.abs(e.deltaY) >= 10) startTransition("clubs");
+        if (isCooldown) return;
+        if (Math.abs(e.deltaY) >= 30) startTransition("clubs");
         return;
       }
       if (phaseRef.current === "clubs") {
         if (e.deltaY < 0) {
           if (window.scrollY <= clubsScrollY + 15) {
             e.preventDefault();
-            if (Math.abs(e.deltaY) >= 10) startTransition("hero");
+            if (isCooldown) return;
+            if (Math.abs(e.deltaY) >= 30) startTransition("hero");
           }
         } else if (e.deltaY > 0) {
           e.preventDefault();
-          if (Math.abs(e.deltaY) >= 10) startTransition("about");
+          if (isCooldown) return;
+          if (Math.abs(e.deltaY) >= 30) startTransition("about");
         }
         return;
       }
-      if (e.deltaY < 0 && phaseRef.current === "about" && aboutSection) {
-        const aRect = aboutSection.getBoundingClientRect();
-        const sectionScrolled = -(aRect.top - HEADER_H);
-        if (sectionScrolled <= 5) {
-          e.preventDefault();
-          if (Math.abs(e.deltaY) >= 10) startTransition("clubs");
+      if (phaseRef.current === "about" && aboutSection) {
+        if (e.deltaY < 0) {
+          const aRect = aboutSection.getBoundingClientRect();
+          const sectionScrolled = -(aRect.top - HEADER_H);
+          if (sectionScrolled <= 5) {
+            e.preventDefault();
+            if (isCooldown) return;
+            if (Math.abs(e.deltaY) >= 30) startTransition("clubs");
+          }
+        } else if (e.deltaY > 0) {
+          const aRect = aboutSection.getBoundingClientRect();
+          const sectionScrolled = -(aRect.top - HEADER_H);
+          if (sectionScrolled >= getAboutEventsTriggerPoint(aboutSection)) {
+            e.preventDefault();
+            if (isCooldown) return;
+            if (Math.abs(e.deltaY) >= 30) startTransition("events");
+          }
+        }
+        return;
+      }
+      if (phaseRef.current === "events" && eventsSection) {
+        if (e.deltaY < 0) {
+          const eRect = eventsSection.getBoundingClientRect();
+          const sectionScrolled = -(eRect.top - HEADER_H);
+          if (sectionScrolled <= 5) {
+            e.preventDefault();
+            if (isCooldown) return;
+            if (Math.abs(e.deltaY) >= 30) startTransition("about");
+          }
         }
       }
     };
@@ -885,8 +1205,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         e.preventDefault();
         return;
       }
+
+      // Snapping transition cooldown
+      const isCooldown = performance.now() - lastTransitionTimeRef.current < 700;
+
       const clubsSection = document.getElementById("clubs");
       const aboutSection = document.getElementById("about");
+      const eventsSection = document.getElementById("events");
       if (!clubsSection) return;
       const clubsAbsTop =
         clubsSection.getBoundingClientRect().top + window.scrollY;
@@ -894,7 +1219,8 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       if (deltaY > 0 && phaseRef.current === "hero") {
         e.preventDefault();
-        if (Math.abs(deltaY) >= 20) {
+        if (isCooldown) return;
+        if (Math.abs(deltaY) >= 40) {
           startTransition("clubs");
           touchStartRef.current = null;
         }
@@ -902,26 +1228,53 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         if (deltaY < 0) {
           if (window.scrollY <= clubsScrollY + 15) {
             e.preventDefault();
-            if (Math.abs(deltaY) >= 20) {
+            if (isCooldown) return;
+            if (Math.abs(deltaY) >= 40) {
               startTransition("hero");
               touchStartRef.current = null;
             }
           }
         } else if (deltaY > 0) {
           e.preventDefault();
-          if (Math.abs(deltaY) >= 20) {
+          if (isCooldown) return;
+          if (Math.abs(deltaY) >= 40) {
             startTransition("about");
             touchStartRef.current = null;
           }
         }
-      } else if (deltaY < 0 && phaseRef.current === "about" && aboutSection) {
+      } else if (phaseRef.current === "about" && aboutSection) {
         const aRect = aboutSection.getBoundingClientRect();
         const sectionScrolled = -(aRect.top - HEADER_H);
-        if (sectionScrolled <= 5) {
-          e.preventDefault();
-          if (Math.abs(deltaY) >= 20) {
-            startTransition("clubs");
-            touchStartRef.current = null;
+        if (deltaY < 0) {
+          if (sectionScrolled <= 5) {
+            e.preventDefault();
+            if (isCooldown) return;
+            if (Math.abs(deltaY) >= 40) {
+              startTransition("clubs");
+              touchStartRef.current = null;
+            }
+          }
+        } else if (deltaY > 0) {
+          if (sectionScrolled >= getAboutEventsTriggerPoint(aboutSection)) {
+            e.preventDefault();
+            if (isCooldown) return;
+            if (Math.abs(deltaY) >= 40) {
+              startTransition("events");
+              touchStartRef.current = null;
+            }
+          }
+        }
+      } else if (phaseRef.current === "events" && eventsSection) {
+        if (deltaY < 0) {
+          const eRect = eventsSection.getBoundingClientRect();
+          const sectionScrolled = -(eRect.top - HEADER_H);
+          if (sectionScrolled <= 5) {
+            e.preventDefault();
+            if (isCooldown) return;
+            if (Math.abs(deltaY) >= 40) {
+              startTransition("about");
+              touchStartRef.current = null;
+            }
           }
         }
       }
@@ -1336,15 +1689,36 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
             opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
             transition: opacity 0.75s ease 0.15s, transform 0.75s ease 0.15s;
           }
-          #about .solar-desktop .p-neptune {
-            --burst-x: -340px;
-            opacity: 0; transform: translate(var(--burst-x), 0) scale(0);
-            transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s, opacity 0.5s ease 0.05s;
+
+          /* ── Exhaled State (ghost planets carry the travel motion) ── */
+          #about.exhaled .solar-desktop .p-mercury,
+          #about.exhaled .solar-desktop .p-venus,
+          #about.exhaled .solar-desktop .p-earth,
+          #about.exhaled .solar-desktop .p-sun,
+          #about.exhaled .solar-desktop .p-mars,
+          #about.exhaled .solar-desktop .p-jupiter,
+          #about.exhaled .solar-desktop .p-saturn-wrap,
+          #about.exhaled .solar-desktop .p-neptune {
+            opacity: 0;
+            transform: none;
+            transition: opacity 0.2s ease;
           }
-          #about .solar-desktop .p-neptune::after {
-            opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 14px #00d2ff);
-            transition: opacity 0.75s ease 0.05s, transform 0.75s ease 0.05s;
+
+          #about.exhaled .solar-mobile .mob-sun,
+          #about.exhaled .solar-mobile .mob-dot {
+            opacity: 0;
+            transform: none;
+            transition: opacity 0.2s ease;
           }
+
+          #about.exhaled .solar-mobile .mob-card {
+            opacity: 0;
+            transform: translateY(40px) scale(0.85);
+            transition: transform 0.65s ease-out, opacity 0.55s ease;
+          }
+          #about.exhaled .solar-mobile .mob-card[data-node="0"] { transition-delay: 0.06s; }
+          #about.exhaled .solar-mobile .mob-card[data-node="1"] { transition-delay: 0.12s; }
+          #about.exhaled .solar-mobile .mob-card[data-node="2"] { transition-delay: 0.18s; }
 
           /* ── Mobile Base / Unrevealed States (Reverse delays) ── */
           #about .solar-mobile .mob-spine {
@@ -2110,25 +2484,34 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           </div>
         </div>
 
-        {/* ── Legacy Stats ── */}
-        {data?.legacyStats && data.legacyStats.length > 0 && (
-          <div className="as-legacy">
-            <div className="as-legacy-inner">
-              <div className="as-legacy-grid">
-                {data.legacyStats.map((stat) => (
-                  <div key={stat._key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div className="as-legacy-val font-display">{stat.value}</div>
-                    <div className="as-legacy-label font-body">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </section>
 
+      <div className="fixed inset-0 z-30 pointer-events-none" aria-hidden="true">
+        {PLANET_DOT_MORPHS.map((morph, index) => (
+          <div
+            key={morph.key}
+            ref={(el) => {
+              morphGhostRefs.current[index] = el;
+            }}
+            className="absolute rounded-full"
+            style={{
+              opacity: 0,
+              width: 0,
+              height: 0,
+              left: 0,
+              top: 0,
+              transform: "translate3d(-50%, -50%, 0) scale(0.6)",
+              willChange: "left, top, width, height, transform, opacity",
+            }}
+          />
+        ))}
+      </div>
+
       {/* ═══ EVENTS CONSTELLATION SECTION ═══ */}
-      <EventsConstellation events={data?.featuredEvents || []} />
+      <EventsConstellation
+        events={data?.featuredEvents || []}
+        morphedDotIds={morphedDotIds}
+      />
 
       <div
         ref={floatingRef}
@@ -2165,7 +2548,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       {/* Projector beam only during club zoom, NOT during about section */}
       {projectorCoords &&
         cardRevealVisible &&
-        phaseRef.current !== "about" &&
         (() => {
           const activeClubData = CLUBS_DETAILS.find(
             (c) => c.slug === selectedClub,
@@ -2241,7 +2623,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           );
         })()}
       <span className="sr-only" aria-live="polite">
-        {phaseRef.current === "animating" ? "Moving between sections" : ""}
+        {cardRevealVisible ? "Club detail opened" : ""}
       </span>
     </div>
   );

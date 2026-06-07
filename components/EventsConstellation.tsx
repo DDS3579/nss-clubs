@@ -507,8 +507,6 @@ export default function EventsConstellation({
           const len = LINE_LENGTHS[i];
 
           const desktopDelay = LINE_START_DESKTOP + i * 0.07;
-          const mobileVisIdx = LINES.slice(0, i + 1).filter(l => l.isMobileVisible).length - 1;
-          const mobileDelay = line.isMobileVisible ? LINE_START_MOBILE + mobileVisIdx * 0.04 : desktopDelay;
 
           return (
             <line
