@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Hero from "./Hero";
 import HeroAtom, { TIMELINE_NODES } from "./HeroAtom";
+import EventsConstellation from "./EventsConstellation";
 import { urlFor } from "@/sanity/lib/image";
 import type { HomepageData } from "@/sanity/lib/types";
 
@@ -2125,6 +2126,9 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           </div>
         )}
       </section>
+
+      {/* ═══ EVENTS CONSTELLATION SECTION ═══ */}
+      <EventsConstellation events={data?.featuredEvents || []} />
 
       <div
         ref={floatingRef}
