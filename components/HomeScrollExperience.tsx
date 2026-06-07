@@ -1190,253 +1190,531 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       <section
         id="about"
-        className="relative overflow-hidden bg-slate-50 py-24 lg:py-40"
+        className="about-solar-section"
       >
-        <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-10">
-          {/* ── Section Header ── */}
-          <div className="text-center mb-12 lg:mb-20">
-            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-black text-primary tracking-tight">
-              Our Journey & <span className="text-accent">Impact</span>
-            </h2>
-            <p className="mt-5 font-body text-slate-500 max-w-2xl mx-auto text-lg leading-relaxed">
-              From a small spark to a blazing constellation of student
-              leadership.
+        {/* Hidden anchor for canvas animation system — keeps canvas shrinking to invisible */}
+        <div
+          ref={aboutAnchorRef}
+          style={{ width: 1, height: 1, position: 'absolute' as const, top: 0, left: 0, opacity: 0, pointerEvents: 'none' as const }}
+        />
+
+        <style dangerouslySetInnerHTML={{ __html: `
+          /* ═══════════════════════════════════════════════════════════
+             ABOUT SOLAR SECTION — ALL STYLES SCOPED TO #about
+          ════════════════════════════════════════════════════════════ */
+          #about.about-solar-section {
+            position: relative; overflow: hidden; background: #f8fafc;
+            padding: 100px 0 80px;
+          }
+
+          /* ── Title ── */
+          #about .as-title { text-align: center; margin: 0 auto 60px; max-width: 800px; padding: 0 24px; }
+          #about .as-title h2 {
+            font-size: clamp(36px, 5vw, 52px); font-weight: 900;
+            color: #0d2460; line-height: 1.1; margin: 0; letter-spacing: -0.02em;
+          }
+          #about .as-title h2 em { font-style: italic; color: #c8903a; }
+          #about .as-subtitle { margin-top: 16px; font-size: 14px; color: #94a3b8; line-height: 1.6; }
+
+          /* ── Desktop Solar System ── */
+          #about .solar-desktop {
+            display: flex; position: relative; max-width: 1280px;
+            margin: 0 auto; padding: 0 32px; align-items: flex-start;
+          }
+          #about .solar-mobile { display: none; }
+
+          /* ── Orbit Line ── */
+          #about .orbit-line-h {
+            position: absolute; top: 46px; left: 8%; right: 8%;
+            height: 1.5px; opacity: 0.12; pointer-events: none; z-index: 0;
+            background: linear-gradient(to right, transparent 0%, #0d2460 8%, #0d2460 92%, transparent 100%);
+          }
+
+          /* ── Planet Columns ── */
+          #about .p-col {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; position: relative; z-index: 1;
+          }
+          #about .p-col-sun { flex: 1.6; }
+
+          /* ── Planet Zone (fixed height aligns card tops) ── */
+          #about .p-zone {
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 130px; width: 100%;
+          }
+
+          /* ── Planet Spheres (3D radial gradient) ── */
+          #about .p-sphere { border-radius: 50%; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+
+          #about .p-mercury {
+            width: 28px; height: 28px; margin-top: 32px;
+            background: radial-gradient(circle at 35% 35%, #c7d3e3 0%, #8a9db8 40%, #5d6e85 75%, #3a4a5c 100%);
+          }
+          #about .p-venus {
+            width: 40px; height: 40px; margin-top: 14px;
+            background: radial-gradient(circle at 35% 35%, #fce0b0 0%, #e8a952 40%, #c47b2a 75%, #8a4e10 100%);
+          }
+          #about .p-earth {
+            width: 44px; height: 44px; margin-top: 18px;
+            background: radial-gradient(circle at 35% 35%, #7ec8e3 0%, #3e8fb0 35%, #1a8b57 65%, #0d4b3e 100%);
+          }
+          #about .p-sun {
+            width: 92px; height: 92px; margin-top: 0;
+            background: radial-gradient(circle at 38% 38%, #fff7d4 0%, #ffd54f 25%, #ffab00 50%, #e65100 80%, #bf360c 100%);
+            box-shadow: 0 0 0 4px rgba(255,171,0,0.15), 0 0 0 10px rgba(255,171,0,0.08), 0 0 30px rgba(255,171,0,0.2);
+          }
+          #about .p-jupiter {
+            width: 68px; height: 68px; margin-top: 12px;
+            background: radial-gradient(circle at 35% 35%, #f0c88a 0%, #d4924c 35%, #a0603a 65%, #6d3a25 100%);
+          }
+          #about .p-saturn-wrap { position: relative; margin-top: 6px; }
+          #about .p-saturn {
+            width: 56px; height: 56px;
+            background: radial-gradient(circle at 35% 35%, #f5e6c8 0%, #c9a96e 40%, #9e7c4a 70%, #6b5030 100%);
+          }
+          #about .p-saturn-ring {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotateX(70deg);
+            width: 84px; height: 24px;
+            border: 2px solid rgba(201,169,110,0.3); border-radius: 50%;
+            pointer-events: none; box-shadow: 0 2px 6px rgba(107,80,48,0.1);
+          }
+          #about .p-neptune {
+            width: 48px; height: 48px; margin-top: 20px;
+            background: radial-gradient(circle at 35% 35%, #7bb8e0 0%, #4a82c7 40%, #2a4fa0 70%, #1a3070 100%);
+          }
+
+          /* ── Connectors ── */
+          #about .p-connector {
+            width: 1px; flex-grow: 1; min-height: 30px;
+            background: linear-gradient(to bottom, rgba(13,36,96,0.2) 0%, rgba(13,36,96,0) 100%);
+          }
+
+          /* ── Cards ── */
+          #about .as-card {
+            width: 100%; border-radius: 16px; padding: 20px 18px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+          }
+          #about .as-card:hover { transform: translateY(-2px); }
+          #about .as-card-dark {
+            background: #1a3378; color: #fff;
+            box-shadow: 0 4px 20px rgba(13,36,96,0.15);
+          }
+          #about .as-card-dark:hover { box-shadow: 0 8px 30px rgba(13,36,96,0.25); }
+          #about .as-card-light {
+            background: #fff; color: #0d2460;
+            border: 1.5px solid #c8903a;
+            box-shadow: 0 4px 20px rgba(200,144,58,0.1);
+          }
+          #about .as-card-light:hover { box-shadow: 0 8px 30px rgba(200,144,58,0.18); }
+
+          #about .as-card-cat { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+          #about .as-card-cat-icon { width: 14px; height: 14px; }
+          #about .as-card-dark .as-card-cat-icon { color: rgba(255,255,255,0.55); }
+          #about .as-card-light .as-card-cat-icon { color: rgba(13,36,96,0.5); }
+          #about .as-card-cat-label {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.15em;
+            text-transform: uppercase;
+          }
+          #about .as-card-dark .as-card-cat-label { color: rgba(255,255,255,0.5); }
+          #about .as-card-light .as-card-cat-label { color: rgba(13,36,96,0.5); }
+
+          #about .as-card h3 {
+            font-size: 18px; font-weight: 900; margin: 0 0 8px;
+            line-height: 1.2; letter-spacing: -0.01em;
+          }
+          #about .as-card-dark h3 { color: rgba(255,255,255,0.95); }
+          #about .as-card-light h3 { color: #0d2460; }
+
+          #about .as-card-body {
+            font-size: 13px; line-height: 1.6; margin: 0;
+          }
+          #about .as-card-dark .as-card-body { color: rgba(255,255,255,0.7); }
+          #about .as-card-light .as-card-body { color: #475569; }
+
+          #about .as-card-stats {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+            margin-top: 14px; padding-top: 12px;
+          }
+          #about .as-card-dark .as-card-stats { border-top: 1px solid rgba(255,255,255,0.1); }
+          #about .as-card-light .as-card-stats { border-top: 1px solid rgba(0,0,0,0.08); }
+          #about .as-stat-label {
+            font-size: 9px; text-transform: uppercase;
+            letter-spacing: 0.1em; font-weight: 600;
+          }
+          #about .as-card-dark .as-stat-label { color: rgba(255,255,255,0.4); }
+          #about .as-card-light .as-stat-label { color: rgba(13,36,96,0.4); }
+          #about .as-stat-value { font-size: 16px; font-weight: 900; margin-top: 2px; }
+          #about .as-card-dark .as-stat-value { color: #fff; }
+          #about .as-card-light .as-stat-value { color: #0d2460; }
+
+          /* ── President Card Specifics ── */
+          #about .as-pres-photo {
+            width: 72px; height: 72px; border-radius: 50%; overflow: hidden;
+            border: 3px solid rgba(200,144,58,0.3); margin: 4px auto 8px;
+            flex-shrink: 0;
+          }
+          #about .as-pres-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+          #about .as-pres-quote {
+            font-style: italic; text-align: center;
+            font-size: 13px; line-height: 1.6; color: #475569;
+            margin: 6px 0 0;
+          }
+          #about .as-pres-footer {
+            text-align: center; font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.15em;
+            color: rgba(13,36,96,0.5); margin-top: 12px; padding-top: 10px;
+            border-top: 1px solid rgba(0,0,0,0.08);
+          }
+
+          /* ── Legacy Stats ── */
+          #about .as-legacy { max-width: 1280px; margin: 60px auto 0; padding: 0 32px; }
+          #about .as-legacy-inner {
+            background: #0d2460; border-radius: 20px; padding: 36px 32px;
+            border: 1px solid rgba(212,163,115,0.2);
+            box-shadow: 0 8px 30px rgba(13,36,96,0.15);
+          }
+          #about .as-legacy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; text-align: center; }
+          #about .as-legacy-val { font-size: clamp(24px, 3vw, 36px); font-weight: 900; color: #c8903a; }
+          #about .as-legacy-label {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+            color: rgba(255,255,255,0.55); font-weight: 600; margin-top: 6px;
+          }
+
+          /* ═══════════════════════════════════════════════════════════
+             MOBILE — max-width: 768px
+          ════════════════════════════════════════════════════════════ */
+          @media (max-width: 768px) {
+            #about.about-solar-section { padding: 60px 20px; }
+            #about .as-title { margin-bottom: 40px; }
+            #about .as-title h2 { font-size: 28px; }
+            #about .solar-desktop { display: none; }
+            #about .solar-mobile {
+              display: flex; flex-direction: column; align-items: center;
+              position: relative; max-width: 560px; margin: 0 auto;
+            }
+            #about .mob-spine {
+              position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+              background: linear-gradient(to bottom, transparent 0%, rgba(13,36,96,0.1) 8%, rgba(13,36,96,0.1) 92%, transparent 100%);
+              transform: translateX(-50%); z-index: 0;
+            }
+            #about .mob-sun {
+              width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+              background: radial-gradient(circle at 38% 38%, #fff7d4 0%, #ffd54f 25%, #ffab00 50%, #e65100 80%, #bf360c 100%);
+              box-shadow: 0 0 0 3px rgba(255,171,0,0.15), 0 0 0 7px rgba(255,171,0,0.08), 0 0 20px rgba(255,171,0,0.2);
+              position: relative; z-index: 1;
+            }
+            #about .mob-connector {
+              width: 1px; height: 40px; flex-shrink: 0; z-index: 1;
+              background: linear-gradient(to bottom, rgba(13,36,96,0.15) 0%, rgba(13,36,96,0) 100%);
+            }
+            #about .mob-dot {
+              width: 20px; height: 20px; border-radius: 50%;
+              flex-shrink: 0; z-index: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            }
+            #about .mob-dot-earth {
+              background: radial-gradient(circle at 35% 35%, #7ec8e3 0%, #3e8fb0 50%, #0d4b3e 100%);
+            }
+            #about .mob-dot-jupiter {
+              background: radial-gradient(circle at 35% 35%, #f0c88a 0%, #d4924c 50%, #6d3a25 100%);
+            }
+            #about .mob-card {
+              width: 100%; border-radius: 12px !important; padding: 18px !important;
+              position: relative; z-index: 1;
+            }
+            #about .mob-card-gap { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+            #about .as-legacy { padding: 0; margin-top: 40px; }
+            #about .as-legacy-grid { grid-template-columns: repeat(2, 1fr); }
+            #about .as-legacy-inner { padding: 28px 20px; }
+          }
+
+          /* ═══════════════════════════════════════════════════════════
+             TABLET — 769px to 1024px
+          ════════════════════════════════════════════════════════════ */
+          @media (min-width: 769px) and (max-width: 1024px) {
+            #about .p-mercury { width: 20px; height: 20px; }
+            #about .p-venus { width: 28px; height: 28px; }
+            #about .p-earth { width: 31px; height: 31px; }
+            #about .p-sun {
+              width: 64px; height: 64px;
+              box-shadow: 0 0 0 3px rgba(255,171,0,0.15), 0 0 0 7px rgba(255,171,0,0.08);
+            }
+            #about .p-jupiter { width: 48px; height: 48px; }
+            #about .p-saturn { width: 39px; height: 39px; }
+            #about .p-saturn-ring { width: 59px; height: 17px; }
+            #about .p-neptune { width: 34px; height: 34px; }
+            #about .p-zone { min-height: 100px; }
+            #about .orbit-line-h { top: 32px; }
+            #about .as-card h3 { font-size: 16px; }
+            #about .as-card-body { font-size: 11px; }
+            #about .as-card { overflow: hidden; }
+            #about .as-card h3 {
+              display: -webkit-box; -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;
+            }
+            #about .as-pres-photo { width: 56px; height: 56px; }
+            #about .as-pres-quote { font-size: 11px; }
+            #about .solar-desktop { padding: 0 20px; }
+            #about .as-legacy { padding: 0 20px; }
+          }
+        ` }} />
+
+        {/* ── Title ── */}
+        <div className="as-title">
+          <h2 className="font-display">
+            Our Journey &amp; <em>Impact</em>
+          </h2>
+          <p className="as-subtitle font-body">
+            From a small spark to a blazing constellation of student leadership.
+          </p>
+        </div>
+
+        {/* ═══ DESKTOP SOLAR SYSTEM LAYOUT ═══ */}
+        <div className="solar-desktop">
+          <div className="orbit-line-h" />
+
+          {/* Mercury (no card) */}
+          <div className="p-col">
+            <div className="p-zone">
+              <div className="p-sphere p-mercury" />
+            </div>
+          </div>
+
+          {/* Venus (no card) */}
+          <div className="p-col">
+            <div className="p-zone">
+              <div className="p-sphere p-venus" />
+            </div>
+          </div>
+
+          {/* Earth + Our Origin Card */}
+          <div className="p-col" data-node="0">
+            <div className="p-zone">
+              <div className="p-sphere p-earth" />
+              <div className="p-connector" />
+            </div>
+            <div className="as-card as-card-dark about-panel">
+              <div className="as-card-cat">
+                <ClubIcon name="BookOpen" className="as-card-cat-icon" />
+                <span className="as-card-cat-label font-body">History &amp; Heritage</span>
+              </div>
+              <h3 className="font-display">Our Origin</h3>
+              <p className="as-card-body font-body">
+                Founded in the heart of our institution, NSS Clubs began as a small
+                group of passionate students with a shared dream — to create a vibrant
+                community where every talent finds its stage.
+              </p>
+              <div className="as-card-stats">
+                <div>
+                  <div className="as-stat-label font-body">Founded</div>
+                  <div className="as-stat-value font-display">2018</div>
+                </div>
+                <div>
+                  <div className="as-stat-label font-body">Founders</div>
+                  <div className="as-stat-value font-display">12</div>
+                </div>
+                <div>
+                  <div className="as-stat-label font-body">First Event</div>
+                  <div className="as-stat-value font-display">2019</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sun + President Card (center) */}
+          <div className="p-col p-col-sun" data-node="1">
+            <div className="p-zone">
+              <div className="p-sphere p-sun" />
+              <div className="p-connector" />
+            </div>
+            <div className="as-card as-card-light about-panel">
+              <div className="as-card-cat">
+                <ClubIcon name="Shield" className="as-card-cat-icon" />
+                <span className="as-card-cat-label font-body">Leadership &amp; Vision</span>
+              </div>
+              <h3 className="font-display">A Message from the President</h3>
+              {data?.presidentPhoto && (
+                <div className="as-pres-photo">
+                  <Image
+                    src={urlFor(data.presidentPhoto).width(256).height(256).fit("crop").auto("format").url()}
+                    alt="President Photo"
+                    width={144}
+                    height={144}
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              <p className="as-pres-quote font-body">
+                &ldquo;{data?.presidentMessage || "Empowering the next generation of leaders through passion, service, and innovation."}&rdquo;
+              </p>
+              <div className="as-pres-footer font-body">NSS President</div>
+            </div>
+          </div>
+
+          {/* Jupiter + Our Vision Card */}
+          <div className="p-col" data-node="2">
+            <div className="p-zone">
+              <div className="p-sphere p-jupiter" />
+              <div className="p-connector" />
+            </div>
+            <div className="as-card as-card-dark about-panel">
+              <div className="as-card-cat">
+                <ClubIcon name="Heart" className="as-card-cat-icon" />
+                <span className="as-card-cat-label font-body">Mission &amp; Purpose</span>
+              </div>
+              <h3 className="font-display">Our Vision</h3>
+              <p className="as-card-body font-body">
+                We envision a campus where creativity knows no boundaries, where a
+                scientist can paint, a dancer can code, and a writer can score goals.
+                NSS Clubs exist to blur the lines between disciplines.
+              </p>
+              <div className="as-card-stats">
+                <div>
+                  <div className="as-stat-label font-body">Clubs</div>
+                  <div className="as-stat-value font-display">6</div>
+                </div>
+                <div>
+                  <div className="as-stat-label font-body">Events/Year</div>
+                  <div className="as-stat-value font-display">50+</div>
+                </div>
+                <div>
+                  <div className="as-stat-label font-body">Impact</div>
+                  <div className="as-stat-value font-display">1000+</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Saturn (no card) */}
+          <div className="p-col">
+            <div className="p-zone">
+              <div className="p-saturn-wrap">
+                <div className="p-sphere p-saturn" />
+                <div className="p-saturn-ring" />
+              </div>
+            </div>
+          </div>
+
+          {/* Neptune (no card) */}
+          <div className="p-col">
+            <div className="p-zone">
+              <div className="p-sphere p-neptune" />
+            </div>
+          </div>
+        </div>
+
+        {/* ═══ MOBILE TIMELINE LAYOUT ═══ */}
+        <div className="solar-mobile">
+          <div className="mob-spine" />
+
+          {/* Sun at top */}
+          <div className="mob-sun" />
+          <div className="mob-connector" />
+
+          {/* Card 1: Our Origin */}
+          <div className="mob-card as-card as-card-dark about-panel" data-node="0">
+            <div className="as-card-cat">
+              <ClubIcon name="BookOpen" className="as-card-cat-icon" />
+              <span className="as-card-cat-label font-body">History &amp; Heritage</span>
+            </div>
+            <h3 className="font-display">Our Origin</h3>
+            <p className="as-card-body font-body">
+              Founded in the heart of our institution, NSS Clubs began as a small
+              group of passionate students with a shared dream — to create a vibrant
+              community where every talent finds its stage.
             </p>
-          </div>
-
-          {/* ── Solar System Anchor ── */}
-          <div className="relative w-full flex justify-center mb-20 lg:mb-28 mt-4">
-            <div
-              ref={aboutAnchorRef}
-              className="w-full max-w-[340px] lg:max-w-[660px] h-[140px] lg:h-[260px] pointer-events-none"
-            />
-          </div>
-
-          {/* ── Main Grid: 3 Columns on Desktop ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-12 items-stretch">
-            {/* ── COLUMN 1: Our Origin ── */}
-            <div data-node="0" className="about-panel flex">
-              <div
-                className={`metallic-card metallic-card-standard relative flex flex-col h-full w-full pt-8 pb-6 px-6 rounded-3xl bg-primary border border-accent/20 transition-all duration-500 ease-out ${
-                  activeAboutNode === 0
-                    ? "ring-2 ring-accent scale-[1.02] shadow-[0_20px_50px_-12px_rgba(212,163,115,0.3)] opacity-100 z-10"
-                    : "opacity-85 hover:opacity-100 hover:scale-[1.01]"
-                }`}
-              >
-                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80 rounded-l-3xl" />
-                <div className="flex flex-col flex-grow gap-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-3 opacity-95">
-                      <ClubIcon
-                        name="BookOpen"
-                        className="w-4 h-4 text-accent"
-                      />
-                      <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
-                        History & Heritage
-                      </span>
-                    </div>
-                    <h3
-                      className={`font-display text-3xl font-black mb-2 tracking-tight text-carved-dark ${
-                        activeAboutNode === 0 ? "about-heading-glow" : ""
-                      }`}
-                    >
-                      Our Origin
-                    </h3>
-                    <p className="text-sm text-white/50 font-body font-semibold mb-4">
-                      Where It All Began
-                    </p>
-                    <p className="font-body text-slate-200/90 text-sm leading-relaxed font-medium">
-                      Founded in the heart of our institution, NSS Clubs began
-                      as a small group of passionate students with a shared
-                      dream — to create a vibrant community where every talent
-                      finds its stage.
-                    </p>
-                  </div>
-                  <div className="border-t border-white/10 pt-5 mt-auto">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                          Founded
-                        </div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">
-                          2018
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                          Founders
-                        </div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">
-                          12
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                          First Event
-                        </div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">
-                          2019
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div className="as-card-stats">
+              <div>
+                <div className="as-stat-label font-body">Founded</div>
+                <div className="as-stat-value font-display">2018</div>
               </div>
-            </div>
-
-            {/* ── COLUMN 2: President's Message (Centerpiece) ── */}
-            <div
-              data-node="1"
-              className="about-panel flex md:col-span-2 lg:col-span-1"
-            >
-              <div
-                className={`metallic-card relative flex flex-col h-full w-full pt-8 pb-6 px-6 rounded-3xl bg-white border-2 border-accent shadow-xl transition-all duration-500 ease-out ${
-                  activeAboutNode === 1
-                    ? "ring-4 ring-primary/20 scale-[1.02] shadow-[0_20px_50px_-12px_rgba(2,59,142,0.25)] opacity-100 z-10"
-                    : "opacity-95 hover:opacity-100 hover:scale-[1.01]"
-                }`}
-              >
-                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-primary rounded-l-3xl" />
-                <div className="flex flex-col flex-grow gap-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <ClubIcon
-                        name="Shield"
-                        className="w-4 h-4 text-primary"
-                      />
-                      <span className="text-[11px] font-bold tracking-[0.2em] text-primary/60 uppercase font-body">
-                        Leadership & Vision
-                      </span>
-                    </div>
-                    <h3
-                      className={`font-display text-3xl font-black mb-6 tracking-tight text-primary ${
-                        activeAboutNode === 1 ? "about-heading-glow" : ""
-                      }`}
-                    >
-                      A Message from <br /> the President
-                    </h3>
-                  </div>
-
-                  <div className="flex-grow flex flex-col items-center justify-center gap-6">
-                    {data?.presidentPhoto && (
-                      <div className="relative w-28 h-28 flex-shrink-0 overflow-hidden rounded-full border-4 border-accent/30 shadow-lg bg-slate-100">
-                        <Image
-                          src={urlFor(data.presidentPhoto)
-                            .width(256)
-                            .height(256)
-                            .fit("crop")
-                            .auto("format")
-                            .url()}
-                          alt="President Photo"
-                          width={128}
-                          height={128}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                    )}
-                    <p className="font-body text-slate-700 text-base leading-relaxed font-medium italic text-center max-w-sm">
-                      &ldquo;
-                      {data?.presidentMessage ||
-                        "Empowering the next generation of leaders through passion, service, and innovation."}
-                      &rdquo;
-                    </p>
-                  </div>
-
-                  <div className="mt-auto text-center pt-4 border-t border-slate-200">
-                    <p className="text-xs font-bold uppercase tracking-widest text-primary/80">
-                      NSS President
-                    </p>
-                  </div>
-                </div>
+              <div>
+                <div className="as-stat-label font-body">Founders</div>
+                <div className="as-stat-value font-display">12</div>
               </div>
-            </div>
-
-            {/* ── COLUMN 3: Our Vision ── */}
-            <div data-node="2" className="about-panel flex">
-              <div
-                className={`metallic-card metallic-card-standard relative flex flex-col h-full w-full pt-8 pb-6 px-6 rounded-3xl bg-primary border border-accent/20 transition-all duration-500 ease-out ${
-                  activeAboutNode === 2
-                    ? "ring-2 ring-accent scale-[1.02] shadow-[0_20px_50px_-12px_rgba(212,163,115,0.3)] opacity-100 z-10"
-                    : "opacity-85 hover:opacity-100 hover:scale-[1.01]"
-                }`}
-              >
-                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-accent/80 rounded-l-3xl" />
-                <div className="flex flex-col flex-grow gap-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-3 opacity-95">
-                      <ClubIcon name="Heart" className="w-4 h-4 text-accent" />
-                      <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase font-body">
-                        Mission & Purpose
-                      </span>
-                    </div>
-                    <h3
-                      className={`font-display text-3xl font-black mb-2 tracking-tight text-carved-dark ${
-                        activeAboutNode === 2 ? "about-heading-glow" : ""
-                      }`}
-                    >
-                      Our Vision
-                    </h3>
-                    <p className="text-sm text-white/50 font-body font-semibold mb-4">
-                      What Drives Us Forward
-                    </p>
-                    <p className="font-body text-slate-200/90 text-sm leading-relaxed font-medium">
-                      We envision a campus where creativity knows no boundaries,
-                      where a scientist can paint, a dancer can code, and a
-                      writer can score goals. NSS Clubs exist to blur the lines
-                      between disciplines.
-                    </p>
-                  </div>
-                  <div className="border-t border-white/10 pt-5 mt-auto">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                          Clubs
-                        </div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">
-                          6
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                          Events/Year
-                        </div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">
-                          50+
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-white/45 font-body font-semibold">
-                          Impact
-                        </div>
-                        <div className="text-xl font-black font-display text-white mt-0.5">
-                          1000+
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <div className="as-stat-label font-body">First Event</div>
+                <div className="as-stat-value font-display">2019</div>
               </div>
             </div>
           </div>
 
-          {/* ── BOTTOM ROW: The Legacy (Stats Banner) ── */}
-          {data?.legacyStats && data.legacyStats.length > 0 && (
-            <div className="mt-16 lg:mt-20 metallic-card metallic-card-standard relative w-full pt-10 pb-10 px-8 rounded-3xl bg-primary border border-accent/20 shadow-lg">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="mob-connector" />
+          <div className="mob-dot mob-dot-earth" />
+          <div className="mob-connector" />
+
+          {/* Card 2: President */}
+          <div className="mob-card as-card as-card-light about-panel" data-node="1">
+            <div className="as-card-cat">
+              <ClubIcon name="Shield" className="as-card-cat-icon" />
+              <span className="as-card-cat-label font-body">Leadership &amp; Vision</span>
+            </div>
+            <h3 className="font-display">A Message from the President</h3>
+            {data?.presidentPhoto && (
+              <div className="as-pres-photo">
+                <Image
+                  src={urlFor(data.presidentPhoto).width(256).height(256).fit("crop").auto("format").url()}
+                  alt="President Photo"
+                  width={144}
+                  height={144}
+                  className="object-cover"
+                />
+              </div>
+            )}
+            <p className="as-pres-quote font-body">
+              &ldquo;{data?.presidentMessage || "Empowering the next generation of leaders through passion, service, and innovation."}&rdquo;
+            </p>
+            <div className="as-pres-footer font-body">NSS President</div>
+          </div>
+
+          <div className="mob-connector" />
+          <div className="mob-dot mob-dot-jupiter" />
+          <div className="mob-connector" />
+
+          {/* Card 3: Our Vision */}
+          <div className="mob-card as-card as-card-dark about-panel" data-node="2">
+            <div className="as-card-cat">
+              <ClubIcon name="Heart" className="as-card-cat-icon" />
+              <span className="as-card-cat-label font-body">Mission &amp; Purpose</span>
+            </div>
+            <h3 className="font-display">Our Vision</h3>
+            <p className="as-card-body font-body">
+              We envision a campus where creativity knows no boundaries, where a
+              scientist can paint, a dancer can code, and a writer can score goals.
+              NSS Clubs exist to blur the lines between disciplines.
+            </p>
+            <div className="as-card-stats">
+              <div>
+                <div className="as-stat-label font-body">Clubs</div>
+                <div className="as-stat-value font-display">6</div>
+              </div>
+              <div>
+                <div className="as-stat-label font-body">Events/Year</div>
+                <div className="as-stat-value font-display">50+</div>
+              </div>
+              <div>
+                <div className="as-stat-label font-body">Impact</div>
+                <div className="as-stat-value font-display">1000+</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Legacy Stats ── */}
+        {data?.legacyStats && data.legacyStats.length > 0 && (
+          <div className="as-legacy">
+            <div className="as-legacy-inner">
+              <div className="as-legacy-grid">
                 {data.legacyStats.map((stat) => (
-                  <div key={stat._key} className="flex flex-col items-center">
-                    <div className="text-3xl md:text-4xl font-black font-display text-accent mt-0.5">
-                      {stat.value}
-                    </div>
-                    <div className="text-[11px] uppercase tracking-widest text-white/60 font-body font-semibold mt-2">
-                      {stat.label}
-                    </div>
+                  <div key={stat._key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div className="as-legacy-val font-display">{stat.value}</div>
+                    <div className="as-legacy-label font-body">{stat.label}</div>
                   </div>
                 ))}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       <div

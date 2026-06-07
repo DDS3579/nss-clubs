@@ -70,12 +70,12 @@ const BACKGROUND_STARS = Array.from({ length: 30 }, (_, i) => ({
 
 // Planet definitions for the solar system
 const PLANET_DEFS = [
-  { x: 200, y: 110, r: 16, baseColor: "#4A90D9", accent: "#6BB5FF", name: "Mercury", hasRing: false, glowColor: "rgba(74,144,217,0.3)" },
-  { x: 280, y: 110, r: 20, baseColor: "#E27D60", accent: "#FF9E80", name: "Venus", hasRing: false, glowColor: "rgba(226,125,96,0.3)" },
-  { x: 360, y: 110, r: 24, baseColor: "#41B3A3", accent: "#6DE0CF", name: "Earth", hasRing: false, glowColor: "rgba(65,179,163,0.3)" },
-  { x: 430, y: 110, r: 18, baseColor: "#C38D9E", accent: "#E8B4C4", name: "Mars", hasRing: false, glowColor: "rgba(195,141,158,0.3)" },
-  { x: 510, y: 110, r: 30, baseColor: "#E8A87C", accent: "#FFD4B0", name: "Jupiter", hasRing: true, glowColor: "rgba(232,168,124,0.4)" },
-  { x: 590, y: 110, r: 14, baseColor: "#5B8DEF", accent: "#8BB4FF", name: "Neptune", hasRing: false, glowColor: "rgba(91,141,239,0.3)" },
+  { x: 150, y: 320, r: 12, baseColor: "#4A90D9", accent: "#6BB5FF", name: "Mercury", hasRing: false, glowColor: "rgba(74,144,217,0.3)" },
+  { x: 238, y: 320, r: 15, baseColor: "#E27D60", accent: "#FF9E80", name: "Venus", hasRing: false, glowColor: "rgba(226,125,96,0.3)" },
+  { x: 326, y: 320, r: 18, baseColor: "#41B3A3", accent: "#6DE0CF", name: "Earth", hasRing: false, glowColor: "rgba(65,179,163,0.3)" },
+  { x: 414, y: 320, r: 14, baseColor: "#C38D9E", accent: "#E8B4C4", name: "Mars", hasRing: false, glowColor: "rgba(195,141,158,0.3)" },
+  { x: 502, y: 320, r: 22, baseColor: "#E8A87C", accent: "#FFD4B0", name: "Jupiter", hasRing: true, glowColor: "rgba(232,168,124,0.4)" },
+  { x: 590, y: 320, r: 11, baseColor: "#5B8DEF", accent: "#8BB4FF", name: "Neptune", hasRing: false, glowColor: "rgba(91,141,239,0.3)" },
 ];
 
 // 🎬 Easing Functions
@@ -120,6 +120,16 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     { x: number; y: number; slug: string; name: string }[]
   >([]);
   const hoveredSlugRef = useRef<string | null>(null);
+  const nucleusCoordsRef = useRef({ x: CX, y: CY });
+  const hoverProgressRef = useRef<Record<string, number>>({
+    "executive-team": 0,
+    "stem": 0,
+    "sports": 0,
+    "literature": 0,
+    "arts": 0,
+    "entertainment": 0,
+    "social": 0,
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -128,8 +138,8 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Optimized: DPR 2 for crisp but performant rendering
-    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    // Optimized: DPR up to 4 for razor-sharp quality when zoomed
+    const DPR = Math.min(Math.max(window.devicePixelRatio || 1, 2) * 2, 4);
     canvas.width = CANVAS_SIZE * DPR;
     canvas.height = CANVAS_SIZE * DPR;
     canvas.style.width = `${CANVAS_SIZE}px`;
@@ -261,8 +271,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     /* ═══════════════════════════════════════════════════════════
        STAGE 1: ATOM — Nucleus with brightening
     ════════════════════════════════════════════════════════════ */
-    function drawNucleus(brightenT: number) {
-      const r = 34;
+    function drawNucleus(x: number, y: number, r: number, brightenT: number) {
       ctx!.save();
 
       // Brightening glow during transition
@@ -272,11 +281,11 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       }
 
       ctx!.beginPath();
-      ctx!.arc(CX, CY, r, 0, 2 * Math.PI);
+      ctx!.arc(x, y, r, 0, 2 * Math.PI);
       ctx!.fillStyle = "#7a5000";
       ctx!.fill();
 
-      const metal = ctx!.createLinearGradient(CX - r, CY - r, CX + r, CY + r);
+      const metal = ctx!.createLinearGradient(x - r, y - r, x + r, y + r);
       // Nucleus colors shift warmer as it brightens
       const warmShift = brightenT;
       metal.addColorStop(0, `rgb(${Math.round(lerp(255, 255, warmShift))},${Math.round(lerp(248, 250, warmShift))},${Math.round(lerp(192, 225, warmShift))})`);
@@ -285,26 +294,26 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       metal.addColorStop(0.8, `rgb(${Math.round(lerp(232, 255, warmShift))},${Math.round(lerp(192, 180, warmShift))},${Math.round(lerp(80, 0, warmShift))})`);
       metal.addColorStop(1, "#a06800");
       ctx!.beginPath();
-      ctx!.arc(CX, CY, r, 0, 2 * Math.PI);
+      ctx!.arc(x, y, r, 0, 2 * Math.PI);
       ctx!.fillStyle = metal;
       ctx!.fill();
 
-      const rim = ctx!.createRadialGradient(CX, CY, r * 0.6, CX, CY, r);
+      const rim = ctx!.createRadialGradient(x, y, r * 0.6, x, y, r);
       rim.addColorStop(0, "rgba(0,0,0,0)");
       rim.addColorStop(1, `rgba(60,30,0,${0.5 - brightenT * 0.3})`);
       ctx!.beginPath();
-      ctx!.arc(CX, CY, r, 0, 2 * Math.PI);
+      ctx!.arc(x, y, r, 0, 2 * Math.PI);
       ctx!.fillStyle = rim;
       ctx!.fill();
 
       const blob = ctx!.createRadialGradient(
-        CX - r * 0.3, CY - r * 0.3, 0,
-        CX - r * 0.3, CY - r * 0.3, r * 0.7,
+        x - r * 0.3, y - r * 0.3, 0,
+        x - r * 0.3, y - r * 0.3, r * 0.7,
       );
       blob.addColorStop(0, `rgba(255,255,220,${0.9 + brightenT * 0.1})`);
       blob.addColorStop(1, "rgba(255,255,255,0)");
       ctx!.beginPath();
-      ctx!.arc(CX, CY, r, 0, 2 * Math.PI);
+      ctx!.arc(x, y, r, 0, 2 * Math.PI);
       ctx!.fillStyle = blob;
       ctx!.fill();
 
@@ -320,34 +329,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       const pulse = 1 + Math.sin(elapsed * 0.04) * 0.02;
       const drawR = r * pulse;
 
-      // Outer corona glow (multiple layers for richness)
-      if (morphT > 0.4) {
-        const coronaAlpha = (morphT - 0.4) * 1.6;
-        
-        // Outermost soft glow
-        const outerGlow = ctx!.createRadialGradient(x, y, drawR * 0.5, x, y, drawR * 3);
-        outerGlow.addColorStop(0, `rgba(255, 200, 50, ${coronaAlpha * 0.15})`);
-        outerGlow.addColorStop(0.5, `rgba(255, 140, 0, ${coronaAlpha * 0.06})`);
-        outerGlow.addColorStop(1, "rgba(255, 100, 0, 0)");
-        ctx!.beginPath();
-        ctx!.arc(x, y, drawR * 3, 0, 2 * Math.PI);
-        ctx!.fillStyle = outerGlow;
-        ctx!.fill();
-        
-        // Inner hot glow
-        const innerGlow = ctx!.createRadialGradient(x, y, drawR * 0.8, x, y, drawR * 1.8);
-        innerGlow.addColorStop(0, `rgba(255, 220, 100, ${coronaAlpha * 0.2})`);
-        innerGlow.addColorStop(1, "rgba(255, 160, 0, 0)");
-        ctx!.beginPath();
-        ctx!.arc(x, y, drawR * 1.8, 0, 2 * Math.PI);
-        ctx!.fillStyle = innerGlow;
-        ctx!.fill();
-      }
-
-      // Sun surface
-      ctx!.shadowColor = "#FF8C00";
-      ctx!.shadowBlur = 30 + morphT * 30;
-
+      // Sun surface (no shadow glow on hover)
       const sunGrad = ctx!.createRadialGradient(
         x - drawR * 0.25, y - drawR * 0.25, 0,
         x, y, drawR,
@@ -362,42 +344,6 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.arc(x, y, drawR, 0, 2 * Math.PI);
       ctx!.fillStyle = sunGrad;
       ctx!.fill();
-
-      // Solar surface texture (subtle radial bands)
-      ctx!.shadowBlur = 0;
-      ctx!.shadowColor = "transparent";
-      if (morphT > 0.6) {
-        const texAlpha = (morphT - 0.6) * 2.5;
-        for (let i = 0; i < 3; i++) {
-          const bandR = drawR * (0.4 + i * 0.2);
-          ctx!.beginPath();
-          ctx!.arc(x, y, bandR, 0, 2 * Math.PI);
-          ctx!.strokeStyle = `rgba(200, 100, 0, ${texAlpha * 0.08})`;
-          ctx!.lineWidth = 2;
-          ctx!.stroke();
-        }
-      }
-
-      // Corona spikes (subtle, elegant)
-      if (morphT > 0.6) {
-        const spikeAlpha = (morphT - 0.6) * 2.5;
-        ctx!.save();
-        ctx!.translate(x, y);
-        ctx!.rotate(elapsed * 0.001);
-        const spikeCount = 16;
-        for (let i = 0; i < spikeCount; i++) {
-          ctx!.rotate((Math.PI * 2) / spikeCount);
-          const spikeLen = drawR * (1.15 + Math.sin(elapsed * 0.03 + i * 0.7) * 0.08);
-          ctx!.beginPath();
-          ctx!.moveTo(0, -drawR * 0.92);
-          ctx!.lineTo(1.5, -spikeLen);
-          ctx!.lineTo(-1.5, -spikeLen);
-          ctx!.closePath();
-          ctx!.fillStyle = `rgba(255, 220, 80, ${spikeAlpha * 0.35})`;
-          ctx!.fill();
-        }
-        ctx!.restore();
-      }
 
       // Specular highlight
       ctx!.beginPath();
@@ -566,11 +512,13 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       planetR: number, baseColor: string, accent: string,
       morphT: number, hasRing: boolean, glowColor: string,
       trailLength: number, trailAngle: number,
+      nodeHoverT: number,
     ) {
       // Calculate interpolated position
       const x = lerp(atomX, planetX, morphT);
       const y = lerp(atomY, planetY, morphT);
-      const r = lerp(14, planetR, morphT);
+      const startR = lerp(14, 11, morphT);
+      const r = lerp(startR, planetR, nodeHoverT);
 
       // Phase 1 (0-0.3): Electron with growing trail, gaining color tint
       if (morphT < 0.35) {
@@ -627,6 +575,18 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       const settle = easeInOutQuart(clamp01((p - 0.56) / 0.44));
       const sep = clamp01(nucleusSeparationRef?.current ?? 0);
 
+      // Update hover progress for each node
+      const slugs = ["executive-team", "stem", "sports", "literature", "arts", "entertainment", "social"];
+      slugs.forEach((slug) => {
+        const isHovered = hoveredSlugRef.current === slug;
+        const currentProgress = hoverProgressRef.current[slug] || 0;
+        if (isHovered) {
+          hoverProgressRef.current[slug] = Math.min(1, currentProgress + 0.08);
+        } else {
+          hoverProgressRef.current[slug] = Math.max(0, currentProgress - 0.08);
+        }
+      });
+
       // 3D Container Spin (Hero -> Clubs)
       if (p > 0.001) {
         const rotY = eased * 360;
@@ -676,22 +636,47 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       if (morphT > 0.2) {
         // Morph into sun
         const sunMorphT = easeOutExpo(clamp01((morphT - 0.2) / 0.8));
-        const sunX = lerp(CX, 90, sunMorphT);
-        const sunY = lerp(CY, 110, sunMorphT);
-        const sunR = lerp(34, 48, sunMorphT);
-        drawSun(sunX, sunY, sunR, sunMorphT);
+        const sunX = lerp(CX, 50, sunMorphT);
+        const sunY = lerp(CY, 320, sunMorphT);
+        const currentR = lerp(34, 26, morphT);
+        const sunR = lerp(currentR, 36, sunMorphT);
+        nucleusCoordsRef.current = { x: sunX, y: sunY };
+
+        // Morph to Sun on hover
+        const nucleusHoverT = hoverProgressRef.current["executive-team"] * morphT;
+        if (nucleusHoverT > 0.01) {
+          if (nucleusHoverT < 0.99) {
+            drawNucleus(sunX, sunY, currentR, 1);
+            ctx.save();
+            ctx.globalAlpha = nucleusHoverT;
+            drawSun(sunX, sunY, sunR, nucleusHoverT);
+            ctx.restore();
+          } else {
+            drawSun(sunX, sunY, sunR, 1);
+          }
+        } else {
+          drawNucleus(sunX, sunY, currentR, 0); // Remain normal nucleus
+        }
       } else {
+        nucleusCoordsRef.current = { x: CX, y: CY };
         // Still atom nucleus, but brightening
-        drawNucleus(brightenT);
+        drawNucleus(CX, CY, 34, brightenT);
       }
 
-      // 4. Draw planet orbit rings (fade in late)
+      // 4. Draw planet orbit rings on hover
       if (morphT > 0.7) {
-        const orbitRingAlpha = easeOutQuart((morphT - 0.7) / 0.3);
-        const sunX = lerp(CX, 90, easeOutExpo(clamp01((morphT - 0.2) / 0.8)));
-        const sunY = lerp(CY, 110, easeOutExpo(clamp01((morphT - 0.2) / 0.8)));
-        PLANET_DEFS.forEach((planet) => {
-          drawPlanetOrbitRing(sunX, sunY, planet.x, orbitRingAlpha);
+        const sunMorphT = easeOutExpo(clamp01((morphT - 0.2) / 0.8));
+        const sunX = lerp(CX, 50, sunMorphT);
+        const sunY = lerp(CY, 320, sunMorphT);
+        
+        PLANET_DEFS.forEach((planet, planetIdx) => {
+          const map = CLUB_MAPPING.find(
+            (m) => m.orbitIdx === Math.floor(planetIdx / 2) && m.electronIdx === (planetIdx % 2),
+          );
+          const nodeHoverT = map ? hoverProgressRef.current[map.slug] * morphT : 0;
+          if (nodeHoverT > 0.01) {
+            drawPlanetOrbitRing(sunX, sunY, planet.x, nodeHoverT * 0.8);
+          }
         });
       }
 
@@ -726,12 +711,18 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
             const trailAngle = Math.atan2(planetDef.y - drawY, planetDef.x - drawX) + Math.PI;
             const trailLength = 40 * trailT;
             
+            const map = CLUB_MAPPING.find(
+              (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
+            );
+            const nodeHoverT = map ? hoverProgressRef.current[map.slug] * morphT : 0;
+
             drawMorphingNode(
               drawX, drawY,
               planetDef.x, planetDef.y,
               planetDef.r, planetDef.baseColor, planetDef.accent,
               morphT, planetDef.hasRing, planetDef.glowColor,
               trailLength, trailAngle,
+              nodeHoverT,
             );
           } else {
             // Normal Atom Mode
@@ -758,10 +749,11 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
             (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
           );
           if (map) {
-            const visualX = sep > 0.001 ? drawX + orbitShiftX : drawX;
+            const visualX = morphT > 0.01 ? lerp(drawX, planetDef.x, morphT) : (sep > 0.001 ? drawX + orbitShiftX : drawX);
+            const visualY = morphT > 0.01 ? lerp(drawY, planetDef.y, morphT) : drawY;
             newCoords.push({
               x: visualX,
-              y: drawY,
+              y: visualY,
               slug: map.slug,
               name: map.name,
             });
@@ -843,7 +835,9 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SIZE;
 
       let hoveredSlug: string | null = null;
-      const ndist = Math.sqrt((x - CX) ** 2 + (y - CY) ** 2);
+      const nX = nucleusCoordsRef.current.x;
+      const nY = nucleusCoordsRef.current.y;
+      const ndist = Math.sqrt((x - nX) ** 2 + (y - nY) ** 2);
 
       if (ndist < 40) {
         hoveredSlug = "executive-team";
@@ -871,7 +865,9 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SIZE;
 
       let clickedSlug: string | null = null;
-      const ndist = Math.sqrt((x - CX) ** 2 + (y - CY) ** 2);
+      const nX = nucleusCoordsRef.current.x;
+      const nY = nucleusCoordsRef.current.y;
+      const ndist = Math.sqrt((x - nX) ** 2 + (y - nY) ** 2);
 
       if (ndist < 40) {
         clickedSlug = "executive-team";
