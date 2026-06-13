@@ -5,6 +5,8 @@ import Image from "next/image";
 import Hero from "./Hero";
 import HeroAtom, { TIMELINE_NODES } from "./HeroAtom";
 import EventsConstellation, { DOTS } from "./EventsConstellation";
+import GalleryOrbit from "./home/GalleryOrbit";
+import ConstellationFooter from "./layout/ConstellationFooter";
 import { urlFor } from "@/sanity/lib/image";
 import type { HomepageData } from "@/sanity/lib/types";
 
@@ -308,6 +310,16 @@ function getAboutEventsTriggerPoint(aboutSection: HTMLElement) {
   );
 }
 
+function getEventsGalleryTriggerPoint(eventsSection: HTMLElement) {
+  const scrollableH = Math.max(eventsSection.offsetHeight - window.innerHeight, 1);
+  const progressTrigger = scrollableH * 0.75;
+  const viewportLeadTrigger = scrollableH - window.innerHeight * 0.2;
+  return Math.max(
+    0,
+    Math.min(scrollableH - 5, Math.max(progressTrigger, viewportLeadTrigger)),
+  );
+}
+
 type MorphPoint = {
   x: number;
   y: number;
@@ -386,9 +398,9 @@ const MORPH_DURATION_FRACTION = 0.7;
 const MORPH_DOT_IDS = PLANET_DOT_MORPHS.map((item) => item.dotId);
 const ABOUT_EVENTS_TRIGGER_RATIO = 0.68;
 
-type Phase = "hero" | "animating" | "clubs" | "zooming" | "zoomed" | "about" | "events";
+type Phase = "hero" | "animating" | "clubs" | "zooming" | "zoomed" | "about" | "events" | "gallery";
 interface AnimState {
-  targetPhase: "hero" | "clubs" | "about" | "events";
+  targetPhase: "hero" | "clubs" | "about" | "events" | "gallery";
   startTime: number;
   scrollStart: number;
   scrollEnd: number;
@@ -431,6 +443,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   const eventsMorphRef = useRef(0);
   const morphGhostRefs = useRef<(HTMLDivElement | null)[]>([]);
   const morphedDotsVisibleRef = useRef(false);
+  const galleryHandoffRef = useRef(false);
 
   const [clubsTextVisible, setClubsTextVisible] = useState(false);
   const [selectedClub, setSelectedClub] = useState<string | null>(null);
@@ -514,6 +527,41 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     },
     [],
   );
+
+  /* ── Trigger the events → gallery smooth morph transition ── */
+  const startGalleryTransition = useCallback(() => {
+    if (phaseRef.current === "animating") return;
+    if (phaseRef.current === "zooming" || phaseRef.current === "zoomed") return;
+
+    const gallerySection = document.getElementById("gallery");
+    let scrollTarget = 0;
+    if (gallerySection) {
+      scrollTarget =
+        gallerySection.getBoundingClientRect().top +
+        window.scrollY -
+        HEADER_H;
+    } else {
+      // 🛡️ FALLBACK: If #gallery is missing, scroll down ~1.5 viewports from the events section
+      const eventsSection = document.getElementById("events");
+      if (eventsSection) {
+        scrollTarget =
+          eventsSection.getBoundingClientRect().top +
+          window.scrollY +
+          eventsSection.offsetHeight -
+          HEADER_H;
+      } else {
+        scrollTarget = window.scrollY + window.innerHeight * 1.5;
+      }
+    }
+
+    phaseRef.current = "animating";
+    animRef.current = {
+      targetPhase: "gallery",
+      startTime: performance.now(),
+      scrollStart: window.scrollY,
+      scrollEnd: scrollTarget,
+    };
+  }, []);
 
   /* ── Zoom initialization ── */
   const initZoom = useCallback((slug: string) => {
@@ -830,6 +878,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         } else if (anim.targetPhase === "events") {
           posT = 1;
           aboutT = 1;
+        } else if (anim.targetPhase === "gallery") {
+          // Events → gallery smooth morph: preserve the events visual state
+          // (atom + about fully shown, events morph complete) while the rAF
+          // tick glides the page scroll to the gallery section. The
+          // GalleryOrbit scroll-bridge particles animate off the raw scroll
+          // position, so they ride the morph naturally.
+          posT = 1;
+          aboutT = 1;
         }
 
         if (anim.targetPhase === "events") {
@@ -868,6 +924,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const clubsSection = document.getElementById("clubs");
         const aboutSection = document.getElementById("about");
         const eventsSection = document.getElementById("events");
+        const gallerySection = document.getElementById("gallery");
 
         if (clubsSection) {
           const clubsRect = clubsSection.getBoundingClientRect();
@@ -886,6 +943,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               window.scrollY -
               HEADER_H
             : aboutScrollY + (aboutSection ? aboutSection.offsetHeight : window.innerHeight * 0.8);
+
+          // 🛡️ FALLBACK: If #gallery is missing, use a safe distance below events
+          const galleryScrollY = gallerySection
+            ? gallerySection.getBoundingClientRect().top +
+              window.scrollY -
+              HEADER_H
+            : eventsScrollY + (eventsSection ? eventsSection.offsetHeight : window.innerHeight * 0.8);
 
           const sy = window.scrollY;
 
@@ -923,8 +987,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 updateProjectorCoords();
               }
             }
-          } else {
+          } else if (sy < galleryScrollY) {
             phaseRef.current = "events";
+            posT = 1;
+            aboutT = 1;
+            eventsMorphRef.current = 1;
+          } else {
+            phaseRef.current = "gallery";
             posT = 1;
             aboutT = 1;
             eventsMorphRef.current = 1;
@@ -1117,7 +1186,108 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
   /* ── Wheel & touch handlers for section-snap ── */
   useEffect(() => {
+    const releaseEventsHandoff = (direction: number) => {
+      if (
+        direction <= 0 ||
+        phaseRef.current !== "animating" ||
+        animRef.current?.targetPhase !== "events"
+      ) {
+        return false;
+      }
+
+      const eventsSection = document.getElementById("events");
+      if (!eventsSection) return false;
+
+      const eventsTop = eventsSection.getBoundingClientRect().top;
+      if (eventsTop > HEADER_H + 18) return false;
+
+      phaseRef.current = "events";
+      animRef.current = null;
+      eventsMorphRef.current = 1;
+      atomProgressRef.current = 1;
+      aboutProgressRef.current = 1;
+      lastTransitionTimeRef.current = performance.now() - 800;
+      return true;
+    };
+
+    const isBelowEventsStart = () => {
+      const eventsSection = document.getElementById("events");
+      if (!eventsSection) return false;
+
+      const eventsScrollY =
+        eventsSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
+      return window.scrollY > eventsScrollY + 12;
+    };
+
+    const getSectionScrollY = (id: string) => {
+      const section = document.getElementById(id);
+      if (!section) return null;
+      return section.getBoundingClientRect().top + window.scrollY - HEADER_H;
+    };
+
+    const smoothScrollToSection = (id: string) => {
+      const targetY = getSectionScrollY(id);
+      if (targetY === null || galleryHandoffRef.current) return false;
+
+      galleryHandoffRef.current = true;
+      window.scrollTo({
+        top: Math.max(0, targetY),
+        behavior: "smooth",
+      });
+
+      window.setTimeout(() => {
+        galleryHandoffRef.current = false;
+      }, 950);
+
+      return true;
+    };
+
+    const handleEventsGalleryHandoff = (direction: number) => {
+      if (phaseRef.current !== "events" || galleryHandoffRef.current) {
+        return false;
+      }
+
+      const eventsSection = document.getElementById("events");
+      const gallerySection = document.getElementById("gallery");
+      if (!eventsSection || !gallerySection) return false;
+
+      const eventsY = getSectionScrollY("events");
+      const galleryY = getSectionScrollY("gallery");
+      if (eventsY === null || galleryY === null) return false;
+
+      const sy = window.scrollY;
+      const nearEventsStart = Math.abs(sy - eventsY) < 90;
+      const nearGalleryStart = Math.abs(sy - galleryY) < 120;
+
+      const eRect = eventsSection.getBoundingClientRect();
+      const sectionScrolled = -(eRect.top - HEADER_H);
+      const triggerPoint = getEventsGalleryTriggerPoint(eventsSection);
+      const nearEventsEnd = sectionScrolled >= triggerPoint;
+
+      if (direction > 0 && nearEventsEnd) {
+        startGalleryTransition();
+        return true;
+      }
+
+      if (direction < 0 && nearGalleryStart) {
+        startTransition("events");
+        return true;
+      }
+
+      return false;
+    };
+
     const handleWheel = (e: WheelEvent) => {
+      if (releaseEventsHandoff(e.deltaY)) return;
+
+      if (handleEventsGalleryHandoff(e.deltaY)) {
+        e.preventDefault();
+        return;
+      }
+
+      if (phaseRef.current === "events" && e.deltaY > 0) return;
+      if (phaseRef.current === "events" && isBelowEventsStart()) return;
+
       if (
         phaseRef.current === "animating" ||
         phaseRef.current === "zooming" ||
@@ -1179,6 +1349,18 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         return;
       }
       if (phaseRef.current === "events" && eventsSection) {
+        if (e.deltaY > 0) {
+          const eRect = eventsSection.getBoundingClientRect();
+          const sectionScrolled = -(eRect.top - HEADER_H);
+          const triggerPoint = getEventsGalleryTriggerPoint(eventsSection);
+          if (sectionScrolled >= triggerPoint) {
+            e.preventDefault();
+            if (isCooldown) return;
+            if (Math.abs(e.deltaY) >= 30) startGalleryTransition();
+          }
+          return;
+        }
+
         if (e.deltaY < 0) {
           const eRect = eventsSection.getBoundingClientRect();
           const sectionScrolled = -(eRect.top - HEADER_H);
@@ -1197,6 +1379,18 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     const handleTouchMove = (e: TouchEvent) => {
       if (touchStartRef.current === null) return;
       const deltaY = touchStartRef.current - (e.touches[0]?.clientY ?? 0);
+
+      if (releaseEventsHandoff(deltaY)) return;
+
+      if (handleEventsGalleryHandoff(deltaY)) {
+        e.preventDefault();
+        touchStartRef.current = null;
+        return;
+      }
+
+      if (phaseRef.current === "events" && deltaY > 0) return;
+      if (phaseRef.current === "events" && isBelowEventsStart()) return;
+
       if (
         phaseRef.current === "animating" ||
         phaseRef.current === "zooming" ||
@@ -1265,6 +1459,21 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           }
         }
       } else if (phaseRef.current === "events" && eventsSection) {
+        if (deltaY > 0) {
+          const eRect = eventsSection.getBoundingClientRect();
+          const sectionScrolled = -(eRect.top - HEADER_H);
+          const triggerPoint = getEventsGalleryTriggerPoint(eventsSection);
+          if (sectionScrolled >= triggerPoint) {
+            e.preventDefault();
+            if (isCooldown) return;
+            if (Math.abs(deltaY) >= 40) {
+              startGalleryTransition();
+              touchStartRef.current = null;
+            }
+          }
+          return;
+        }
+
         if (deltaY < 0) {
           const eRect = eventsSection.getBoundingClientRect();
           const sectionScrolled = -(eRect.top - HEADER_H);
@@ -2512,6 +2721,8 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         events={data?.featuredEvents || []}
         morphedDotIds={morphedDotIds}
       />
+      <GalleryOrbit items={data?.featuredGallery || []} />
+      <ConstellationFooter />
 
       <div
         ref={floatingRef}
