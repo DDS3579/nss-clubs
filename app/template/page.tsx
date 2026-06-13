@@ -22,7 +22,7 @@ export default async function HomePage() {
 
       {/* PRESIDENT'S MESSAGE (Dynamic) */}
       <section id="about" className="max-w-4xl mx-auto py-16 px-6 scroll-mt-24">
-        <h2 className="text-3xl font-bold mb-6">President's Message</h2>
+        <h2 className="text-3xl font-bold mb-6">President&apos;s Message</h2>
         <div className="flex flex-col md:flex-row gap-8 items-start">
           {data.presidentPhoto && (
             <Image 

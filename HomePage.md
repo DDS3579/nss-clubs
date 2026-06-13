@@ -7,17 +7,21 @@ This document provides a highly detailed, comprehensive breakdown of the fronten
 
 ## 📂 Homepage Codebase File Structure & Dependency Tree
 
-Below is the directory tree of the components, entry points, styles, and footers that compose the homepage visual and interactive experience:
+Below is the directory tree of the components, hooks, entry points, styles, and footers that compose the homepage visual and interactive experience:
 
 ```
 club-website/
 ├── app/
 │   └── page.tsx               # Next.js Server Component (Fetches HomepageData from Sanity CMS)
+├── hooks/
+│   ├── useScrollStateMachine.ts # Scroll state tracker, DOM layout cache, and snap listeners
+│   ├── useMorphCoordinates.ts # GPU-accelerated absolute coordinates ghost planet morpher
+│   └── useGalleryBridge.ts    # Handoff flag orchestrator for events-to-gallery scroll bridges
 └── components/
-    ├── HomeScrollExperience.tsx # Master Client Orchestrator (State machine, transitions, snaps, morphs)
-    ├── Hero.tsx               # Static banner container & background highlights (.hero-atom-origin anchors)
-    ├── HeroAtom.tsx           # Interactive Canvas (DPI-scaled atom nucleus & orbiting club electrons)
-    ├── EventsConstellation.tsx # SVG constellation overlay (Y-staggered cascade dots & lines)
+    ├── HomeScrollExperience.tsx # Master Client Orchestrator (Coordinates sub-hooks and canvas container)
+    ├── Hero.tsx               # Static banner container (Exposes HeroHandle forwardRef to hooks)
+    ├── HeroAtom.tsx           # Interactive Canvas (DPI-scaled atom nucleus, inverse matrix cursor checking)
+    ├── EventsConstellation.tsx # SVG constellation overlay (Receives svgRef to expose bounds details)
     ├── home/
     │   ├── GalleryOrbit.tsx   # 3D rotating photo carousel & interactive scroll-bridge particles
     │   └── GalleryOrbit.module.css # Scoped CSS keyframes (collapse, guides, clockwise rotations)
@@ -27,21 +31,28 @@ club-website/
 
 ### 🛰️ Core State & Data Flow Pipeline
 
-The diagram below outlines how Sanity CMS content and interactive animation states flow downward through these components:
+The diagram below outlines how Sanity CMS content, custom hooks, and interactive animation states flow downward through these components:
 
 ```mermaid
 graph TD
     Sanity[Sanity CMS Database] -->|getHomepageData Query| PageTSX["app/page.tsx (RSC)"]
     PageTSX -->|HomepageData Prop| HSE["HomeScrollExperience.tsx (Client Orchestrator)"]
 
+    subgraph "Custom React Hooks Layer"
+        HSE --> USM["useScrollStateMachine.ts"]
+        HSE --> UMC["useMorphCoordinates.ts"]
+        HSE --> UGB["useGalleryBridge.ts"]
+    end
+
     subgraph "Homepage View Structure"
-        HSE -->|Coordinates Sync| HeroAtom["HeroAtom.tsx (Canvas Engine)"]
-        HSE -->|Ghost Morphs| EC["EventsConstellation.tsx (SVG Map)"]
-        HSE -->|Scroll Bridge Particles| GO["GalleryOrbit.tsx (3D Rings)"]
-        HSE -.->|Fades Container| Hero["Hero.tsx (Static Layout)"]
-        HSE -.->|Scroll Snap Snug| CF["ConstellationFooter.tsx (Footer)"]
+        USM -->|Exposes bounds refs| HeroAtom["HeroAtom.tsx (Canvas Engine)"]
+        UMC -->|Ghost Morphs| EC["EventsConstellation.tsx (SVG Map)"]
+        UGB -->|Scroll Bridge Particles| GO["GalleryOrbit.tsx (3D Rings)"]
+        USM -.->|Fades Container| Hero["Hero.tsx (Static Layout)"]
+        USM -.->|Scroll Snap Snug| CF["ConstellationFooter.tsx (Footer)"]
     end
 ```
+
 
 ---
 
@@ -59,27 +70,71 @@ The homepage relies on a hybrid static-dynamic rendering model. Dynamic content 
 
 ---
 
-## 🔄 The Orchestrator: [components/HomeScrollExperience.tsx](file:///c:/Projects/NSS/club-website/components/HomeScrollExperience.tsx)
+## 🔄 The Master Orchestrator: [components/HomeScrollExperience.tsx](file:///c:/Projects/NSS/club-website/components/HomeScrollExperience.tsx)
 
-This file contains the master component coordinating page layout, custom snap-scroll behaviors, coordinate mappings, and intersection observers. It manages **123KB** of layout state and animations.
-
-### 1. The Scroll State Machine (Phases)
-The page scroll position is discretized into a state machine defined by the `Phase` type:
-```typescript
-type Phase = "hero" | "animating" | "clubs" | "zooming" | "zoomed" | "about" | "events" | "gallery";
-```
-- `"hero"`: User is at the top banner. The canvas `HeroAtom` floats in the right column (on desktop) or center (on mobile).
-- `"animating"`: A programmatic snap-scroll transition is actively scrolling the page window. All scroll inputs are temporarily blocked.
-- `"clubs"`: User is in the Clubs showcase. The canvas `HeroAtom` aligns with the left column anchor, displaying the 6 interactive club electrons.
-- `"zooming"`: The user has clicked a node, triggering a scale-up transition of the canvas atom toward the screen center.
-- `"zoomed"`: The camera is zoomed into the selected club. The detailed holographic card slides in from the right.
-- `"about"`: The canvas atom has dissolved into the static HTML solar system. Panels (`Our Origin`, `President Message`, `Our Vision`) reveal themselves as the user scrolls.
-- `"events"`: The HTML solar system exhales, fading out its elements, and cascades down into the SVG constellation pattern.
-- `"gallery"`: The SVG constellation nodes collapse into orbit slots, transitioning into the counter-rotating photo rings.
+`HomeScrollExperience.tsx` acts as a lightweight layout shell, routing dynamic props from Sanity CMS and wiring refs. All scrolling state machines, DOM layout calculations, and coordinate morph maps are completely separated into custom React Hooks for clean architectural boundaries.
 
 ---
 
-### 2. Math & Easing Utilities
+## ⚓ Modular Hooks & Architectural Decoupling
+
+### 1. [hooks/useScrollStateMachine.ts](file:///c:/Projects/NSS/club-website/hooks/useScrollStateMachine.ts)
+Exposes the master scroll phase tracker, keyboard/touch event managers, and a centralized scroll layout measurement cache.
+- **`LayoutCache` Interface**:
+  To prevent **layout thrashing** (excessive style reflows caused by calling `getBoundingClientRect()` within a `requestAnimationFrame` loop), the hooks cache element dimensions and absolute page offsets once during geometric changes:
+  ```typescript
+  interface LayoutCache {
+    windowWidth: number;
+    windowHeight: number;
+    scrollX: number;
+    scrollY: number;
+    heroAnchor: PageRect | null;
+    clubsAnchor: PageRect | null;
+    aboutAnchor: PageRect | null;
+    cardWrapper: PageRect | null;
+    clubsSectionTop: number;
+    aboutSectionTop: number;
+    aboutSectionHeight: number;
+    eventsSectionTop: number;
+    eventsSectionHeight: number;
+    gallerySectionTop: number;
+    planets: Record<string, { x: number; y: number; size: number } | null>;
+    constellationSvg: PageRect | null;
+  }
+  ```
+- **Batched DOM Measurements**:
+  - **`updateLayoutGeometry()`**: Called inside a `ResizeObserver` listener and window `resize` handler. Updates coordinates and bounding rect values in `layoutCacheRef` without triggering React state re-renders.
+  - **`computeScrollProgress()`**: Reads cached top offsets to calculate standard linear scroll position values (`atomProgressRef`, `aboutProgressRef`, and `eventsMorphRef`). Updates discrete React states (`clubsTextVisible` and `activeAboutNode`) strictly on threshold crossings.
+  - **`initializeFromScroll()`**: Runs on the first frame to inspect scroll position and sync phases, preventing visual jumps if the user refreshes mid-page.
+  - **`getProjectorAndTargetCoordsCached(...)`**: A static calculation method that uses cached bounds to locate target endpoints for the holographic beam, bypassing DOM reads entirely.
+
+- **Snapping Bindings**:
+  Automatically adds scroll snapping classes (`snap-y`, `snap-mandatory`, `scroll-smooth`) to `document.documentElement` during mount.
+
+- **Component Ref Handoffs**:
+  - **`HeroHandle`**: [components/Hero.tsx](file:///c:/Projects/NSS/club-website/components/Hero.tsx) is refactored using `forwardRef` and `useImperativeHandle`. It exposes a `getAtomOrigin()` method that returns the first visible `.hero-atom-origin` container (desktop or mobile). The hooks call this to get the canvas coordinates without raw selector querying.
+  - **`svgRef`**: Passed to [components/EventsConstellation.tsx](file:///c:/Projects/NSS/club-website/components/EventsConstellation.tsx) to expose the background viewBox bounds to `useScrollStateMachine`.
+
+---
+
+### 2. [hooks/useMorphCoordinates.ts](file:///c:/Projects/NSS/club-website/hooks/useMorphCoordinates.ts)
+Manages the absolute coordinate calculations and DOM updates for the 7 planet "ghosts" that bridge the transition from the solar system to the background SVG constellation.
+- **`updateMorphGhosts(progress: number)`**:
+  - Called directly from the main rAF loop.
+  - Skips React virtual DOM diffing and updates styles directly (`ghost.style.transform = translate3d(...)`).
+  - Utilizes **`translate3d(x, y, 0)`** instead of `left`/`top` offsets to trigger GPU composition layers and prevent layout reflows during frame updates.
+  - Maps planet positions from `layoutCacheRef` to SVG coordinate equivalents (`scaleX = svgRect.width / 1000`, `scaleY = svgRect.height / 600`).
+- **`morphedDotIds`**: State variable holding IDs of hidden constellation dots, letting individual SVG circles fade in only as ghost particles land.
+
+---
+
+### 3. [hooks/useGalleryBridge.ts](file:///c:/Projects/NSS/club-website/hooks/useGalleryBridge.ts)
+A lightweight state wrapper handling transition handoffs between the SVG constellation and the rotating gallery:
+- **`checkGalleryHandoff()`**: Monitors morph progress. Once events morph reaches $1.0$, it sets the gallery handoff flag `galleryHandoffRef.current = true`, freeing the scroll snapping container to allow natural scroll progression into the gallery.
+
+---
+
+### 4. Math & Easing Utilities
 To ensure butter-smooth transitions across different screen resolutions, several math helpers are used:
 - **`lerp(a: number, b: number, t: number): number`**: Linear interpolation. Computes $a + (b - a) \times t$. Used for floating coordinate paths, canvas scales, and color mixing.
 - **`clamp01(v: number): number`**: Restricts a value between `0` and `1`.
@@ -90,91 +145,6 @@ To ensure butter-smooth transitions across different screen resolutions, several
 
 ---
 
-### 3. Detailed Orchestrator Functions Directory
-- **`startTransition(targetPhase: "hero" | "clubs" | "about" | "events"): void`**
-  - **Purpose**: Triggers a programmatic scroll snapping slide to the designated target phase section.
-  - **Mechanics**:
-    1. Blocks scroll triggers by setting `phaseRef.current = "animating"`.
-    2. Measures target coordinates: `0` for `hero`, top of `#clubs` container (offset by `HEADER_H`), top of `#about` container, or top of `#events` container.
-    3. Saves start time (`performance.now()`), start scroll `window.scrollY`, and target scroll coordinate in the animation reference (`animRef.current`).
-- **`startGalleryTransition(): void`**
-  - **Purpose**: Initiates programmatic transition from events view to gallery view.
-  - **Mechanics**: Computes the top position of the `#gallery` section container, sets `phaseRef.current = "animating"`, and locks inputs.
-- **`initZoom(slug: string): void`**
-  - **Purpose**: Computes absolute layout scales and positions to initialize a smooth zoom into the clicked node.
-  - **Math & Layout Values**:
-    - Computes canvas scale relative to target size (`CANVAS_INTRINSIC = 640px`).
-    - Maps target angles based on `ROTATION_OFFSETS` dictionary for correct target orientation.
-    - Saves state `setSelectedClub(slug)` and dispatches forward zooming details into `zoomAnimRef.current`.
-- **`handleElectronClick(slug: string): void`**
-  - **Purpose**: Checks page state before executing a zoom.
-  - **Mechanics**: If current phase is `hero`, it first dispatches `startTransition("clubs")` and queues the zoom execution in `pendingZoomSlugRef.current` until section snapping finishes. If already in `clubs` phase, it immediately executes `initZoom(slug)`.
-- **`handleCloseClub(): void`**
-  - **Purpose**: Closes the active club card display and plays the zoom exit timeline in reverse.
-  - **Mechanics**: Sets `phaseRef.current = "zooming"` and sets the `direction` parameter of `zoomAnimRef` to `"reverse"`.
-- **`updateProjectorCoords(): void`**
-  - **Purpose**: Calculates the three polygon coordinates `(x1, y1)`, `(x2, y2)`, and `(x3, y3)` for the holographic beam projection line.
-  - **Endpoint Calculations**:
-    - Projector lens source: `x1 = window.innerWidth * 0.18`, `y1 = window.innerHeight * 0.5`.
-    - Holographic screen targets: top-left `(x2, y2)` and bottom-left `(x3, y3)` bounds of the card container (`cardWrapperRef.current.getBoundingClientRect()`).
-- **`syncMorphedDots(visible: boolean): void`**
-  - **Purpose**: Toggles visible states of morphed background dots within the SVG constellation component.
-  - **Mechanics**: Avoids redundant renders by comparing the request to `morphedDotsVisibleRef.current` and updating the state `setMorphedDotIds` accordingly.
-- **`getLayoutElement(selector: string): HTMLElement | null`**
-  - **Purpose**: Standard selector lookup. Returns the first element with non-zero bounds width/height.
-- **`getMorphElementPoint(selectors: string[]): MorphPoint | null`**
-  - **Purpose**: Computes absolute coordinates of about-section planets.
-  - **Return**: `{ x: rect.left + window.scrollX + width / 2, y: rect.top + window.scrollY + height / 2, size: max(width, height) }`.
-- **`getConstellationDotPoint(dotId: number): MorphPoint | null`**
-  - **Purpose**: Projects coordinate of target dot in SVG constellation into absolute screen coordinates.
-  - **Return**: Scales viewBox coordinates (0-1000 X, 0-600 Y) to match local SVG element bounds.
-- **`updateMorphGhosts(progress: number): void`**
-  - **Purpose**: Drives particle positions along a linear path between solar system elements and target constellation dots.
-  - **Math**: Staggers transitions using `morph.stagger`. Applies local ease-in-out easing, computes current coordinates `(x, y)` and diameter `size`, mixes color gradients, and updates style tags of the ghost references.
-
----
-
-### 4. Central Snap-Scroll Mechanics (`wheel` & `touchmove`)
-Traditional browser scrolling is overridden in certain sections to enforce smooth, responsive section snaps.
-- **Cooldowns**: Snapping transitions are rate-limited via `lastTransitionTimeRef` (700ms threshold) to prevent multiple triggers from mouse-wheel flicks.
-- **Directional Snapping Triggers**:
-  - `hero` $\rightarrow$ scroll down $\rightarrow$ triggers snap to `clubs` section.
-  - `clubs` $\rightarrow$ scroll up $\rightarrow$ snaps to `hero`; scroll down $\rightarrow$ snaps to `about`.
-  - `about` $\rightarrow$ scroll up $\rightarrow$ snaps to `clubs`; scroll down past the bottom threshold $\rightarrow$ snaps to `events`.
-  - `events` $\rightarrow$ scroll down past trigger point $\rightarrow$ snaps to `gallery`.
-- **Handoff Logic (`releaseEventsHandoff`)**:
-  Allows the page to release custom scrolling and revert to natural, smooth browser scrolling when the user enters the footer/gallery sections.
-
----
-
-### 5. Floating Canvas Coordination (The "Tick" Loop)
-A central `requestAnimationFrame` loop drives the floating canvas:
-1. Calculates the bounding rects of the static layout anchors (`.hero-atom-origin` and `clubsAnchorRef`).
-2. Interpolates the absolute coordinates (`cx`, `cy`) and scaling factor of the canvas container based on `atomProgressRef` (Hero $\leftrightarrow$ Clubs) and `aboutProgressRef` (Clubs $\leftrightarrow$ About).
-3. Applies CSS styles:
-   - `floatingRef.style.transform = "translate(x, y)"`
-   - `canvasWrapRef.style.transform = "scale(s)"`
-4. Gradually fades out the canvas opacity (`opacity = 1 - aboutProgressRef.current`) past `55%` of the "About" section transition. This allows a seamless handoff to the static HTML solar system planets.
-
----
-
-### 6. Solar System to Constellation Ghost Particle Morphs
-During the `events` phase transition, 7 static HTML planets in the "About" section must morph into stardust dots in the SVG constellation background.
-- **`PLANET_DOT_MORPHS` Mapping Table**:
-  - Mercury $\rightarrow$ Dot `0` (Anchor, Blue)
-  - Venus $\rightarrow$ Dot `5` (Background, Blue)
-  - Earth $\rightarrow$ Dot `2` (Anchor, Blue)
-  - Sun $\rightarrow$ Dot `4` (Gold, Sun Echo)
-  - Mars $\rightarrow$ Dot `1` (Anchor, Blue)
-  - Jupiter $\rightarrow$ Dot `3` (Anchor, Blue)
-  - Saturn $\rightarrow$ Dot `12` (Background, Blue)
-- **`updateMorphGhosts(progress)`**:
-  - Instantiates temporary floating divs ("ghosts") aligned absolute to the viewport.
-  - Obtains `from` coordinates from HTML elements (`#about .p-venus`, etc.) and `to` coordinates from the SVG viewbox projection.
-  - Interpolates size, color, and positions in screen coordinates.
-  - Once progress completes, the ghosts fade out, and the corresponding SVG dots are faded in.
-
----
 
 ## ⚛️ The Interactive Engine: [components/HeroAtom.tsx](file:///c:/Projects/NSS/club-website/components/HeroAtom.tsx)
 
@@ -225,8 +195,15 @@ ctx.scale(DPR, DPR);
 - **`frame(timestamp: number): void`**
   - **Purpose**: The core requestAnimationFrame ticking callback. 
   - **Logic**: Throttles frame rates, updates hover progress variables, applies CSS Y-rotations/tilts, clears frame bounds, and dispatches draws in the correct layout layer order.
+  - **Perspective Skew Protection**:
+    3D CSS rotations are applied to the canvas container during transit phases to create a spinning sphere. To prevent Y-perspective distortion from altering `getBoundingClientRect()` bounds once settled, the 3D transforms are strictly locked to when progress $p$ is in active transit:
+    $$\text{apply3D} \iff p \in (0.001, 0.999)$$
 - **`handleMouseMove(e: MouseEvent) / handleClick(e: MouseEvent): void`**
   - **Purpose**: Canvas mouse interaction handlers. Translates cursor coordinates to scale bounds and raycasts collision hits with electrons or the nucleus.
+  - **DPI Inverse Matrix Mapping**:
+    To support exact hover/click accuracy regardless of canvas scale or page scaling (especially when zoomed), the hook performs **Inverse Matrix Mapping** to translate screen points back into the $640\times640$ virtual space:
+    $$x_{\text{virtual}} = \frac{(e.clientX - rect.left) \cdot \text{canvasWidth}}{\text{clientWidth} \cdot \text{DPR}}$$
+    $$y_{\text{virtual}} = \frac{(e.clientY - rect.top) \cdot \text{canvasHeight}}{\text{clientHeight} \cdot \text{DPR}}$$
 
 ---
 

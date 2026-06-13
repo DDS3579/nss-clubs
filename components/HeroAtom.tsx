@@ -15,10 +15,8 @@ interface HeroAtomProps {
 const CANVAS_SIZE = 640;
 const CX = CANVAS_SIZE / 2;
 const CY = CANVAS_SIZE / 2;
-const PRIMARY_BLUE = "#023B8E";
 const DEEP_BLUE = "#011f5b";
 const ACCENT_GOLD = "#D4A373";
-const PALE_GOLD = "#fff8c0";
 
 const orbits = [
   { rx: 200, ry: 67, angleDeg: -60, offsets: [0, Math.PI], speed: 0.016 },
@@ -328,7 +326,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     /* ═══════════════════════════════════════════════════════════
        STAGE 3: SOLAR SYSTEM — The Sun
     ════════════════════════════════════════════════════════════ */
-    function drawSun(x: number, y: number, r: number, morphT: number) {
+    function drawSun(x: number, y: number, r: number) {
       ctx!.save();
 
       const pulse = 1 + Math.sin(elapsed * 0.04) * 0.02;
@@ -593,7 +591,8 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       });
 
       // 3D Container Spin (Hero -> Clubs)
-      if (p > 0.001) {
+      // Only apply 3D context during transition to prevent perspective distorting getBoundingClientRect when completed
+      if (p > 0.001 && p < 0.999) {
         const rotY = eased * 360;
         const rotX = Math.sin(Math.PI * eased) * 12;
         const rotZ = Math.sin(Math.PI * eased) * -15;
@@ -654,10 +653,10 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
             drawNucleus(sunX, sunY, currentR, 1);
             ctx.save();
             ctx.globalAlpha = nucleusHoverT;
-            drawSun(sunX, sunY, sunR, nucleusHoverT);
+            drawSun(sunX, sunY, sunR);
             ctx.restore();
           } else {
-            drawSun(sunX, sunY, sunR, 1);
+            drawSun(sunX, sunY, sunR);
           }
         } else {
           drawNucleus(sunX, sunY, currentR, 0); // Remain normal nucleus
@@ -836,8 +835,10 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       const canvasEl = canvasRef.current;
       if (!canvasEl) return;
       const rect = canvasEl.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * CANVAS_SIZE;
-      const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SIZE;
+      // Inverse Matrix Mapping: Use canvas.getBoundingClientRect() scale ratio to map to raw canvas space,
+      // then divide by DPR to scale back to virtual CANVAS_SIZE (640x640) coordinate space.
+      const x = ((e.clientX - rect.left) * canvasEl.width) / rect.width / DPR;
+      const y = ((e.clientY - rect.top) * canvasEl.height) / rect.height / DPR;
 
       let hoveredSlug: string | null = null;
       const nX = nucleusCoordsRef.current.x;
@@ -866,8 +867,10 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       const canvasEl = canvasRef.current;
       if (!canvasEl) return;
       const rect = canvasEl.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * CANVAS_SIZE;
-      const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SIZE;
+      // Inverse Matrix Mapping: Use canvas.getBoundingClientRect() scale ratio to map to raw canvas space,
+      // then divide by DPR to scale back to virtual CANVAS_SIZE (640x640) coordinate space.
+      const x = ((e.clientX - rect.left) * canvasEl.width) / rect.width / DPR;
+      const y = ((e.clientY - rect.top) * canvasEl.height) / rect.height / DPR;
 
       let clickedSlug: string | null = null;
       const nX = nucleusCoordsRef.current.x;

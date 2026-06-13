@@ -278,6 +278,8 @@ export default function GalleryOrbit({
       aria-labelledby="gallery-orbit-title"
       className={classNames(
         styles.section,
+        "snap-start",
+        "scroll-mt-16",
         phase === "open" && styles.isVisible,
         phase === "exiting" && styles.isExiting,
       )}

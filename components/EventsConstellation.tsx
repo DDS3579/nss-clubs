@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, type RefObject } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { urlFor } from "@/sanity/lib/image";
@@ -139,11 +139,14 @@ const LINE_START_MOBILE = 0.6; // 60% of 10 mobile dots = 6th, at 5×60ms = 0.3s
 interface EventsConstellationProps {
   events: FeaturedEvent[];
   morphedDotIds?: number[];
+  /** Optional ref to expose the constellation SVG element to a parent */
+  svgRef?: RefObject<SVGSVGElement | null>;
 }
 
 export default function EventsConstellation({
   events,
   morphedDotIds = [],
+  svgRef,
 }: EventsConstellationProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const [hasAnimated, setHasAnimated] = useState(false);
@@ -172,7 +175,7 @@ export default function EventsConstellation({
     <section
       ref={sectionRef}
       id="events"
-      className={`events-constellation-section${hasAnimated ? " ec-animated" : ""}`}
+      className={`snap-start scroll-mt-16 events-constellation-section${hasAnimated ? " ec-animated" : ""}`}
     >
       <style dangerouslySetInnerHTML={{ __html: `
         /* ═══════════════════════════════════════════════════════════
@@ -492,6 +495,7 @@ export default function EventsConstellation({
 
       {/* ── Constellation SVG Background ── */}
       <svg
+        ref={svgRef}
         className="ec-constellation-svg"
         viewBox="0 0 1000 600"
         preserveAspectRatio="none"

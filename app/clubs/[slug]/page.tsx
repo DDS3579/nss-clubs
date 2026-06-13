@@ -14,7 +14,7 @@ export default async function ClubPage({ params }: { params: Promise<{ slug: str
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <h1 className="text-3xl font-bold">Club Not Found</h1>
-        <p className="text-gray-500">We couldn't find a club with the slug "{slug}".</p>
+        <p className="text-gray-500">We couldn&apos;t find a club with the slug &quot;{slug}&quot;.</p>
         <Link href="/" className="text-blue-600 underline">Go back home</Link>
       </div>
     )

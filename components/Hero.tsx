@@ -1,8 +1,30 @@
 "use client";
 
+import { forwardRef, useRef, useImperativeHandle } from "react";
 import Link from "next/link";
 
-export default function Hero() {
+export interface HeroHandle {
+  /** Returns the first visible hero-atom-origin element (desktop or mobile) */
+  getAtomOrigin: () => HTMLDivElement | null;
+}
+
+const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
+  const mobileOriginRef = useRef<HTMLDivElement>(null);
+  const desktopOriginRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    getAtomOrigin() {
+      // Return the first visible origin element
+      for (const el of [desktopOriginRef.current, mobileOriginRef.current]) {
+        if (el) {
+          const r = el.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) return el;
+        }
+      }
+      return desktopOriginRef.current ?? mobileOriginRef.current;
+    },
+  }));
+
   return (
     <section className="relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden bg-white pt-6 pb-12 sm:pt-4 sm:pb-16 lg:min-h-[calc(100svh-4rem)] lg:-mt-8 lg:pb-20">
       {/* Background radial highlights */}
@@ -15,7 +37,7 @@ export default function Hero() {
         <div className="flex flex-col items-center text-center gap-5 lg:hidden">
 
           {/* Atom */}
-          <div className="hero-atom-origin relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
+          <div ref={mobileOriginRef} className="hero-atom-origin relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
 
           {/* Heading */}
           <h1 className="font-display font-black leading-[0.92] tracking-tight text-text w-full">
@@ -95,11 +117,13 @@ export default function Hero() {
 
           {/* Column 2: HeroAtom */}
           <div className="lg:col-span-6 flex items-center justify-center w-full">
-            <div className="hero-atom-origin relative w-[640px] h-[640px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
+            <div ref={desktopOriginRef} className="hero-atom-origin relative w-[640px] h-[640px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
           </div>
 
         </div>
       </div>
     </section>
   );
-}
+});
+
+export default Hero;

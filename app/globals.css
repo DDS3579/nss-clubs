@@ -43,3 +43,47 @@ body {
   font-family: var(--font-body);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   LENIS SMOOTH SCROLL — Base Styles
+   Required for proper Lenis operation across all devices.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Allow Lenis to measure the full document height */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+/* Override any CSS scroll-behavior that conflicts with Lenis interpolation */
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+/* Contain overscroll for elements that opt out of Lenis */
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* Lock scrolling when Lenis is stopped (e.g., during zoom animations) */
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Ensure smooth touch scrolling on mobile devices */
+.lenis.lenis-scrolling {
+  overflow: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LENIS CSS CUSTOM PROPERTIES
+   Updated every frame by useLenis.ts — use in calc() or
+   as keyframe drivers to keep CSS animations locked to
+   Lenis's buttery scroll interpolation.
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --lenis-scroll-y: 0px;
+  --lenis-progress: 0;
+  --lenis-velocity: 0;
+  --lenis-direction: 0;
+}
+
