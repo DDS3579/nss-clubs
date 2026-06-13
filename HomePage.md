@@ -81,16 +81,60 @@ type Phase = "hero" | "animating" | "clubs" | "zooming" | "zoomed" | "about" | "
 
 ### 2. Math & Easing Utilities
 To ensure butter-smooth transitions across different screen resolutions, several math helpers are used:
-- **`lerp(a, b, t)`**: Linear interpolation. Computes `a + (b - a) * t`. Used for floating coordinate paths, canvas scales, and color mixing.
-- **`clamp01(v)`**: Restricts a value between `0` and `1`.
-- **`easeInOutQuart(t)`**: A quartic bezier easing function. Starts slow, accelerates, and decelerates near completion. Used for snapping transitions.
+- **`lerp(a: number, b: number, t: number): number`**: Linear interpolation. Computes $a + (b - a) \times t$. Used for floating coordinate paths, canvas scales, and color mixing.
+- **`clamp01(v: number): number`**: Restricts a value between `0` and `1`.
+- **`easeInOutQuart(t: number): number`**: A quartic bezier easing function. Starts slow, accelerates, and decelerates near completion. Used for snapping transitions.
   $$\text{easeInOutQuart}(t) = \begin{cases} 8t^4 & \text{if } t < 0.5 \\ 1 - \frac{(-2t + 2)^4}{2} & \text{otherwise} \end{cases}$$
-- **`hexToRgb(hex)`**: Converts hex color strings into an `{r, g, b}` object by utilizing bitwise shift operations (`>>`).
-- **`mixHex(a, b, t)`**: Computes the interpolated RGB color between two hex colors. Used during the dynamic event-to-gallery particle morphs.
+- **`hexToRgb(hex: string): { r: number; g: number; b: number }`**: Converts hex color strings into an `{r, g, b}` object by utilizing bitwise shift operations (`>>`).
+- **`mixHex(a: string, b: string, t: number): string`**: Computes the interpolated RGB color between two hex colors. Used during the dynamic event-to-gallery particle morphs.
 
 ---
 
-### 3. Central Snap-Scroll Mechanics (`wheel` & `touchmove`)
+### 3. Detailed Orchestrator Functions Directory
+- **`startTransition(targetPhase: "hero" | "clubs" | "about" | "events"): void`**
+  - **Purpose**: Triggers a programmatic scroll snapping slide to the designated target phase section.
+  - **Mechanics**:
+    1. Blocks scroll triggers by setting `phaseRef.current = "animating"`.
+    2. Measures target coordinates: `0` for `hero`, top of `#clubs` container (offset by `HEADER_H`), top of `#about` container, or top of `#events` container.
+    3. Saves start time (`performance.now()`), start scroll `window.scrollY`, and target scroll coordinate in the animation reference (`animRef.current`).
+- **`startGalleryTransition(): void`**
+  - **Purpose**: Initiates programmatic transition from events view to gallery view.
+  - **Mechanics**: Computes the top position of the `#gallery` section container, sets `phaseRef.current = "animating"`, and locks inputs.
+- **`initZoom(slug: string): void`**
+  - **Purpose**: Computes absolute layout scales and positions to initialize a smooth zoom into the clicked node.
+  - **Math & Layout Values**:
+    - Computes canvas scale relative to target size (`CANVAS_INTRINSIC = 640px`).
+    - Maps target angles based on `ROTATION_OFFSETS` dictionary for correct target orientation.
+    - Saves state `setSelectedClub(slug)` and dispatches forward zooming details into `zoomAnimRef.current`.
+- **`handleElectronClick(slug: string): void`**
+  - **Purpose**: Checks page state before executing a zoom.
+  - **Mechanics**: If current phase is `hero`, it first dispatches `startTransition("clubs")` and queues the zoom execution in `pendingZoomSlugRef.current` until section snapping finishes. If already in `clubs` phase, it immediately executes `initZoom(slug)`.
+- **`handleCloseClub(): void`**
+  - **Purpose**: Closes the active club card display and plays the zoom exit timeline in reverse.
+  - **Mechanics**: Sets `phaseRef.current = "zooming"` and sets the `direction` parameter of `zoomAnimRef` to `"reverse"`.
+- **`updateProjectorCoords(): void`**
+  - **Purpose**: Calculates the three polygon coordinates `(x1, y1)`, `(x2, y2)`, and `(x3, y3)` for the holographic beam projection line.
+  - **Endpoint Calculations**:
+    - Projector lens source: `x1 = window.innerWidth * 0.18`, `y1 = window.innerHeight * 0.5`.
+    - Holographic screen targets: top-left `(x2, y2)` and bottom-left `(x3, y3)` bounds of the card container (`cardWrapperRef.current.getBoundingClientRect()`).
+- **`syncMorphedDots(visible: boolean): void`**
+  - **Purpose**: Toggles visible states of morphed background dots within the SVG constellation component.
+  - **Mechanics**: Avoids redundant renders by comparing the request to `morphedDotsVisibleRef.current` and updating the state `setMorphedDotIds` accordingly.
+- **`getLayoutElement(selector: string): HTMLElement | null`**
+  - **Purpose**: Standard selector lookup. Returns the first element with non-zero bounds width/height.
+- **`getMorphElementPoint(selectors: string[]): MorphPoint | null`**
+  - **Purpose**: Computes absolute coordinates of about-section planets.
+  - **Return**: `{ x: rect.left + window.scrollX + width / 2, y: rect.top + window.scrollY + height / 2, size: max(width, height) }`.
+- **`getConstellationDotPoint(dotId: number): MorphPoint | null`**
+  - **Purpose**: Projects coordinate of target dot in SVG constellation into absolute screen coordinates.
+  - **Return**: Scales viewBox coordinates (0-1000 X, 0-600 Y) to match local SVG element bounds.
+- **`updateMorphGhosts(progress: number): void`**
+  - **Purpose**: Drives particle positions along a linear path between solar system elements and target constellation dots.
+  - **Math**: Staggers transitions using `morph.stagger`. Applies local ease-in-out easing, computes current coordinates `(x, y)` and diameter `size`, mixes color gradients, and updates style tags of the ghost references.
+
+---
+
+### 4. Central Snap-Scroll Mechanics (`wheel` & `touchmove`)
 Traditional browser scrolling is overridden in certain sections to enforce smooth, responsive section snaps.
 - **Cooldowns**: Snapping transitions are rate-limited via `lastTransitionTimeRef` (700ms threshold) to prevent multiple triggers from mouse-wheel flicks.
 - **Directional Snapping Triggers**:
@@ -103,7 +147,7 @@ Traditional browser scrolling is overridden in certain sections to enforce smoot
 
 ---
 
-### 4. Floating Canvas Coordination (The "Tick" Loop)
+### 5. Floating Canvas Coordination (The "Tick" Loop)
 A central `requestAnimationFrame` loop drives the floating canvas:
 1. Calculates the bounding rects of the static layout anchors (`.hero-atom-origin` and `clubsAnchorRef`).
 2. Interpolates the absolute coordinates (`cx`, `cy`) and scaling factor of the canvas container based on `atomProgressRef` (Hero $\leftrightarrow$ Clubs) and `aboutProgressRef` (Clubs $\leftrightarrow$ About).
@@ -111,16 +155,6 @@ A central `requestAnimationFrame` loop drives the floating canvas:
    - `floatingRef.style.transform = "translate(x, y)"`
    - `canvasWrapRef.style.transform = "scale(s)"`
 4. Gradually fades out the canvas opacity (`opacity = 1 - aboutProgressRef.current`) past `55%` of the "About" section transition. This allows a seamless handoff to the static HTML solar system planets.
-
----
-
-### 5. Holographic Projector Beam Simulation
-When a club is selected, a connection line projects from the "nucleus" to the sliding card:
-- **Points Calculated**:
-  - `x1, y1`: Coordinate of the canvas nucleus (source) located at $18\%$ screen width, $50\%$ screen height.
-  - `x2, y2`: Bounding top-left coordinate of the card wrapper.
-  - `x3, y3`: Bounding bottom-left coordinate of the card wrapper.
-- **Rendering**: Draws an SVG polygon filled with a linear gradient of the club's specific accent color (`#projector-beam-grad`). A pinging circle is drawn at the source pointer.
 
 ---
 
@@ -155,16 +189,48 @@ canvas.height = CANVAS_SIZE * DPR;
 ctx.scale(DPR, DPR);
 ```
 
-### 2. Orbit Math and Electron Trails
-- **Orbits**: Rendered using `ctx.ellipse()` with variable eccentricity:
-  - Radius X: `200px` (widen factor applied up to $1.8\times$ during transit).
-  - Radius Y: `67px` (ratio creating a 3D tilted plane).
-  - Tilt Angles: `-60deg`, `0deg`, and `60deg` respectively.
-- **Rotations**: Driven by reference-based angle offsets that sync with the snap scroll.
-- **Trails**: A `createLinearGradient` is drawn behind moving electrons, tracking backward from their current angle direction:
-  $$\vec{v}_{\text{trail}} = - (\cos(\theta_{\text{trail}}), \sin(\theta_{\text{trail}})) \times \text{length}$$
+### 2. Math & Easing Utilities
+- **`easeOutExpo(t: number)`**: Decelerates scaling smoothly.
+- **`easeInOutCubic(t: number)`**: Performs standard S-shaped interpolation.
+- **`easeOutQuart(t: number)`**: Used to create quick snapping animations.
+- **`shortestAngle(start: number, end: number): number`**: Returns the shortest angular distance between two polar angles in radians. Used to orient electrons properly during the Settle Phase.
+  $$\text{diff} = (\text{end} - \text{start}) \pmod{2\pi}$$
 
-### 3. Click and Hover Raycast Collision Detection
+---
+
+### 3. Detailed Canvas Rendering Functions Directory
+- **`drawOrbit(rx: number, ry: number, angleDeg: number, orbitFade: number, morphT: number): void`**
+  - **Purpose**: Draws the elliptical orbit path for electrons.
+  - **Math**: Scales ellipse width by $1 + \text{morphT} \times 0.8$ during transits. Interpolates color channels from blue `rgb(2, 59, 142)` to gold `rgb(212, 163, 115)` as orbits dissolve.
+- **`getPos(rx: number, ry: number, angleDeg: number, theta: number, morphT: number): { x: number; y: number }`**
+  - **Purpose**: Computes the 2D Cartesian $(x,y)$ coordinates for a moving electron along its eccentric 3D orbit plane at polar angle $\theta$.
+- **`drawElectron(x: number, y: number, alpha: number, trailLength: number, trailAngle: number): void`**
+  - **Purpose**: Draws a metallic-sheened electron sphere.
+  - **Rendering**: Draws a radial gradient shadow, draws the base color, overlays a linear gradient sheen, adds a specular circular highlight, and renders motion trails.
+- **`drawNucleus(x: number, y: number, r: number, brightenT: number): void`**
+  - **Purpose**: Draws the golden center nucleus representing the Executive Team.
+  - **Rendering**: Adds a glow shadow (`ACCENT_GOLD` or `#FF8C00`), a warm-shifting linear metal gradient, a dark rim border gradient, and a specular highlight.
+- **`drawSun(x: number, y: number, r: number, morphT: number): void`**
+  - **Purpose**: Draws the fully formed sun in the solar system.
+  - **Rendering**: Multiplies radius by a sinusoidal pulse factor: $r \times (1 + \sin(\text{time} \times 0.04) \times 0.02)$.
+- **`drawPlanetOrbitRing(sunX: number, sunY: number, planetX: number, orbitAlpha: number): void`**
+  - **Purpose**: Draws a dashed circular path ring representing gravity wells around the sun on electron hover.
+- **`drawPlanet(x: number, y: number, r: number, baseColor: string, accent: string, alpha: number, hasRing: boolean, glowColor: string): void`**
+  - **Purpose**: Draws a detailed 3D textured planet.
+  - **Rendering**: Renders outer atmospheric radial glow, soft shadows, clips surface bands, draws rings (using 3D ellipse rotations), and adds specular highlights.
+- **`drawBackgroundStars(alpha: number): void`**
+  - **Purpose**: Twinkles stars in the canvas background. Uses individual star offsets and phase rates.
+- **`drawMorphingNode(...): void`**
+  - **Purpose**: Directs the gradual shape, color, and scale crossfade from electron to planet over 3 stages.
+- **`frame(timestamp: number): void`**
+  - **Purpose**: The core requestAnimationFrame ticking callback. 
+  - **Logic**: Throttles frame rates, updates hover progress variables, applies CSS Y-rotations/tilts, clears frame bounds, and dispatches draws in the correct layout layer order.
+- **`handleMouseMove(e: MouseEvent) / handleClick(e: MouseEvent): void`**
+  - **Purpose**: Canvas mouse interaction handlers. Translates cursor coordinates to scale bounds and raycasts collision hits with electrons or the nucleus.
+
+---
+
+### 4. Click and Hover Raycast Collision Detection
 Canvas objects do not have DOM listeners. Interactive click/hover detection is implemented using radial coordinate distance checks within the event listener bounding boxes:
 - **Nucleus Detection**:
   $$\text{distance} = \sqrt{(x - x_{\text{nucleus}})^2 + (y - y_{\text{nucleus}})^2} < 40\text{px}$$
@@ -172,13 +238,13 @@ Canvas objects do not have DOM listeners. Interactive click/hover detection is i
   $$\text{distance} = \sqrt{(x - x_{\text{electron}})^2 + (y - y_{\text{electron}})^2} < 30\text{px}$$
 - Cursor styling shifts to `pointer` when hovering over any interactive node.
 
-### 4. Morphing Nodes (Electron $\rightarrow$ Planet)
+---
+
+### 5. Morphing Nodes (Electron $\rightarrow$ Planet)
 As scroll transition progresses, the canvas transforms the electrons into structured planets (`drawMorphingNode` function):
 - **Phase 1 ($t \in [0.0, 0.35]$)**: Electrons expand, trails stretch, and base colors start interpolating.
 - **Phase 2 ($t \in [0.35, 0.65]$)**: Crossfade is executed. The blue metallic electron sheens fade out, and 3D textured planet rings and shadows emerge.
 - **Phase 3 ($t \in [0.65, 1.0]$)**: Planets settle into fixed horizontal positions, and hover atmospheric glows are initialized.
-
----
 
 ## 🌌 The Visual Transition: [components/EventsConstellation.tsx](file:///c:/Projects/NSS/club-website/components/EventsConstellation.tsx)
 
