@@ -2,7 +2,49 @@
 
 This document provides a highly detailed, comprehensive breakdown of the frontend architecture, state machines, math utilities, canvas animations, CSS keyframes, and scroll behaviors that power the interactive homepage of the **NSS Clubs** website.
 
+
 ---
+
+## 📂 Homepage Codebase File Structure & Dependency Tree
+
+Below is the directory tree of the components, entry points, styles, and footers that compose the homepage visual and interactive experience:
+
+```
+club-website/
+├── app/
+│   └── page.tsx               # Next.js Server Component (Fetches HomepageData from Sanity CMS)
+└── components/
+    ├── HomeScrollExperience.tsx # Master Client Orchestrator (State machine, transitions, snaps, morphs)
+    ├── Hero.tsx               # Static banner container & background highlights (.hero-atom-origin anchors)
+    ├── HeroAtom.tsx           # Interactive Canvas (DPI-scaled atom nucleus & orbiting club electrons)
+    ├── EventsConstellation.tsx # SVG constellation overlay (Y-staggered cascade dots & lines)
+    ├── home/
+    │   ├── GalleryOrbit.tsx   # 3D rotating photo carousel & interactive scroll-bridge particles
+    │   └── GalleryOrbit.module.css # Scoped CSS keyframes (collapse, guides, clockwise rotations)
+    └── layout/
+        └── ConstellationFooter.tsx # Constellation-themed footer with twinkling SVG micro-animations
+```
+
+### 🛰️ Core State & Data Flow Pipeline
+
+The diagram below outlines how Sanity CMS content and interactive animation states flow downward through these components:
+
+```mermaid
+graph TD
+    Sanity[Sanity CMS Database] -->|getHomepageData Query| PageTSX["app/page.tsx (RSC)"]
+    PageTSX -->|HomepageData Prop| HSE["HomeScrollExperience.tsx (Client Orchestrator)"]
+
+    subgraph "Homepage View Structure"
+        HSE -->|Coordinates Sync| HeroAtom["HeroAtom.tsx (Canvas Engine)"]
+        HSE -->|Ghost Morphs| EC["EventsConstellation.tsx (SVG Map)"]
+        HSE -->|Scroll Bridge Particles| GO["GalleryOrbit.tsx (3D Rings)"]
+        HSE -.->|Fades Container| Hero["Hero.tsx (Static Layout)"]
+        HSE -.->|Scroll Snap Snug| CF["ConstellationFooter.tsx (Footer)"]
+    end
+```
+
+---
+
 
 ## 🏛️ High-Level Architecture & Page Flow
 
