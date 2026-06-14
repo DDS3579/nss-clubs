@@ -436,13 +436,32 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       )
         return;
       if (phaseRef.current === "hero") {
-        lenisScrollTo("#clubs", { duration: 1.2 });
         pendingZoomSlugRef.current = slug;
+        lenisScrollTo("#clubs", {
+          duration: 1.2,
+          onComplete: () => {
+            const pendingSlug = pendingZoomSlugRef.current;
+            if (pendingSlug) {
+              pendingZoomSlugRef.current = null;
+            updateLayoutGeometry();
+              // Center the atom in viewport before zoom (lower in viewport = scroll more down)
+              const clubsAnchor = clubsAnchorRef.current;
+              if (clubsAnchor) {
+                const rect = clubsAnchor.getBoundingClientRect();
+                const atomCenterY = rect.top + rect.height / 2 + window.scrollY;
+                const targetScrollY = atomCenterY - window.innerHeight / 2 + 25;
+                lenisScrollTo(targetScrollY, { immediate: true });
+                updateLayoutGeometry();
+              }
+              initZoom(pendingSlug);
+            }
+          },
+        });
       } else if (phaseRef.current === "clubs") {
         initZoom(slug);
       }
     },
-    [initZoom, phaseRef, pendingZoomSlugRef],
+    [initZoom, phaseRef, pendingZoomSlugRef, lenisScrollTo, updateLayoutGeometry, clubsAnchorRef],
   );
 
   /* ── Close club card and reverse zoom ── */
@@ -452,6 +471,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     if (!slug) return;
     const clubsAnchor = clubsAnchorRef.current;
     if (!clubsAnchor) return;
+
+    // Instantly scroll to center the atom in viewport (lower in viewport = scroll more down)
+    const rect = clubsAnchor.getBoundingClientRect();
+    const atomCenterY = rect.top + rect.height / 2 + window.scrollY;
+    const targetScrollY = atomCenterY - window.innerHeight / 2;
+    lenisScrollTo(targetScrollY, { immediate: true });
+    // Force layout cache sync to get correct coordinates at the new scroll position
+    updateLayoutGeometry();
+
     const clubsRect = clubsAnchor.getBoundingClientRect();
     const clubsCx = clubsRect.left + clubsRect.width / 2;
     const clubsCy = clubsRect.top + clubsRect.height / 2;
@@ -480,7 +508,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       clubsFloatY,
       clubsScale,
     };
-  }, [selectedClub, phaseRef, clubsAnchorRef]);
+  }, [selectedClub, phaseRef, clubsAnchorRef, lenisScrollTo, updateLayoutGeometry]);
 
   // Pending zoom triggers are now handled synchronously inside the frame tick loop below to prevent state-race conditions.
 
@@ -517,13 +545,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       // Compute scroll-derived progress values (writes to refs, not state)
       computeScrollProgress();
-
-      // Check if we transitioned to the clubs phase and have a pending zoom slug, triggering it instantly.
-      if (phaseRef.current === "clubs" && pendingZoomSlugRef.current) {
-        const slug = pendingZoomSlugRef.current;
-        pendingZoomSlugRef.current = null;
-        initZoom(slug);
-      }
 
       // ── Position the floating atom canvas ──
       let cx = 0,

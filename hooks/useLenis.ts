@@ -23,6 +23,16 @@ const SNAP_SECTION_IDS = ["hero", "clubs", "about", "events"] as const;
  */
 const FREE_SCROLL_PHASES: Phase[] = ["gallery"];
 
+/* ─── Magnetic Scroll Constants ─── */
+/** Velocity threshold (px/ms) to "break" the magnetic pull */
+const MAGNETIC_BREAK_VELOCITY = 1.8;
+/** Duration multiplier when magnetic effect is active */
+const MAGNETIC_DURATION_MULTIPLIER = 2.2;
+/** Wheel multiplier when magnetic effect is active (lower = heavier) */
+const MAGNETIC_WHEEL_MULTIPLIER = 0.35;
+/** Touch multiplier when magnetic effect is active */
+const MAGNETIC_TOUCH_MULTIPLIER = 1.2;
+
 interface UseLenisArgs {
   /** Phase ref from useScrollStateMachine — used to determine snap behavior */
   phaseRef: React.RefObject<Phase>;
@@ -71,6 +81,12 @@ export default function useLenis({
   const rafIdRef = useRef<number>(0);
   const snapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSnappingRef = useRef(false);
+  const magneticActiveRef = useRef(false);
+  const originalOptionsRef = useRef<{
+    duration: number;
+    wheelMultiplier: number;
+    touchMultiplier: number;
+  } | null>(null);
 
   /* ── Initialize Lenis (client-only) ── */
   useEffect(() => {
@@ -80,13 +96,21 @@ export default function useLenis({
       orientation: "vertical",
       gestureOrientation: "vertical",
       smoothWheel: true,
+      wheelMultiplier: 1,
       touchMultiplier: 2,
       infinite: false,
     });
 
     lenisRef.current = lenis;
 
-    /* ── Scroll event: sync CSS custom properties ── */
+    // Store original options for restoration
+    originalOptionsRef.current = {
+      duration: 1.2,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+    };
+
+    /* ── Scroll event: sync CSS custom properties & magnetic logic ── */
     lenis.on("scroll", (e: Lenis) => {
       // Direct DOM writes — no React, no layout reads
       const root = document.documentElement;
@@ -104,16 +128,58 @@ export default function useLenis({
         String(e.direction)
       );
 
-      // ── Programmatic snap detection ──
-      // Only snap in snappable phases, not during active morphs or zoom
+      // ── Magnetic Scroll Logic for #clubs section ──
       const currentPhase = phaseRef.current;
-      const isFreeScroll = FREE_SCROLL_PHASES.includes(currentPhase);
       const isZooming =
         currentPhase === "zooming" || currentPhase === "zoomed";
       const isMorphing =
         eventsMorphRef.current > 0.01 && eventsMorphRef.current < 0.99;
 
-      if (isFreeScroll || isZooming || isMorphing || isSnappingRef.current) {
+      // Check if we should activate/deactivate magnetic effect
+      if (currentPhase === "clubs" && !isZooming && !isMorphing) {
+        // Activate magnetic effect if not already active
+        if (!magneticActiveRef.current) {
+          magneticActiveRef.current = true;
+          const lenisInstance = lenisRef.current;
+          if (lenisInstance && originalOptionsRef.current) {
+            lenisInstance.options.duration =
+              originalOptionsRef.current.duration * MAGNETIC_DURATION_MULTIPLIER;
+            lenisInstance.options.wheelMultiplier = MAGNETIC_WHEEL_MULTIPLIER;
+            lenisInstance.options.touchMultiplier = MAGNETIC_TOUCH_MULTIPLIER;
+          }
+        }
+
+        // Check for velocity break — user scrolling aggressively to escape
+        if (Math.abs(e.velocity) > MAGNETIC_BREAK_VELOCITY) {
+          // Deactivate magnetic effect immediately
+          magneticActiveRef.current = false;
+          const lenisInstance = lenisRef.current;
+          if (lenisInstance && originalOptionsRef.current) {
+            lenisInstance.options.duration = originalOptionsRef.current.duration;
+            lenisInstance.options.wheelMultiplier =
+              originalOptionsRef.current.wheelMultiplier;
+            lenisInstance.options.touchMultiplier =
+              originalOptionsRef.current.touchMultiplier;
+          }
+        }
+      } else if (magneticActiveRef.current) {
+        // Left clubs phase or entered zoom/morph — restore normal physics
+        magneticActiveRef.current = false;
+        const lenisInstance = lenisRef.current;
+        if (lenisInstance && originalOptionsRef.current) {
+          lenisInstance.options.duration = originalOptionsRef.current.duration;
+          lenisInstance.options.wheelMultiplier =
+            originalOptionsRef.current.wheelMultiplier;
+          lenisInstance.options.touchMultiplier =
+            originalOptionsRef.current.touchMultiplier;
+        }
+      }
+
+      // ── Programmatic snap detection ──
+      // Only snap in snappable phases, not during active morphs, zoom, or magnetic
+      const isFreeScroll = FREE_SCROLL_PHASES.includes(currentPhase);
+
+      if (isFreeScroll || isZooming || isMorphing || isSnappingRef.current || magneticActiveRef.current) {
         return;
       }
 
@@ -239,6 +305,18 @@ export default function useLenis({
 
   /* ── Stop/Start controls ── */
   const stop = useCallback(() => {
+    // Deactivate magnetic effect when stopping (e.g., for zoom)
+    if (magneticActiveRef.current) {
+      magneticActiveRef.current = false;
+      const lenisInstance = lenisRef.current;
+      if (lenisInstance && originalOptionsRef.current) {
+        lenisInstance.options.duration = originalOptionsRef.current.duration;
+        lenisInstance.options.wheelMultiplier =
+          originalOptionsRef.current.wheelMultiplier;
+        lenisInstance.options.touchMultiplier =
+          originalOptionsRef.current.touchMultiplier;
+      }
+    }
     lenisRef.current?.stop();
   }, []);
 
