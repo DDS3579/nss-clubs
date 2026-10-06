@@ -1,89 +1,101 @@
 @import "tailwindcss";
-@import "./styles/tokens.css";
 
-@theme {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  
-  /* NSS Design System Mappings */
-  --color-primary: #023B8E;
-  --color-accent: #D4A373;
-  --color-text: #1A365D;
-  --color-bg: #ffffff;
-  
-  --font-display: var(--font-space-grotesk);
-  --font-body: var(--font-inter);
-  
-  --radius-button: 12px;
-  --radius-card: 18px;
-  --radius-card-lg: 24px;
-  
-  --transition-fast: 150ms ease-in-out;
-  --transition-base: 250ms ease-in-out;
-  --transition-slow: 350ms ease-in-out;
-}
-
-:root {
-  --background: #ffffff;
-  --foreground: #1A365D; /* Set to design system default text color */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-body);
+/* ═══════════════════════════════════════════════════════════
+   FONTS
+   Loaded in app/layout.tsx with next/font and exposed as
+   --font-space-grotesk / --font-inter on <html>.
+   `inline` makes Tailwind write the var() straight into the
+   font-display / font-body / font-sans utilities.
+   ═══════════════════════════════════════════════════════════ */
+@theme inline {
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   LENIS SMOOTH SCROLL — Base Styles
-   Required for proper Lenis operation across all devices.
+   DESIGN TOKENS  (the only place colours/radii/shadows are defined)
+   Each variable below automatically becomes Tailwind utilities:
+     --color-primary  → bg-primary / text-primary / border-primary
+     --radius-card    → rounded-card
+     --shadow-md      → shadow-md  (re-themed with the navy tint)
+   `static` = always emit the variables, even if only used in CSS.
    ═══════════════════════════════════════════════════════════ */
+@theme static {
+  --color-primary: #023b8e;
+  --color-accent: #d4a373;
+  --color-text: #1a365d;
+  --color-bg: #ffffff;
 
-/* Allow Lenis to measure the full document height */
+  --radius-button: 12px;
+  --radius-card: 18px;
+  --radius-card-lg: 24px;
+
+  --shadow-sm: 0 1px 2px rgba(26, 54, 93, 0.05);
+  --shadow-md: 0 4px 6px rgba(26, 54, 93, 0.1);
+  --shadow-lg: 0 10px 15px rgba(26, 54, 93, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BASE STYLES
+   Everything here lives in @layer base, so any Tailwind class
+   (text-white, rounded-full, font-body …) always wins.
+   No dark mode: the site is a fixed light design.
+   ═══════════════════════════════════════════════════════════ */
+@layer base {
+  :root {
+    color-scheme: light;
+    --transition-fast: 150ms ease-in-out;
+  }
+
+  body {
+    @apply bg-bg text-text font-body;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display;
+  }
+
+  a {
+    transition: color var(--transition-fast);
+  }
+
+  a:not([class*="text-"]) {
+    color: var(--color-primary);
+  }
+
+  a:not([class*="text-"]):hover {
+    color: var(--color-accent);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LENIS SMOOTH SCROLL — base styles (unchanged for now)
+   To be revisited in step 5, when touch devices move to native
+   scrolling and useLenis.ts is rewritten.
+   ═══════════════════════════════════════════════════════════ */
 html.lenis,
 html.lenis body {
   height: auto;
 }
 
-/* Override any CSS scroll-behavior that conflicts with Lenis interpolation */
 .lenis.lenis-smooth {
   scroll-behavior: auto !important;
 }
 
-/* Contain overscroll for elements that opt out of Lenis */
 .lenis.lenis-smooth [data-lenis-prevent] {
   overscroll-behavior: contain;
 }
 
-/* Lock scrolling when Lenis is stopped (e.g., during zoom animations) */
 .lenis.lenis-stopped {
   overflow: hidden;
 }
 
-/* Ensure smooth touch scrolling on mobile devices */
 .lenis.lenis-scrolling {
   overflow: auto;
 }
-
-/* ═══════════════════════════════════════════════════════════
-   LENIS CSS CUSTOM PROPERTIES
-   Updated every frame by useLenis.ts — use in calc() or
-   as keyframe drivers to keep CSS animations locked to
-   Lenis's buttery scroll interpolation.
-   ═══════════════════════════════════════════════════════════ */
-:root {
-  --lenis-scroll-y: 0px;
-  --lenis-progress: 0;
-  --lenis-velocity: 0;
-  --lenis-direction: 0;
-}
-
