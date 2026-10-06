@@ -32,6 +32,7 @@ export const structure: StructureResolver = (S) =>
             .items([
               S.documentTypeListItem('club').title('Clubs'),
               S.documentTypeListItem('event').title('Events'),
+              S.documentTypeListItem('album').title('Photo Albums'),
               S.documentTypeListItem('galleryItem').title('Media Gallery'),
             ])
         ),
