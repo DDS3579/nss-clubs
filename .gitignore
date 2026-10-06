@@ -47,3 +47,8 @@ dist/
 
 # Sanity Type Generation
 sanity.types.ts
+
+.kilo/
+
+.env*
+!.env.example
