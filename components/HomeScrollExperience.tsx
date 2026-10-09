@@ -16,7 +16,6 @@ import useScrollStateMachine, {
   type LayoutCache,
 } from "@/hooks/useScrollStateMachine";
 import useMorphCoordinates, { PLANET_DOT_MORPHS } from "@/hooks/useMorphCoordinates";
-import useGalleryBridge from "@/hooks/useGalleryBridge";
 import useLenis from "@/hooks/useLenis";
 
 /* ─── constants ─── */
@@ -296,6 +295,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   const rafRef = useRef(0);
   const rotationOffsetRef = useRef(0);
   const nucleusSeparationRef = useRef(0);
+  const zoomActiveRef = useRef(false);
   const zoomAnimRef = useRef<ZoomAnimState | null>(null);
   const cardWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -361,7 +361,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     atomProgressRef,
     aboutProgressRef,
     eventsMorphRef,
-    activeAboutNodeRef,
     pendingZoomSlugRef,
     initializedRef,
     updateLayoutGeometry,
@@ -378,14 +377,8 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
 
 
-  /* ═══ HOOK: Gallery Bridge (lightweight handoff flag) ═══ */
-  const { checkGalleryHandoff } = useGalleryBridge({
-    phaseRef,
-    eventsMorphRef,
-  });
-
   /* ═══ HOOK: Lenis Smooth Scroll (momentum, CSS vars, programmatic snap) ═══ */
-  const { lenisRef, scrollTo: lenisScrollTo, stop: lenisStop, start: lenisStart } = useLenis({
+  const { scrollTo: lenisScrollTo, stop: lenisStop, start: lenisStart } = useLenis({
     phaseRef,
     eventsMorphRef,
   });
@@ -412,6 +405,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     setSelectedClub(slug);
     setCardRevealVisible(false);
     phaseRef.current = "zooming";
+    zoomActiveRef.current = true; // atom canvas switches to extra-sharp
     lenisStop(); // Freeze Lenis during zoom animation to prevent scroll interference
     zoomAnimRef.current = {
       direction: "forward",
@@ -424,7 +418,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       clubsFloatY,
       clubsScale,
     };
-  }, [clubsAnchorRef, phaseRef]);
+  }, [clubsAnchorRef, phaseRef, lenisStop]);
 
   /* ── Electron & Nucleus Click Handler ── */
   const handleElectronClick = useCallback(
@@ -621,9 +615,6 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       // Morph ghosts — direct DOM style writes via the hook
       updateMorphGhosts(eventsMorphRef.current);
 
-      // Check gallery handoff status
-      checkGalleryHandoff();
-
       // ── Zoom animation (reads zoomAnimRef, writes to floating/canvasWrap styles) ──
       if (
         (phaseRef.current === "zooming" || phaseRef.current === "zoomed") &&
@@ -700,6 +691,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 zoomAnimRef.current = null;
                 rotationOffsetRef.current = 0;
                 nucleusSeparationRef.current = 0;
+                zoomActiveRef.current = false;
                 setSelectedClub(null);
                 setCardRevealVisible(false);
                 lenisStart(); // Resume Lenis after reverse zoom completes
@@ -720,6 +712,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                 phaseRef.current = "clubs";
                 zoomAnimRef.current = null;
                 rotationOffsetRef.current = 0;
+                zoomActiveRef.current = false;
                 setSelectedClub(null);
                 setCardRevealVisible(false);
                 lenisStart(); // Resume Lenis after reverse zoom completes
@@ -1952,8 +1945,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               progressRef={atomProgressRef}
               rotationOffsetRef={rotationOffsetRef}
               nucleusSeparationRef={nucleusSeparationRef}
-              aboutProgressRef={aboutProgressRef}
-              activeAboutNodeRef={activeAboutNodeRef}
+              zoomActiveRef={zoomActiveRef}
               onElectronClick={handleElectronClick}
             />
           </div>
