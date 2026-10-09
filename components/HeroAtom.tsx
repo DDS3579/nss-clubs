@@ -1,138 +1,120 @@
 "use client";
-import React, { useRef, useEffect } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
+import { CLUBS, EXECUTIVE_TEAM, ORBIT_ANGLES_DEG, getClubAtSlot } from "@/lib/clubs";
+import { clamp01, degToRad, easeInOutQuart, shortestAngle } from "@/lib/math";
+
+/* ═══════════════════════════════════════════════════════════
+   The NSS atom: the executive team is the nucleus, the six clubs
+   are the electrons. Drawn on a canvas, driven by refs that
+   HomeScrollExperience updates every frame.
+
+   What changed from the old version:
+   - Removed ~400 lines of dead sun / planet / star drawing
+     (the morph amount was hard-coded to 0, so it never ran).
+   - Callbacks are read through refs, so a parent re-render no
+     longer restarts the whole animation (that was resetting the
+     electrons mid-zoom every time a club was clicked).
+   - Canvas is 1-2x sharp normally and only goes ultra-sharp while
+     a zoom is running (it used to be a fixed 2560x2560 bitmap).
+   - Animation speed is time-based, so it is the same on 60/120/144 Hz.
+   - Tap targets grow when the atom is small (phones).
+   - Keyboard / screen-reader users get real buttons.
+   - Respects "reduce motion".
+   ═══════════════════════════════════════════════════════════ */
 
 interface HeroAtomProps {
+  /** 0 = hero, 1 = clubs section. Electrons settle onto the horizontal axis as it grows. */
   progressRef?: React.MutableRefObject<number>;
+  /** Extra rotation (radians) applied to all orbits during the club zoom. */
   rotationOffsetRef?: React.MutableRefObject<number>;
+  /** 0-1: slides the orbits away so the nucleus can be zoomed on its own. */
   nucleusSeparationRef?: React.MutableRefObject<number>;
+  /** Set true while a zoom is running or open: switches the canvas to extra-sharp. */
+  zoomActiveRef?: React.MutableRefObject<boolean>;
+  /** @deprecated No longer used. Kept only so HomeScrollExperience still compiles. */
   aboutProgressRef?: React.MutableRefObject<number>;
+  /** @deprecated No longer used. Kept only so HomeScrollExperience still compiles. */
   activeAboutNodeRef?: React.MutableRefObject<number>;
   className?: string;
   onElectronClick?: (slug: string) => void;
   onElectronHover?: (slug: string | null) => void;
 }
 
+/* ─── geometry (logical canvas units; the canvas is scaled by CSS) ─── */
 const CANVAS_SIZE = 640;
 const CX = CANVAS_SIZE / 2;
 const CY = CANVAS_SIZE / 2;
+
+const ORBIT_RX = 200;
+const ORBIT_RY = 67;
+const NUCLEUS_RADIUS = 34;
+const ELECTRON_RADIUS = 14;
+
+/* ─── colours ─── */
 const DEEP_BLUE = "#011f5b";
 const ACCENT_GOLD = "#D4A373";
 
-const orbits = [
-  { rx: 200, ry: 67, angleDeg: -60, offsets: [0, Math.PI], speed: 0.016 },
-  {
-    rx: 200,
-    ry: 67,
-    angleDeg: 0,
-    offsets: [Math.PI * 0.33, Math.PI * 1.33],
-    speed: 0.013,
-  },
-  {
-    rx: 200,
-    ry: 67,
-    angleDeg: 60,
-    offsets: [Math.PI * 0.66, Math.PI * 1.66],
-    speed: 0.018,
-  },
-];
+/* ─── interaction ─── */
+const ELECTRON_HIT_RADIUS = 30;
+const NUCLEUS_HIT_RADIUS = 40;
+/** Never let a tap target be smaller than this many CSS pixels (phone-friendly). */
+const MIN_TAP_RADIUS_PX = 22;
 
-const CLUB_MAPPING = [
-  { orbitIdx: 0, electronIdx: 0, slug: "stem", name: "STEM Club" },
-  { orbitIdx: 0, electronIdx: 1, slug: "sports", name: "Sports Club" },
-  { orbitIdx: 1, electronIdx: 0, slug: "literature", name: "Literature Club" },
-  { orbitIdx: 1, electronIdx: 1, slug: "arts", name: "Arts & Craft Club" },
-  {
-    orbitIdx: 2,
-    electronIdx: 0,
-    slug: "entertainment",
-    name: "Entertainment Club",
-  },
-  { orbitIdx: 2, electronIdx: 1, slug: "social", name: "Social Club" },
-];
+/* ─── orbit definitions (tilt comes from lib/clubs so it is defined once) ─── */
+const ORBIT_ELECTRON_OFFSETS = [
+  [0, Math.PI],
+  [Math.PI * 0.33, Math.PI * 1.33],
+  [Math.PI * 0.66, Math.PI * 1.66],
+] as const;
+const ORBIT_SPEEDS = [0.016, 0.013, 0.018] as const;
 
-// Timeline nodes for about section projector connections
-export const TIMELINE_NODES = [
-  { label: "Our Origin", targetX: 200, targetY: 110 },
-  { label: "Our Vision", targetX: 90, targetY: 110 },
-  { label: "The Legacy", targetX: 520, targetY: 110 },
-];
-
-const BACKGROUND_STARS = Array.from({ length: 30 }, (_, i) => ({
-  x: Math.random() * CANVAS_SIZE,
-  y: Math.random() * CANVAS_SIZE,
-  size: Math.random() * 1.5 + 0.5,
-  speed: Math.random() * 0.02 + 0.008,
-  phase: Math.random() * Math.PI * 2,
-  color: i % 3 === 0 ? "rgba(255, 248, 192, " : i % 3 === 1 ? "rgba(100, 180, 255, " : "rgba(255, 200, 150, ",
+const ORBITS = ORBIT_ANGLES_DEG.map((angleDeg, i) => ({
+  rx: ORBIT_RX,
+  ry: ORBIT_RY,
+  angleDeg,
+  offsets: ORBIT_ELECTRON_OFFSETS[i],
+  speed: ORBIT_SPEEDS[i],
 }));
 
-// Planet definitions for the solar system
-// Layout (canvas is 640×640, sun column ~50% = 320, side columns flank it):
-//   Left card (Our Origin)  → 3 inner planets at x ≈ 90, 170, 250
-//   Center (Sun)            → nucleus morphs to sun at (50, 320); sun also drawn at column center
-//   Right card (Our Vision) → 3 outer planets at x ≈ 390, 470, 550
-// y=320 keeps them on a single horizontal row aligned with the sun's center.
-const PLANET_DEFS = [
-  { x: 90,  y: 320, r: 12, baseColor: "#4A90D9", accent: "#6BB5FF", name: "Mercury", hasRing: false, glowColor: "rgba(74,144,217,0.3)" },
-  { x: 170, y: 320, r: 15, baseColor: "#E27D60", accent: "#FF9E80", name: "Venus",   hasRing: false, glowColor: "rgba(226,125,96,0.3)" },
-  { x: 250, y: 320, r: 18, baseColor: "#41B3A3", accent: "#6DE0CF", name: "Earth",   hasRing: false, glowColor: "rgba(65,179,163,0.3)" },
-  { x: 390, y: 320, r: 14, baseColor: "#C38D9E", accent: "#E8B4C4", name: "Mars",    hasRing: false, glowColor: "rgba(195,141,158,0.3)" },
-  { x: 470, y: 320, r: 22, baseColor: "#E8A87C", accent: "#FFD4B0", name: "Jupiter", hasRing: true,  glowColor: "rgba(232,168,124,0.4)" },
-  { x: 550, y: 320, r: 11, baseColor: "#5B8DEF", accent: "#8BB4FF", name: "Neptune", hasRing: false, glowColor: "rgba(91,141,239,0.3)" },
-];
+/** Everything you can click, in the order screen readers announce it. */
+const NODES = [...CLUBS, EXECUTIVE_TEAM];
 
-// 🎬 Easing Functions
-function clamp01(v: number) {
-  return Math.min(1, Math.max(0, v));
-}
-function easeOutExpo(t: number) {
-  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-}
-function easeInOutCubic(t: number) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-function easeInOutQuart(t: number) {
-  return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
-}
-function easeOutQuart(t: number) {
-  return 1 - Math.pow(1 - t, 4);
-}
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
-}
-function shortestAngle(start: number, end: number) {
-  let diff = (end - start) % (Math.PI * 2);
-  if (diff > Math.PI) diff -= Math.PI * 2;
-  if (diff < -Math.PI) diff += Math.PI * 2;
-  return diff;
+interface ElectronCoord {
+  x: number;
+  y: number;
+  slug: string;
+  name: string;
 }
 
 const HeroAtom: React.FC<HeroAtomProps> = ({
   progressRef,
   rotationOffsetRef,
   nucleusSeparationRef,
-  aboutProgressRef,
-  activeAboutNodeRef,
+  zoomActiveRef,
   className,
   onElectronClick,
   onElectronHover,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const electronCoordsRef = useRef<
-    { x: number; y: number; slug: string; name: string }[]
-  >([]);
-  const hoveredSlugRef = useRef<string | null>(null);
+  const electronCoordsRef = useRef<ElectronCoord[]>([]);
   const nucleusCoordsRef = useRef({ x: CX, y: CY });
-  const hoverProgressRef = useRef<Record<string, number>>({
-    "executive-team": 0,
-    "stem": 0,
-    "sports": 0,
-    "literature": 0,
-    "arts": 0,
-    "entertainment": 0,
-    "social": 0,
+  const hoveredSlugRef = useRef<string | null>(null);
+
+  /* Latest callbacks live in refs. The animation effect never depends on them,
+     so the parent re-rendering can't restart the animation. */
+  const onClickRef = useRef(onElectronClick);
+  const onHoverRef = useRef(onElectronHover);
+  useEffect(() => {
+    onClickRef.current = onElectronClick;
+    onHoverRef.current = onElectronHover;
   });
+
+  const setHovered = useCallback((slug: string | null) => {
+    if (hoveredSlugRef.current === slug) return;
+    hoveredSlugRef.current = slug;
+    onHoverRef.current?.(slug);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -141,97 +123,75 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Optimized: DPR up to 4 for razor-sharp quality when zoomed
-    const DPR = Math.min(Math.max(window.devicePixelRatio || 1, 2) * 2, 4);
-    canvas.width = CANVAS_SIZE * DPR;
-    canvas.height = CANVAS_SIZE * DPR;
-    canvas.style.width = `${CANVAS_SIZE}px`;
-    canvas.style.height = `${CANVAS_SIZE}px`;
-    ctx.scale(DPR, DPR);
+    /* ── resolution ──
+       normal: up to 2x (sharp on retina, light on phones)
+       zoom:   up to 4x (3x on narrow screens) only while a zoom is open */
+    const deviceDpr = window.devicePixelRatio || 1;
+    const BASE_DPR = Math.min(Math.max(deviceDpr, 1), 2);
+    const ZOOM_DPR = Math.min(
+      Math.max(deviceDpr, 2) * 2,
+      window.innerWidth < 768 ? 3 : 4,
+    );
+    let currentDpr = 0;
+    const applyResolution = (dpr: number) => {
+      currentDpr = dpr;
+      canvas.width = Math.round(CANVAS_SIZE * dpr);
+      canvas.height = Math.round(CANVAS_SIZE * dpr);
+      canvas.style.width = `${CANVAS_SIZE}px`;
+      canvas.style.height = `${CANVAS_SIZE}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    applyResolution(BASE_DPR);
 
-    let animationId: number;
-    let elapsed = 0;
-    let lastTime = 0;
+    /* The tooltip font: next/font gives Inter a generated name, so the plain
+       word 'Inter' never matched. Read the real name from the CSS variable. */
+    const fontFamily =
+      getComputedStyle(canvas).getPropertyValue("--font-inter").trim() || "sans-serif";
 
-    /* ═══════════════════════════════════════════════════════════
-       STAGE 1: ATOM — Orbit drawing
-    ════════════════════════════════════════════════════════════ */
-    function drawOrbit(
-      rx: number,
-      ry: number,
-      angleDeg: number,
-      orbitFade: number,
-      morphT: number,
-    ) {
-      // During transition, orbits widen and fade
-      const widenFactor = 1 + morphT * 0.8;
-      const actualRx = rx * widenFactor;
-      const actualRy = ry * widenFactor;
-      
-      const a = (angleDeg * Math.PI) / 180 + (rotationOffsetRef?.current ?? 0);
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let reduceMotion = motionQuery.matches;
+    const onMotionChange = (e: MediaQueryListEvent) => {
+      reduceMotion = e.matches;
+    };
+    motionQuery.addEventListener("change", onMotionChange);
+
+    let animationId = 0;
+    let elapsed = 0; // measured in "60 fps frames", advances with real time
+    let lastTimestamp = 0;
+
+    /* ───────────────────────── drawing ───────────────────────── */
+
+    function drawOrbit(rx: number, ry: number, angleDeg: number, alpha: number) {
+      if (alpha <= 0) return;
+      const angle = degToRad(angleDeg) + (rotationOffsetRef?.current ?? 0);
       ctx!.save();
       ctx!.translate(CX, CY);
-      ctx!.rotate(a);
+      ctx!.rotate(angle);
       ctx!.beginPath();
-      ctx!.ellipse(0, 0, actualRx, actualRy, 0, 0, 2 * Math.PI);
-      
-      // Orbit color transitions from blue to warm gold during morph
-      const orbitAlpha = orbitFade * (1 - morphT * 1.2);
-      if (orbitAlpha > 0) {
-        const r = Math.round(lerp(2, 212, morphT));
-        const g = Math.round(lerp(59, 163, morphT));
-        const b = Math.round(lerp(142, 115, morphT));
-        ctx!.strokeStyle = `rgba(${r},${g},${b},${Math.max(0, orbitAlpha)})`;
-        ctx!.lineWidth = lerp(1.2, 0.6, morphT);
-        ctx!.stroke();
-      }
+      ctx!.ellipse(0, 0, rx, ry, 0, 0, 2 * Math.PI);
+      ctx!.strokeStyle = `rgba(2,59,142,${alpha})`;
+      ctx!.lineWidth = 1.2;
+      ctx!.stroke();
       ctx!.restore();
     }
 
-    function getPos(rx: number, ry: number, angleDeg: number, theta: number, morphT: number = 0) {
-      const widenFactor = 1 + morphT * 0.8;
-      const a = (angleDeg * Math.PI) / 180 + (rotationOffsetRef?.current ?? 0);
-      const ex = rx * widenFactor * Math.cos(theta);
-      const ey = ry * widenFactor * Math.sin(theta);
+    function getElectronPos(rx: number, ry: number, angleDeg: number, theta: number) {
+      const a = degToRad(angleDeg) + (rotationOffsetRef?.current ?? 0);
+      const ex = rx * Math.cos(theta);
+      const ey = ry * Math.sin(theta);
       return {
         x: CX + ex * Math.cos(a) - ey * Math.sin(a),
         y: CY + ex * Math.sin(a) + ey * Math.cos(a),
       };
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       STAGE 1: ATOM — Electron drawing with trail effect
-    ════════════════════════════════════════════════════════════ */
-    function drawElectron(x: number, y: number, alpha = 1, trailLength = 0, trailAngle = 0) {
-      const r = 14;
+    function drawElectron(x: number, y: number) {
+      const r = ELECTRON_RADIUS;
       ctx!.save();
-      ctx!.globalAlpha = alpha;
+      ctx!.globalAlpha = 1;
 
-      // Trail effect during transition
-      if (trailLength > 0) {
-        const trailGrad = ctx!.createLinearGradient(
-          x - Math.cos(trailAngle) * trailLength,
-          y - Math.sin(trailAngle) * trailLength,
-          x, y
-        );
-        trailGrad.addColorStop(0, "rgba(2, 59, 142, 0)");
-        trailGrad.addColorStop(0.5, `rgba(100, 160, 255, ${alpha * 0.15})`);
-        trailGrad.addColorStop(1, `rgba(160, 200, 255, ${alpha * 0.3})`);
-        
-        ctx!.beginPath();
-        ctx!.moveTo(x - Math.cos(trailAngle) * trailLength, y - Math.sin(trailAngle) * trailLength);
-        ctx!.lineTo(x, y);
-        ctx!.lineWidth = r * 1.5;
-        ctx!.lineCap = "round";
-        ctx!.strokeStyle = trailGrad;
-        ctx!.stroke();
-      }
-
-      // Shadow
-      const shadow = ctx!.createRadialGradient(
-        x + 1.5, y + 2, 0,
-        x + 1.5, y + 2, r * 1.5,
-      );
+      // Soft shadow
+      const shadow = ctx!.createRadialGradient(x + 1.5, y + 2, 0, x + 1.5, y + 2, r * 1.5);
       shadow.addColorStop(0, "rgba(0,10,40,0.35)");
       shadow.addColorStop(1, "rgba(0,0,0,0)");
       ctx!.beginPath();
@@ -257,10 +217,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.fill();
 
       // Highlight
-      const hl = ctx!.createRadialGradient(
-        x - r * 0.4, y - r * 0.4, 0,
-        x - r * 0.4, y - r * 0.4, r * 0.6,
-      );
+      const hl = ctx!.createRadialGradient(x - r * 0.4, y - r * 0.4, 0, x - r * 0.4, y - r * 0.4, r * 0.6);
       hl.addColorStop(0, "rgba(255,255,255,0.85)");
       hl.addColorStop(1, "rgba(255,255,255,0)");
       ctx!.beginPath();
@@ -271,17 +228,8 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.restore();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       STAGE 1: ATOM — Nucleus with brightening
-    ════════════════════════════════════════════════════════════ */
-    function drawNucleus(x: number, y: number, r: number, brightenT: number) {
+    function drawNucleus(x: number, y: number, r: number) {
       ctx!.save();
-
-      // Brightening glow during transition
-      if (brightenT > 0.01) {
-        ctx!.shadowColor = lerp(0, 1, brightenT) > 0.5 ? "#FF8C00" : ACCENT_GOLD;
-        ctx!.shadowBlur = 20 + brightenT * 50;
-      }
 
       ctx!.beginPath();
       ctx!.arc(x, y, r, 0, 2 * Math.PI);
@@ -289,12 +237,10 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.fill();
 
       const metal = ctx!.createLinearGradient(x - r, y - r, x + r, y + r);
-      // Nucleus colors shift warmer as it brightens
-      const warmShift = brightenT;
-      metal.addColorStop(0, `rgb(${Math.round(lerp(255, 255, warmShift))},${Math.round(lerp(248, 250, warmShift))},${Math.round(lerp(192, 225, warmShift))})`);
-      metal.addColorStop(0.2, `rgb(${Math.round(lerp(245, 255, warmShift))},${Math.round(lerp(216, 225, warmShift))},${Math.round(lerp(74, 50, warmShift))})`);
+      metal.addColorStop(0, "rgb(255,248,192)");
+      metal.addColorStop(0.2, "rgb(245,216,74)");
       metal.addColorStop(0.5, ACCENT_GOLD);
-      metal.addColorStop(0.8, `rgb(${Math.round(lerp(232, 255, warmShift))},${Math.round(lerp(192, 180, warmShift))},${Math.round(lerp(80, 0, warmShift))})`);
+      metal.addColorStop(0.8, "rgb(232,192,80)");
       metal.addColorStop(1, "#a06800");
       ctx!.beginPath();
       ctx!.arc(x, y, r, 0, 2 * Math.PI);
@@ -303,17 +249,14 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
 
       const rim = ctx!.createRadialGradient(x, y, r * 0.6, x, y, r);
       rim.addColorStop(0, "rgba(0,0,0,0)");
-      rim.addColorStop(1, `rgba(60,30,0,${0.5 - brightenT * 0.3})`);
+      rim.addColorStop(1, "rgba(60,30,0,0.5)");
       ctx!.beginPath();
       ctx!.arc(x, y, r, 0, 2 * Math.PI);
       ctx!.fillStyle = rim;
       ctx!.fill();
 
-      const blob = ctx!.createRadialGradient(
-        x - r * 0.3, y - r * 0.3, 0,
-        x - r * 0.3, y - r * 0.3, r * 0.7,
-      );
-      blob.addColorStop(0, `rgba(255,255,220,${0.9 + brightenT * 0.1})`);
+      const blob = ctx!.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x - r * 0.3, y - r * 0.3, r * 0.7);
+      blob.addColorStop(0, "rgba(255,255,220,0.9)");
       blob.addColorStop(1, "rgba(255,255,255,0)");
       ctx!.beginPath();
       ctx!.arc(x, y, r, 0, 2 * Math.PI);
@@ -323,607 +266,248 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx!.restore();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       STAGE 3: SOLAR SYSTEM — The Sun
-    ════════════════════════════════════════════════════════════ */
-    function drawSun(x: number, y: number, r: number) {
+    function drawTooltip(text: string, tx: number, ty: number, isExecutive: boolean) {
       ctx!.save();
+      ctx!.font = `bold 12px ${fontFamily}`;
+      const padX = 12;
+      const rectW = ctx!.measureText(text).width + padX * 2;
+      const rectH = 26;
+      const rectX = tx - rectW / 2;
+      const rectY = ty - 45;
 
-      const pulse = 1 + Math.sin(elapsed * 0.04) * 0.02;
-      const drawR = r * pulse;
-
-      // Sun surface (no shadow glow on hover)
-      const sunGrad = ctx!.createRadialGradient(
-        x - drawR * 0.25, y - drawR * 0.25, 0,
-        x, y, drawR,
-      );
-      sunGrad.addColorStop(0, "#FFFCE8");
-      sunGrad.addColorStop(0.2, "#FFE082");
-      sunGrad.addColorStop(0.5, "#FFB300");
-      sunGrad.addColorStop(0.75, "#FF8C00");
-      sunGrad.addColorStop(1, "#E65100");
-
-      ctx!.beginPath();
-      ctx!.arc(x, y, drawR, 0, 2 * Math.PI);
-      ctx!.fillStyle = sunGrad;
-      ctx!.fill();
-
-      // Specular highlight
-      ctx!.beginPath();
-      const hlGrad = ctx!.createRadialGradient(
-        x - drawR * 0.3, y - drawR * 0.3, 0,
-        x - drawR * 0.3, y - drawR * 0.3, drawR * 0.35,
-      );
-      hlGrad.addColorStop(0, "rgba(255,255,255,0.7)");
-      hlGrad.addColorStop(1, "rgba(255,255,255,0)");
-      ctx!.arc(x - drawR * 0.25, y - drawR * 0.25, drawR * 0.35, 0, 2 * Math.PI);
-      ctx!.fillStyle = hlGrad;
-      ctx!.fill();
-
-      ctx!.restore();
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       STAGE 3: SOLAR SYSTEM — Planet orbit rings
-    ════════════════════════════════════════════════════════════ */
-    function drawPlanetOrbitRing(sunX: number, sunY: number, planetX: number, orbitAlpha: number) {
-      if (orbitAlpha < 0.01) return;
-      ctx!.save();
-      const orbitRadius = Math.abs(planetX - sunX);
-      ctx!.beginPath();
-      ctx!.arc(sunX, sunY, orbitRadius, 0, 2 * Math.PI);
-      ctx!.strokeStyle = `rgba(255, 255, 255, ${orbitAlpha * 0.08})`;
-      ctx!.lineWidth = 0.8;
-      ctx!.setLineDash([4, 8]);
-      ctx!.stroke();
-      ctx!.setLineDash([]);
-      ctx!.restore();
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       STAGE 3: SOLAR SYSTEM — Planets
-    ════════════════════════════════════════════════════════════ */
-    function drawPlanet(
-      x: number,
-      y: number,
-      r: number,
-      baseColor: string,
-      accent: string,
-      alpha: number,
-      hasRing: boolean = false,
-      glowColor: string = "rgba(100,100,100,0.3)",
-    ) {
-      ctx!.save();
-      ctx!.globalAlpha = alpha;
-
-      // Atmospheric glow
-      const atmoGlow = ctx!.createRadialGradient(x, y, r * 0.8, x, y, r * 1.6);
-      atmoGlow.addColorStop(0, glowColor);
-      atmoGlow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx!.beginPath();
-      ctx!.arc(x, y, r * 1.6, 0, 2 * Math.PI);
-      ctx!.fillStyle = atmoGlow;
-      ctx!.fill();
-
-      // Planet shadow (soft)
-      ctx!.shadowColor = "rgba(0,0,0,0.4)";
+      ctx!.shadowColor = "rgba(0, 10, 40, 0.2)";
       ctx!.shadowBlur = 12;
       ctx!.shadowOffsetY = 4;
+      ctx!.fillStyle = isExecutive ? ACCENT_GOLD : "#011f5b";
 
-      // Base Planet Color
       ctx!.beginPath();
-      ctx!.arc(x, y, r, 0, 2 * Math.PI);
-      ctx!.fillStyle = baseColor;
+      if (typeof ctx!.roundRect === "function") {
+        ctx!.roundRect(rectX, rectY, rectW, rectH, 8);
+      } else {
+        ctx!.rect(rectX, rectY, rectW, rectH);
+      }
       ctx!.fill();
 
-      // 3D Spherical Shading
+      // Little pointer under the label
       ctx!.shadowColor = "transparent";
-      ctx!.shadowBlur = 0;
-      const shade = ctx!.createRadialGradient(
-        x - r * 0.35, y - r * 0.35, 0,
-        x + r * 0.1, y + r * 0.1, r,
-      );
-      shade.addColorStop(0, `rgba(255,255,255,0.3)`);
-      shade.addColorStop(0.3, "rgba(255,255,255,0.08)");
-      shade.addColorStop(0.7, "rgba(0,0,0,0.15)");
-      shade.addColorStop(1, "rgba(0,0,0,0.55)");
       ctx!.beginPath();
-      ctx!.arc(x, y, r, 0, 2 * Math.PI);
-      ctx!.fillStyle = shade;
+      ctx!.moveTo(tx - 6, rectY + rectH);
+      ctx!.lineTo(tx + 6, rectY + rectH);
+      ctx!.lineTo(tx, rectY + rectH + 6);
+      ctx!.closePath();
       ctx!.fill();
 
-      // Accent band (subtle color variation across the surface)
-      ctx!.save();
-      ctx!.beginPath();
-      ctx!.arc(x, y, r, 0, 2 * Math.PI);
-      ctx!.clip();
-      const bandGrad = ctx!.createLinearGradient(x - r, y - r * 0.3, x + r, y + r * 0.3);
-      bandGrad.addColorStop(0, "transparent");
-      bandGrad.addColorStop(0.4, `${accent}33`);
-      bandGrad.addColorStop(0.6, `${accent}33`);
-      bandGrad.addColorStop(1, "transparent");
-      ctx!.fillStyle = bandGrad;
-      ctx!.fillRect(x - r, y - r, r * 2, r * 2);
-      ctx!.restore();
-
-      // Ring for Jupiter-like planet
-      if (hasRing) {
-        ctx!.save();
-        ctx!.translate(x, y);
-        ctx!.rotate(-Math.PI / 7);
-        
-        // Outer ring
-        ctx!.beginPath();
-        ctx!.ellipse(0, 0, r * 1.8, r * 0.3, 0, 0, 2 * Math.PI);
-        const ringGrad = ctx!.createLinearGradient(-r * 1.8, 0, r * 1.8, 0);
-        ringGrad.addColorStop(0, `rgba(232, 200, 160, ${alpha * 0.15})`);
-        ringGrad.addColorStop(0.3, `rgba(232, 180, 140, ${alpha * 0.6})`);
-        ringGrad.addColorStop(0.5, `rgba(255, 220, 180, ${alpha * 0.75})`);
-        ringGrad.addColorStop(0.7, `rgba(232, 180, 140, ${alpha * 0.6})`);
-        ringGrad.addColorStop(1, `rgba(232, 200, 160, ${alpha * 0.15})`);
-        ctx!.strokeStyle = ringGrad;
-        ctx!.lineWidth = 3.5;
-        ctx!.stroke();
-
-        // Inner ring
-        ctx!.beginPath();
-        ctx!.ellipse(0, 0, r * 1.5, r * 0.22, 0, 0, 2 * Math.PI);
-        ctx!.strokeStyle = `rgba(255, 220, 180, ${alpha * 0.35})`;
-        ctx!.lineWidth = 1.5;
-        ctx!.stroke();
-        ctx!.restore();
-      }
-
-      // Small specular highlight
-      const specGrad = ctx!.createRadialGradient(
-        x - r * 0.3, y - r * 0.35, 0,
-        x - r * 0.3, y - r * 0.35, r * 0.3,
-      );
-      specGrad.addColorStop(0, "rgba(255,255,255,0.6)");
-      specGrad.addColorStop(1, "rgba(255,255,255,0)");
-      ctx!.beginPath();
-      ctx!.arc(x, y, r, 0, 2 * Math.PI);
-      ctx!.fillStyle = specGrad;
-      ctx!.fill();
-
+      ctx!.fillStyle = isExecutive ? "#011f5b" : "#ffffff";
+      ctx!.textAlign = "center";
+      ctx!.textBaseline = "middle";
+      ctx!.fillText(text, tx, rectY + rectH / 2 + 1);
       ctx!.restore();
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       TWINKLING BACKGROUND STARS
-    ════════════════════════════════════════════════════════════ */
-    function drawBackgroundStars(alpha: number) {
-      if (alpha < 0.01) return;
-      ctx!.save();
-      BACKGROUND_STARS.forEach((star) => {
-        const twinkle = Math.sin(elapsed * star.speed + star.phase) * 0.4 + 0.6;
-        const starAlpha = alpha * twinkle * 0.3;
-        ctx!.fillStyle = `${star.color}${starAlpha})`;
-        ctx!.beginPath();
-        ctx!.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
-        ctx!.fill();
-      });
-      ctx!.restore();
-    }
+    /* ───────────────────────── frame loop ───────────────────────── */
 
-    /* ═══════════════════════════════════════════════════════════
-       TRANSITION: Electron-to-Planet crossfade with color morph
-    ════════════════════════════════════════════════════════════ */
-    function drawMorphingNode(
-      atomX: number, atomY: number,
-      planetX: number, planetY: number,
-      planetR: number, baseColor: string, accent: string,
-      morphT: number, hasRing: boolean, glowColor: string,
-      trailLength: number, trailAngle: number,
-      nodeHoverT: number,
-    ) {
-      // Calculate interpolated position
-      const x = lerp(atomX, planetX, morphT);
-      const y = lerp(atomY, planetY, morphT);
-      const startR = lerp(14, 11, morphT);
-      const r = lerp(startR, planetR, nodeHoverT);
-
-      // Phase 1 (0-0.3): Electron with growing trail, gaining color tint
-      if (morphT < 0.35) {
-        const subT = morphT / 0.35;
-        // Draw electron with color tinting
-        const electronAlpha = 1 - subT * 0.5;
-        drawElectron(x, y, electronAlpha, trailLength * subT, trailAngle);
-        
-        // Overlay planet color hint
-        if (subT > 0.15) {
-          const hintAlpha = (subT - 0.15) * 0.5;
-          ctx!.save();
-          ctx!.globalAlpha = hintAlpha;
-          ctx!.beginPath();
-          ctx!.arc(x, y, r * 0.9, 0, 2 * Math.PI);
-          ctx!.fillStyle = baseColor;
-          ctx!.fill();
-          ctx!.restore();
-        }
-      }
-      // Phase 2 (0.3-0.65): Crossfade — electron fading, planet emerging
-      else if (morphT < 0.65) {
-        const subT = (morphT - 0.35) / 0.3;
-        const electronAlpha = Math.max(0, 1 - subT * 2);
-        const planetAlpha = easeOutQuart(subT);
-        
-        if (electronAlpha > 0.01) {
-          drawElectron(x, y, electronAlpha, trailLength * 0.5, trailAngle);
-        }
-        drawPlanet(x, y, r, baseColor, accent, planetAlpha, hasRing, glowColor);
-      }
-      // Phase 3 (0.65-1.0): Full planet, settling into position
-      else {
-        const settleT = easeOutQuart((morphT - 0.65) / 0.35);
-        drawPlanet(x, y, r, baseColor, accent, 0.7 + settleT * 0.3, hasRing, glowColor);
-      }
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       FRAME LOOP
-    ════════════════════════════════════════════════════════════ */
     function frame(timestamp: number) {
-      if (!ctx || !canvas || !container) return;
-      
-      // Throttle to ~60fps for performance
-      if (lastTime && timestamp - lastTime < 14) {
+      // Cap at roughly 60 fps (saves battery on 120 Hz phones)
+      if (lastTimestamp && timestamp - lastTimestamp < 14) {
         animationId = requestAnimationFrame(frame);
         return;
       }
-      lastTime = timestamp;
-      
+      // dt is measured in 60 fps frames so the speed is identical on any screen
+      const dt = lastTimestamp ? Math.min(timestamp - lastTimestamp, 100) / (1000 / 60) : 1;
+      lastTimestamp = timestamp;
+      if (!reduceMotion) elapsed += dt;
+
+      // Extra-sharp only while a zoom is running
+      const wantedDpr = zoomActiveRef?.current ? ZOOM_DPR : BASE_DPR;
+      if (wantedDpr !== currentDpr) applyResolution(wantedDpr);
+
       const p = clamp01(progressRef?.current ?? 0);
       const eased = easeInOutQuart(p);
       const settle = easeInOutQuart(clamp01((p - 0.56) / 0.44));
       const sep = clamp01(nucleusSeparationRef?.current ?? 0);
 
-      // Update hover progress for each node
-      const slugs = ["executive-team", "stem", "sports", "literature", "arts", "entertainment", "social"];
-      slugs.forEach((slug) => {
-        const isHovered = hoveredSlugRef.current === slug;
-        const currentProgress = hoverProgressRef.current[slug] || 0;
-        if (isHovered) {
-          hoverProgressRef.current[slug] = Math.min(1, currentProgress + 0.08);
-        } else {
-          hoverProgressRef.current[slug] = Math.max(0, currentProgress - 0.08);
-        }
-      });
-
-      // 3D Container Spin (Hero -> Clubs)
-      // Only apply 3D context during transition to prevent perspective distorting getBoundingClientRect when completed
+      // 3D spin of the whole atom while travelling hero → clubs.
+      // (Only during the transition: perspective would distort hit-testing afterwards.)
       if (p > 0.001 && p < 0.999) {
         const rotY = eased * 360;
         const rotX = Math.sin(Math.PI * eased) * 12;
         const rotZ = Math.sin(Math.PI * eased) * -15;
         const pulse = 1 + Math.sin(Math.PI * p) * 0.15;
-        container.style.transform = `perspective(1000px) rotateY(${rotY}deg) rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${pulse})`;
+        container!.style.transform = `perspective(1000px) rotateY(${rotY}deg) rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${pulse})`;
       } else {
-        container.style.transform = "";
+        container!.style.transform = "";
       }
 
-      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx!.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
+      // During the executive zoom the orbits slide away to the left and fade
       const orbitShiftX = sep * -700;
       const orbitFade = 1 - sep;
-      const abP = 0; // Disable morphing in canvas atom, fade-out handled by container
+      const shifted = sep > 0.001;
 
-      /* ── STAGED MORPH TIMING ──
-         Stage 1 (abP 0.00-0.15): Electron trails stretch, orbits start widening
-         Stage 2 (abP 0.15-0.50): Nucleus brightens, electrons gain colors, orbits dissolve
-         Stage 3 (abP 0.50-1.00): Full solar system formation
-      */
-      const morphT = easeOutExpo(clamp01((abP - 0.05) / 0.85));
-      const trailT = easeInOutCubic(clamp01(abP / 0.25)); // Trail stretching (early)
-      const brightenT = easeInOutCubic(clamp01((abP - 0.05) / 0.4)); // Nucleus brightening
+      // 1. Orbit rings
+      if (shifted) {
+        ctx!.save();
+        ctx!.globalAlpha = orbitFade;
+        ctx!.translate(orbitShiftX, 0);
+      }
+      ORBITS.forEach((o) => drawOrbit(o.rx, o.ry, o.angleDeg, orbitFade));
+      if (shifted) ctx!.restore();
 
-      if (sep > 0.001) {
-        ctx.save();
-        ctx.globalAlpha = orbitFade;
-        ctx.translate(orbitShiftX, 0);
+      // 2. Nucleus (stays put)
+      nucleusCoordsRef.current = { x: CX, y: CY };
+      drawNucleus(CX, CY, NUCLEUS_RADIUS);
+
+      // 3. Electrons
+      const coords: ElectronCoord[] = [];
+      if (shifted) {
+        ctx!.save();
+        ctx!.globalAlpha = orbitFade;
+        ctx!.translate(orbitShiftX, 0);
       }
 
-      // 1. Orbits: widen during transition, then fade
-      const orbitAlphaAbout = 1 - easeInOutQuart(clamp01((abP - 0.1) / 0.35));
-      if (orbitAlphaAbout > 0.01) {
-        orbits.forEach((o) =>
-          drawOrbit(o.rx, o.ry, o.angleDeg, orbitFade * orbitAlphaAbout, morphT),
-        );
-      }
-
-      if (sep > 0.001) ctx.restore();
-
-      // 2. Background stars fade in during transition
-      drawBackgroundStars(morphT);
-
-      // 3. Nucleus → Sun transition
-      if (morphT > 0.2) {
-        // Morph into sun
-        const sunMorphT = easeOutExpo(clamp01((morphT - 0.2) / 0.8));
-        const sunX = lerp(CX, 50, sunMorphT);
-        const sunY = lerp(CY, 320, sunMorphT);
-        const currentR = lerp(34, 26, morphT);
-        const sunR = lerp(currentR, 36, sunMorphT);
-        nucleusCoordsRef.current = { x: sunX, y: sunY };
-
-        // Morph to Sun on hover
-        const nucleusHoverT = hoverProgressRef.current["executive-team"] * morphT;
-        if (nucleusHoverT > 0.01) {
-          if (nucleusHoverT < 0.99) {
-            drawNucleus(sunX, sunY, currentR, 1);
-            ctx.save();
-            ctx.globalAlpha = nucleusHoverT;
-            drawSun(sunX, sunY, sunR);
-            ctx.restore();
-          } else {
-            drawSun(sunX, sunY, sunR);
-          }
-        } else {
-          drawNucleus(sunX, sunY, currentR, 0); // Remain normal nucleus
-        }
-      } else {
-        nucleusCoordsRef.current = { x: CX, y: CY };
-        // Still atom nucleus, but brightening
-        drawNucleus(CX, CY, 34, brightenT);
-      }
-
-      // 4. Draw planet orbit rings on hover
-      if (morphT > 0.7) {
-        const sunMorphT = easeOutExpo(clamp01((morphT - 0.2) / 0.8));
-        const sunX = lerp(CX, 50, sunMorphT);
-        const sunY = lerp(CY, 320, sunMorphT);
-        
-        PLANET_DEFS.forEach((planet, planetIdx) => {
-          const map = CLUB_MAPPING.find(
-            (m) => m.orbitIdx === Math.floor(planetIdx / 2) && m.electronIdx === (planetIdx % 2),
-          );
-          const nodeHoverT = map ? hoverProgressRef.current[map.slug] * morphT : 0;
-          if (nodeHoverT > 0.01) {
-            drawPlanetOrbitRing(sunX, sunY, planet.x, nodeHoverT * 0.8);
-          }
-        });
-      }
-
-      const newCoords: { x: number; y: number; slug: string; name: string }[] = [];
-
-      if (sep > 0.001) {
-        ctx.save();
-        ctx.globalAlpha = orbitFade;
-        ctx.translate(orbitShiftX, 0);
-      }
-
-      // 5. Draw Electrons / Morphing Nodes
-      orbits.forEach((o, orbitIdx) => {
-        o.offsets.forEach((off, idx) => {
-          const movingTheta = off + elapsed * o.speed;
+      ORBITS.forEach((o, orbitIdx) => {
+        o.offsets.forEach((offset, electronIdx) => {
+          const movingTheta = offset + elapsed * o.speed;
           let theta = movingTheta;
 
-          if (p > 0.001 && abP < 0.15) {
-            const target = idx === 0 ? 0 : Math.PI;
+          // On the way to the clubs section, electrons glide onto the horizontal axis
+          if (p > 0.001) {
+            const target = electronIdx === 0 ? 0 : Math.PI;
             theta = movingTheta + shortestAngle(movingTheta, target) * settle;
           }
 
-          const pos = getPos(o.rx, o.ry, o.angleDeg, theta, morphT < 0.3 ? morphT : 0);
-          const drawX = pos.x;
-          const drawY = pos.y;
+          const pos = getElectronPos(o.rx, o.ry, o.angleDeg, theta);
+          const club = getClubAtSlot(orbitIdx, electronIdx);
 
-          const planetIdx = orbitIdx * 2 + idx;
-          const planetDef = PLANET_DEFS[planetIdx];
-
-          if (morphT > 0.01) {
-            // Calculate trail angle from current movement direction
-            const trailAngle = Math.atan2(planetDef.y - drawY, planetDef.x - drawX) + Math.PI;
-            const trailLength = 40 * trailT;
-            
-            const map = CLUB_MAPPING.find(
-              (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
-            );
-            const nodeHoverT = map ? hoverProgressRef.current[map.slug] * morphT : 0;
-
-            drawMorphingNode(
-              drawX, drawY,
-              planetDef.x, planetDef.y,
-              planetDef.r, planetDef.baseColor, planetDef.accent,
-              morphT, planetDef.hasRing, planetDef.glowColor,
-              trailLength, trailAngle,
-              nodeHoverT,
-            );
-          } else {
-            // Normal Atom Mode
-            const map = CLUB_MAPPING.find(
-              (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
-            );
-            const isHovered = map && map.slug === hoveredSlugRef.current;
-            if (isHovered && sep < 0.01) {
-              ctx.save();
-              ctx.beginPath();
-              ctx.arc(
-                drawX, drawY,
-                22 + Math.sin(elapsed * 0.15) * 3,
-                0, 2 * Math.PI,
-              );
-              ctx.fillStyle = "rgba(2, 59, 142, 0.2)";
-              ctx.fill();
-              ctx.restore();
-            }
-            drawElectron(drawX, drawY);
+          if (club && club.slug === hoveredSlugRef.current && sep < 0.01) {
+            ctx!.save();
+            ctx!.beginPath();
+            ctx!.arc(pos.x, pos.y, 22 + Math.sin(elapsed * 0.15) * 3, 0, 2 * Math.PI);
+            ctx!.fillStyle = "rgba(2, 59, 142, 0.2)";
+            ctx!.fill();
+            ctx!.restore();
           }
 
-          const map = CLUB_MAPPING.find(
-            (m) => m.orbitIdx === orbitIdx && m.electronIdx === idx,
-          );
-          if (map) {
-            const visualX = morphT > 0.01 ? lerp(drawX, planetDef.x, morphT) : (sep > 0.001 ? drawX + orbitShiftX : drawX);
-            const visualY = morphT > 0.01 ? lerp(drawY, planetDef.y, morphT) : drawY;
-            newCoords.push({
-              x: visualX,
-              y: visualY,
-              slug: map.slug,
-              name: map.name,
+          drawElectron(pos.x, pos.y);
+
+          if (club) {
+            coords.push({
+              x: shifted ? pos.x + orbitShiftX : pos.x,
+              y: pos.y,
+              slug: club.slug,
+              name: club.name,
             });
           }
         });
       });
 
-      if (sep > 0.001) ctx.restore();
-      electronCoordsRef.current = newCoords;
+      if (shifted) ctx!.restore();
+      electronCoordsRef.current = coords;
 
-      // Tooltip Logic (only in atom mode, not during morph)
-      if (hoveredSlugRef.current && morphT < 0.1) {
-        let text = "";
-        let tx = CX;
-        let ty = CY;
-        if (hoveredSlugRef.current === "executive-team") {
-          text = "Executive Team";
-        } else {
-          const hoveredEc = newCoords.find(
-            (ec) => ec.slug === hoveredSlugRef.current,
-          );
-          if (hoveredEc) {
-            text = hoveredEc.name;
-            tx = hoveredEc.x;
-            ty = hoveredEc.y;
-          }
-        }
-
-        if (text) {
-          ctx.save();
-          ctx.font = "bold 12px 'Inter', sans-serif";
-          const textWidth = ctx.measureText(text).width;
-          const padX = 12;
-          const rectW = textWidth + padX * 2;
-          const rectH = 26;
-          const rectX = tx - rectW / 2;
-          const rectY = ty - 45;
-
-          ctx.shadowColor = "rgba(0, 10, 40, 0.2)";
-          ctx.shadowBlur = 12;
-          ctx.shadowOffsetY = 4;
-          ctx.fillStyle =
-            hoveredSlugRef.current === "executive-team" ? "#D4A373" : "#011f5b";
-
-          ctx.beginPath();
-          if (ctx.roundRect) {
-            ctx.roundRect(rectX, rectY, rectW, rectH, 8);
-          } else {
-            ctx.rect(rectX, rectY, rectW, rectH);
-          }
-          ctx.fill();
-
-          ctx.shadowColor = "transparent";
-          ctx.beginPath();
-          ctx.moveTo(tx - 6, rectY + rectH);
-          ctx.lineTo(tx + 6, rectY + rectH);
-          ctx.lineTo(tx, rectY + rectH + 6);
-          ctx.closePath();
-          ctx.fill();
-
-          ctx.fillStyle =
-            hoveredSlugRef.current === "executive-team" ? "#011f5b" : "#ffffff";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(text, tx, rectY + rectH / 2 + 1);
-          ctx.restore();
-        }
+      // 4. Tooltip
+      const hovered = hoveredSlugRef.current;
+      if (hovered === EXECUTIVE_TEAM.slug) {
+        drawTooltip(EXECUTIVE_TEAM.name, CX, CY, true);
+      } else if (hovered) {
+        const ec = coords.find((c) => c.slug === hovered);
+        if (ec) drawTooltip(ec.name, ec.x, ec.y, false);
       }
 
-      elapsed++;
       animationId = requestAnimationFrame(frame);
     }
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const canvasEl = canvasRef.current;
-      if (!canvasEl) return;
-      const rect = canvasEl.getBoundingClientRect();
-      // Inverse Matrix Mapping: Use canvas.getBoundingClientRect() scale ratio to map to raw canvas space,
-      // then divide by DPR to scale back to virtual CANVAS_SIZE (640x640) coordinate space.
-      const x = ((e.clientX - rect.left) * canvasEl.width) / rect.width / DPR;
-      const y = ((e.clientY - rect.top) * canvasEl.height) / rect.height / DPR;
+    /* ───────────────────────── pointer input ───────────────────────── */
 
-      let hoveredSlug: string | null = null;
-      const nX = nucleusCoordsRef.current.x;
-      const nY = nucleusCoordsRef.current.y;
-      const ndist = Math.sqrt((x - nX) ** 2 + (y - nY) ** 2);
+    /** Finds the nucleus/electron under a screen point (closest fit wins). */
+    function pickNode(clientX: number, clientY: number): string | null {
+      const rect = canvas!.getBoundingClientRect();
+      if (!rect.width) return null;
+      const scale = rect.width / CANVAS_SIZE; // CSS px per logical unit
+      const x = (clientX - rect.left) / scale;
+      const y = (clientY - rect.top) / scale;
+      const minRadius = MIN_TAP_RADIUS_PX / scale; // keeps phone taps forgiving
 
-      if (ndist < 40) {
-        hoveredSlug = "executive-team";
-      } else {
-        for (const ec of electronCoordsRef.current) {
-          if (Math.sqrt((x - ec.x) ** 2 + (y - ec.y) ** 2) < 30) {
-            hoveredSlug = ec.slug;
-            break;
-          }
+      let best: string | null = null;
+      let bestScore = Infinity;
+
+      const nucleus = nucleusCoordsRef.current;
+      const nucleusReach = Math.max(NUCLEUS_HIT_RADIUS, minRadius);
+      const nucleusDist = Math.hypot(x - nucleus.x, y - nucleus.y);
+      if (nucleusDist < nucleusReach) {
+        best = EXECUTIVE_TEAM.slug;
+        bestScore = nucleusDist / nucleusReach;
+      }
+
+      const electronReach = Math.max(ELECTRON_HIT_RADIUS, minRadius);
+      for (const ec of electronCoordsRef.current) {
+        const dist = Math.hypot(x - ec.x, y - ec.y);
+        if (dist < electronReach && dist / electronReach < bestScore) {
+          best = ec.slug;
+          bestScore = dist / electronReach;
         }
       }
+      return best;
+    }
 
-      if (hoveredSlug !== hoveredSlugRef.current) {
-        hoveredSlugRef.current = hoveredSlug;
-        if (onElectronHover) onElectronHover(hoveredSlug);
-      }
-      canvasEl.style.cursor = hoveredSlug ? "pointer" : "default";
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return; // touch has no hover
+      const slug = pickNode(e.clientX, e.clientY);
+      setHovered(slug);
+      canvas.style.cursor = slug ? "pointer" : "default";
+    };
+
+    const handlePointerLeave = () => {
+      setHovered(null);
+      canvas.style.cursor = "default";
     };
 
     const handleClick = (e: MouseEvent) => {
-      const canvasEl = canvasRef.current;
-      if (!canvasEl) return;
-      const rect = canvasEl.getBoundingClientRect();
-      // Inverse Matrix Mapping: Use canvas.getBoundingClientRect() scale ratio to map to raw canvas space,
-      // then divide by DPR to scale back to virtual CANVAS_SIZE (640x640) coordinate space.
-      const x = ((e.clientX - rect.left) * canvasEl.width) / rect.width / DPR;
-      const y = ((e.clientY - rect.top) * canvasEl.height) / rect.height / DPR;
-
-      let clickedSlug: string | null = null;
-      const nX = nucleusCoordsRef.current.x;
-      const nY = nucleusCoordsRef.current.y;
-      const ndist = Math.sqrt((x - nX) ** 2 + (y - nY) ** 2);
-
-      if (ndist < 40) {
-        clickedSlug = "executive-team";
-      } else {
-        for (const ec of electronCoordsRef.current) {
-          if (Math.sqrt((x - ec.x) ** 2 + (y - ec.y) ** 2) < 30) {
-            clickedSlug = ec.slug;
-            break;
-          }
-        }
-      }
-
-      if (clickedSlug && onElectronClick) {
-        onElectronClick(clickedSlug);
-      }
+      const slug = pickNode(e.clientX, e.clientY);
+      if (slug) onClickRef.current?.(slug);
     };
 
-    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerleave", handlePointerLeave);
     canvas.addEventListener("click", handleClick);
     animationId = requestAnimationFrame(frame);
 
     return () => {
       cancelAnimationFrame(animationId);
-      canvas.removeEventListener("mousemove", handleMouseMove);
+      motionQuery.removeEventListener("change", onMotionChange);
+      canvas.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("pointerleave", handlePointerLeave);
       canvas.removeEventListener("click", handleClick);
     };
-  }, [
-    progressRef,
-    rotationOffsetRef,
-    nucleusSeparationRef,
-    aboutProgressRef,
-    activeAboutNodeRef,
-    onElectronClick,
-    onElectronHover,
-  ]);
+    // Only stable refs/callbacks here on purpose: a parent re-render must never restart the atom.
+  }, [progressRef, rotationOffsetRef, nucleusSeparationRef, zoomActiveRef, setHovered]);
 
   return (
     <div
       ref={containerRef}
       className={className}
       style={{ width: CANVAS_SIZE, height: CANVAS_SIZE }}
+      role="group"
+      aria-label="NSS Clubs: the executive team and the six clubs"
     >
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_SIZE}
-        height={CANVAS_SIZE}
-        className="block"
-      />
+      <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} className="block" aria-hidden="true" />
+
+      {/* Keyboard & screen-reader path: real buttons for everything on the canvas.
+          Focusing one highlights it on the atom; Enter opens it. */}
+      <ul className="sr-only">
+        {NODES.map((node) => (
+          <li key={node.slug}>
+            <button
+              type="button"
+              onClick={() => onClickRef.current?.(node.slug)}
+              onFocus={() => setHovered(node.slug)}
+              onBlur={() => setHovered(null)}
+            >
+              {node.name}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
