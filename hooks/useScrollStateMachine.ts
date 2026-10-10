@@ -5,6 +5,13 @@ import type { HeroHandle } from "../components/Hero";
 /* ─── constants ─── */
 const HEADER_H = 64;
 
+/**
+ * The planets fly into the constellation while you scroll through this much
+ * of the viewport height just before the Events section reaches the top.
+ * 1 = a full screen of scrolling. Lower = faster/snappier, higher = slower.
+ */
+const MORPH_SCROLL_FRACTION = 1;
+
 type Phase = "hero" | "clubs" | "zooming" | "zoomed" | "about" | "events" | "gallery";
 
 interface PageRect {
@@ -48,7 +55,7 @@ interface PlanetDotMorph {
   stagger: number;
 }
 
-const PLANET_DOT_MORPHS: PlanetDotMorph[] = [
+export const PLANET_DOT_MORPHS: PlanetDotMorph[] = [
   { key: "mercury", refKeys: ["mercury"], dotId: 0, fromColor: "#b8c0c9", toColor: "#1a3378", stagger: 0 },
   { key: "venus", refKeys: ["venus"], dotId: 5, fromColor: "#d9a763", toColor: "#1a3378", stagger: 0.06 },
   { key: "earth", refKeys: ["earth"], dotId: 2, fromColor: "#3e8fb0", toColor: "#1a3378", stagger: 0.12 },
@@ -158,6 +165,7 @@ export default function useScrollStateMachine({
   const atomProgressRef = useRef(0);
   const aboutProgressRef = useRef(0);
   const eventsMorphRef = useRef(0);
+  const prevEventsMorphRef = useRef(0);
   const activeAboutNodeRef = useRef(0);
   const prevActiveNodeRef = useRef(-1);
   const prevShowTextRef = useRef(false);
@@ -263,6 +271,33 @@ export default function useScrollStateMachine({
       onProjectorCoordsChange(null);
     }
   }, [selectedClub, getPlanetRef, cardWrapperRef, onProjectorCoordsChange, layoutCacheRef]);
+
+  /**
+   * Re-measures ONLY the planets (page coordinates).
+   * The planets sit in a pinned stage, so the positions measured at page load are
+   * stale by the time you scroll down to them. We measure again at the exact moment
+   * the flight begins, when they are at rest, so the ghosts leave from the real spot.
+   */
+  const refreshPlanetPositions = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const sx = window.scrollX;
+    const sy = window.scrollY;
+    const planets = layoutCacheRef.current.planets;
+    PLANET_DOT_MORPHS.forEach((morph) => {
+      for (const refKey of morph.refKeys) {
+        const el = getPlanetRef(refKey);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) continue;
+        planets[morph.key] = {
+          x: rect.left + sx + rect.width / 2,
+          y: rect.top + sy + rect.height / 2,
+          size: Math.max(rect.width, rect.height),
+        };
+        return;
+      }
+    });
+  }, [getPlanetRef, layoutCacheRef]);
 
   /* ── Holographic Projector Coordinate Updater (Club zoom only) ── */
   const updateProjectorCoords = useCallback(() => {
@@ -465,7 +500,19 @@ export default function useScrollStateMachine({
         phaseRef.current = "about";
         posT = 1;
         aboutT = 1;
-        eventsMorphRef.current = 0;
+
+        // 0 → 1 while scrolling through the last stretch before Events (was only ever 0 or 1)
+        const morphStartY = Math.max(
+          aboutScrollY,
+          eventsScrollY - cache.windowHeight * MORPH_SCROLL_FRACTION,
+        );
+        const morphT = Math.min(1, Math.max(0,
+          (sy - morphStartY) / Math.max(eventsScrollY - morphStartY, 1),
+        ));
+        if (morphT > 0 && prevEventsMorphRef.current === 0) {
+          refreshPlanetPositions(); // flight is starting: measure the planets once
+        }
+        eventsMorphRef.current = morphT;
 
         if (aboutSectionTop) {
           const sectionScrolled = sy + HEADER_H - aboutSectionTop;
@@ -496,13 +543,15 @@ export default function useScrollStateMachine({
       aboutProgressRef.current = aboutT;
     }
 
+    prevEventsMorphRef.current = eventsMorphRef.current;
+
     /* Discrete clubsTextVisible threshold crossing */
     const showText = posT > 0.55;
     if (showText !== prevShowTextRef.current) {
       prevShowTextRef.current = showText;
       setClubsTextVisible(showText);
     }
-  }, [updateProjectorCoords, layoutCacheRef]);
+  }, [updateProjectorCoords, refreshPlanetPositions, layoutCacheRef]);
 
   /**
    * Called once on first valid frame to set correct initial state
