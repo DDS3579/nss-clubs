@@ -1,4 +1,6 @@
 import HomeScrollExperience from "@/components/HomeScrollExperience";
+import NoticeLayer from "@/components/home/NoticeLayer";
+import { getActiveNotices } from "@/sanity/lib/notices";
 import { getHomepageData } from "@/sanity/lib/queries";
 
 // Re-check Sanity at most once a minute. Without this the page was frozen at
@@ -6,12 +8,13 @@ import { getHomepageData } from "@/sanity/lib/queries";
 export const revalidate = 60;
 
 export default async function HomePage() {
-  // Always returns a complete object, so an unpublished Homepage document
-  // shows the fallback text instead of an error screen.
-  const data = await getHomepageData();
+  // Both always return complete objects, so unpublished or empty content shows
+  // the fallback text (or no notice) instead of an error screen.
+  const [data, notices] = await Promise.all([getHomepageData(), getActiveNotices()]);
 
   return (
-    <main className="min-h-screen bg-bg">
+    <main id="main-content" className="min-h-screen bg-bg">
+      <NoticeLayer announcements={notices.announcements} popup={notices.popup} />
       <HomeScrollExperience data={data} />
     </main>
   );
