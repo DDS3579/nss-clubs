@@ -1,32 +1,79 @@
-# NSS Club Website
+# NSS Clubs Website
 
-## 🗄️ Backend Architecture (Sanity CMS)
+The website of NSS Clubs: an executive team (the nucleus) and six clubs (the electrons): Social, Entertainment, Sports, Literature, Arts and Crafts, STEM. Built with Next.js (App Router), Tailwind CSS v4 and Sanity as the content system.
 
-The backend is powered by **Sanity.io**, operating as a fully headless, relational Content Lake. The Sanity Studio is mounted locally within the Next.js App Router at `/studio`.
+## Quick start
 
-### ⚙️ Core Backend Rules
+```bash
+npm install
+cp .env.example .env.local     # then fill in the values (see below)
+npm run dev                    # http://localhost:3000
+```
 
-- **API Versioning**: The Sanity client is pinned to a static UTC date (e.g., 2026-05-31) inside `sanity/env.ts`. Never use dynamic dates (like `new Date()`), as this prevents sudden breaking changes when Sanity updates their API.
-- **Query Testing**: The Vision Plugin is enabled in the Studio navigation bar. Use it to test GROQ queries, verify reference resolution (`->`), and inspect raw JSON payloads before writing frontend fetch logic.
-- **Image Pipeline**: Sanity stores images as asset references. They are transformed on-the-fly and served via `cdn.sanity.io` using the `urlFor()` helper located in `sanity/lib/image.ts`.
-- **Singleton Pattern**: The homepage schema is structured as a Singleton (locked to `_id == "homepage"` via the Structure Tool) to prevent duplicate global configurations.
+Before sharing changes: `npm run build && npm run lint` (both should finish clean).
 
-### 🧩 Schema Topology (8 Document Types)
+### Environment variables
 
-The Content Lake is strictly relational. References (`type: 'reference'`) are used heavily to prevent data duplication.
+| Variable | Needed | What it is |
+|---|---|---|
+| `NEXT_PUBLIC_SANITY_PROJECT_ID` | yes | Sanity project ID (sanity.io/manage → your project) |
+| `NEXT_PUBLIC_SANITY_DATASET` | yes | Usually `production` |
+| `NEXT_PUBLIC_SANITY_API_VERSION` | no | Defaults to a pinned date in `sanity/env.ts` |
+| `NEXT_PUBLIC_SITE_URL` | recommended | The public address, e.g. `https://nssclubs.example`. Used for share previews and the sitemap |
 
-- **homepage**: Global settings (President's message, Legacy Stats, Featured Events/Gallery).
-- **teamMember**: Base directory of people (Name, Photo, Bio, Grade).
-- **executiveTeam**: Maps specific roles (President, Secretary) to teamMember references by Academic Year.
-- **club**: The 6 core institutions. Includes auto-generated slug for dynamic routing, and arrays of teamMember references for Club Heads.
-- **event**: Datetime-driven events linked to specific clubs via references.
-- **galleryItem**: Centralized media library. Images are tagged to clubs and/or events via cross-references.
-- **announcement**: Standard text notices with `isActive` toggles and `expiryDate` (date only).
-- **popup**: Marketing modals with CTA links, restricted by `startDate` and `expiryDate` (datetime).
+None of these are secrets (they are public by design), but `.env.local` is not committed to git. Put the same variables in the hosting dashboard.
 
-### 🔄 Data Fetching Pipeline
+## Where things live
 
-- **Queries**: All GROQ queries are centralized in `sanity/lib/queries.ts`.
-- **Types**: Strict TypeScript interfaces mapping the Sanity schemas live in `sanity/lib/types.ts`.
-- **Execution**: Data is fetched exclusively via React Server Components (async/await) using the `next-sanity` client. Client-side fetching (`useEffect`) is strictly prohibited unless building interactive widgets (like live countdown timers).
+| Path | What |
+|---|---|
+| `app/page.tsx` | Homepage (the scroll story) |
+| `app/clubs/[slug]` | The six club pages |
+| `app/events`, `app/events/[slug]` | Events list and event pages |
+| `app/gallery` | Photo wall and Google Drive albums |
+| `app/executive-team` | Current and previous teams |
+| `app/contact` | Contact page |
+| `app/studio` | The content editor (Sanity Studio) at `/studio` |
+| `lib/clubs.ts` | **The six clubs + executive team: names, colours, orbit slots.** Edit here to change club details shown on the atom |
+| `lib/site.ts` | Site name and **contact details** (email, phone, address, social links) |
+| `lib/dates.ts` | Event date formatting. The time zone is one constant at the top |
+| `lib/math.ts` | Shared math/easing helpers for the animations |
+| `components/HeroAtom.tsx` | The atom (canvas) |
+| `components/HomeScrollExperience.tsx` | The homepage scroll choreography; styles in `components/home/home-experience.css` |
+| `hooks/` | Scroll engine (`useScrollStateMachine`, `useLenis`, `useMorphCoordinates`) |
+| `sanity/schemaTypes` | Content structure (9 document types) |
+| `sanity/lib/queries.ts` | **Every query to Sanity, plus the typed `get…` functions pages use** |
 
+## Content (Sanity)
+
+Edit content at `/studio` (log in with a Sanity account that has been invited to the project).
+
+Document types: **homepage** (single document), **teamMember**, **executiveTeam** (roles for one academic year), **club**, **event**, **galleryItem**, **album** (a Google Drive album: link + cover photo), **announcement**, **popup**.
+
+- **Photos:** featured photos are uploaded to Sanity as *galleryItem*. Full albums stay on Google Drive: create an *album* with the Drive link (shared as "Anyone with the link") and a cover photo.
+- **Executive team:** create one *executiveTeam* per academic year (for example `2083/84`). The newest year is shown as the current team.
+- **Updates appear on the site within about a minute.**
+
+### Backend rules
+
+- The Sanity client is pinned to a fixed API date in `sanity/env.ts`. Never use `new Date()` there.
+- All reads go through `sanityFetch` (`sanity/lib/fetch.ts`): results are cached for 60 seconds and tagged by document type.
+- The Vision plugin in the Studio is handy for testing GROQ queries.
+- Images are served from `cdn.sanity.io`. Pages with many photos ask Sanity for the exact size and format (`sanity/lib/imageMeta.ts`) instead of using Vercel's image optimizer.
+- Data is fetched in server components. Use `useEffect` fetching only for interactive widgets (like the event countdown).
+
+## Deploying (Vercel)
+
+1. Push the repository to GitHub and import it at vercel.com/new.
+2. Add the environment variables above (Project → Settings → Environment Variables), including `NEXT_PUBLIC_SITE_URL`.
+3. In Sanity (sanity.io/manage → API → CORS origins), add your site address and enable **Allow credentials**. Without this, `/studio` will not log in on the live site.
+4. Every push to the main branch deploys automatically.
+
+## Handing over to next year's team
+
+The president changes every year, so do not let any account live only in one person's name.
+
+- Create or use a **shared club email** and register the GitHub, Vercel and Sanity accounts (or invite that address as owner/admin) with it.
+- Keep that email's password with the club advisor and pass it on each year.
+- Invite the new president and executive members to the Sanity project (sanity.io/manage → Members) and remove outgoing ones.
+- Update `lib/site.ts` (contact details) and add the new *executiveTeam* in the Studio.
