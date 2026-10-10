@@ -3,14 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Home, Compass, Info, Calendar, Image as ImageIcon, Menu, X } from "lucide-react";
+import { Home, Compass, Info, Calendar, Image as ImageIcon, Users, Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", text: "Home", icon: Home },
   { href: "/#clubs", text: "Clubs", icon: Compass },
   { href: "/#about", text: "About", icon: Info },
-  { href: "/#events", text: "Events", icon: Calendar },
-  { href: "/#gallery", text: "Gallery", icon: ImageIcon },
+  { href: "/events", text: "Events", icon: Calendar },
+  { href: "/gallery", text: "Gallery", icon: ImageIcon },
+  { href: "/executive-team", text: "Executive Team", icon: Users },
 ];
 
 export default function Navbar() {
@@ -26,7 +27,7 @@ export default function Navbar() {
         setIsScrolled(false);
       }
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -75,11 +76,11 @@ export default function Navbar() {
                 >
                   {/* Circular icon container */}
                   <div className="flex items-center justify-center w-8 h-8 rounded-full text-primary bg-transparent transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] shrink-0">
-                    <IconComponent className="w-4.5 h-4.5 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:text-bg" />
+                    <IconComponent className="w-4.5 h-4.5 text-primary transition-transform duration-300 group-hover:scale-110" />
                   </div>
 
                   {/* Sliding text */}
-                  <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-primary font-body text-xs font-semibold tracking-wide uppercase transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:max-w-[100px] group-hover:opacity-100 group-hover:ml-2">
+                  <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-primary font-body text-xs font-semibold tracking-wide uppercase transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:max-w-[140px] group-hover:opacity-100 group-hover:ml-2">
                     {item.text}
                   </span>
                 </Link>
