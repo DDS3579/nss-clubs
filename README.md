@@ -20,6 +20,7 @@ Before sharing changes: `npm run build && npm run lint` (both should finish clea
 | `NEXT_PUBLIC_SANITY_DATASET` | yes | Usually `production` |
 | `NEXT_PUBLIC_SANITY_API_VERSION` | no | Defaults to a pinned date in `sanity/env.ts` |
 | `NEXT_PUBLIC_SITE_URL` | recommended | The public address, e.g. `https://nssclubs.example`. Used for share previews and the sitemap |
+| `SANITY_REVALIDATE_SECRET` | recommended | A long random text you invent. Turns on instant updates (see "Instant updates" below). Never prefix it with `NEXT_PUBLIC_` |
 
 None of these are secrets (they are public by design), but `.env.local` is not committed to git. Put the same variables in the hosting dashboard.
 
@@ -39,7 +40,12 @@ None of these are secrets (they are public by design), but `.env.local` is not c
 | `lib/dates.ts` | Event date formatting. The time zone is one constant at the top |
 | `lib/math.ts` | Shared math/easing helpers for the animations |
 | `components/HeroAtom.tsx` | The atom (canvas) |
-| `components/HomeScrollExperience.tsx` | The homepage scroll choreography; styles in `components/home/home-experience.css` |
+| `components/HomeScrollExperience.tsx` | The homepage scroll engine: phases, zoom animation, the atom's journey. Only logic; the visible sections are separate files |
+| `components/home/ClubsSection.tsx`, `AboutSection.tsx`, `AtomOverlay.tsx`, `ClubIcon.tsx` | The visible homepage sections and the floating atom layer |
+| `components/home/home-experience.css` | All the homepage styles |
+| `components/home/NoticeLayer.tsx` | Homepage announcements (dismissible cards) and the popup (once per visit) |
+| `sanity/lib/notices.ts` | Decides which announcements/popups are live right now (switched on and inside their dates) |
+| `app/api/revalidate/route.ts` | The address Sanity calls after every edit, for instant updates |
 | `hooks/` | Scroll engine (`useScrollStateMachine`, `useLenis`, `useMorphCoordinates`) |
 | `sanity/schemaTypes` | Content structure (9 document types) |
 | `sanity/lib/queries.ts` | **Every query to Sanity, plus the typed `get…` functions pages use** |
@@ -52,7 +58,9 @@ Document types: **homepage** (single document), **teamMember**, **executiveTeam*
 
 - **Photos:** featured photos are uploaded to Sanity as *galleryItem*. Full albums stay on Google Drive: create an *album* with the Drive link (shared as "Anyone with the link") and a cover photo.
 - **Executive team:** create one *executiveTeam* per academic year (for example `2083/84`). The newest year is shown as the current team.
-- **Updates appear on the site within about a minute.**
+- **Announcements:** small dismissible cards at the top of the homepage (up to 3). Turn *Active* off or set an *Expiry Date* to hide one. The expiry day itself still shows.
+- **Popups:** one modal on the homepage, shown once per visitor session (the newest live one wins). Needs *Active* on and the current time between *Start* and *Expiry*. The button link must start with `https://`.
+- **Updates:** with instant updates set up (below), edits appear within seconds. Without it, within about a minute.
 
 ### Backend rules
 
@@ -61,6 +69,22 @@ Document types: **homepage** (single document), **teamMember**, **executiveTeam*
 - The Vision plugin in the Studio is handy for testing GROQ queries.
 - Images are served from `cdn.sanity.io`. Pages with many photos ask Sanity for the exact size and format (`sanity/lib/imageMeta.ts`) instead of using Vercel's image optimizer.
 - Data is fetched in server components. Use `useEffect` fetching only for interactive widgets (like the event countdown).
+
+## Instant updates (Sanity webhook)
+
+By default the site re-checks Sanity regularly. To make edits appear immediately:
+
+1. Invent a long random secret (for example run `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`).
+2. Add it to Vercel as `SANITY_REVALIDATE_SECRET` (all environments) and redeploy. Put it in `.env.local` too if you want to test locally.
+3. In Sanity (sanity.io/manage → your project → API → Webhooks → Create webhook):
+   - **URL:** `https://YOUR-SITE/api/revalidate?secret=THE-SECRET`
+   - **Dataset:** `production`
+   - **Trigger on:** Create, Update, Delete
+   - **Projection:** `{"_type": _type}`
+   - **HTTP method:** POST, leave drafts off
+4. Publish a small change in the Studio and reload the live page.
+
+With the secret set, the site only re-asks Sanity every 15 minutes as a safety net (see `sanity/lib/fetch.ts`), which keeps the free-plan request quota very safe. Keep `useCdn: false` in `sanity/lib/client.ts`: Sanity's cached copy can lag a few seconds behind a publish, which would defeat the instant update.
 
 ## Deploying (Vercel)
 
