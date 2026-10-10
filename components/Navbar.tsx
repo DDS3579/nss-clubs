@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Home, Compass, Info, Calendar, Image as ImageIcon, Users, Menu, X } from "lucide-react";
 
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const pathname = usePathname();
 
   // Add box-shadow and reduce height slightly on scroll for a premium feel
   useEffect(() => {
@@ -30,6 +32,15 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isMobileMenuOpen]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prev) => !prev);
@@ -71,6 +82,7 @@ export default function Navbar() {
                 <Link
                   key={item.text}
                   href={item.href}
+                  aria-current={pathname === item.href ? "page" : undefined}
                   className="group relative flex items-center justify-start h-10 rounded-full px-2 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-primary/5 hover:pr-4"
                   style={{ minWidth: "40px" }}
                 >
@@ -91,7 +103,7 @@ export default function Navbar() {
           {/* RIGHT: CTA Button (Desktop) & Hamburger (Mobile) */}
           <div className="flex items-center gap-4">
             <Link
-              href="/#contact"
+              href="/contact"
               className="hidden md:inline-flex items-center justify-center bg-primary text-bg text-sm font-semibold tracking-wide px-5 py-2.5 rounded-button shadow-sm hover:bg-accent hover:text-primary transition-all duration-300 active:scale-95"
             >
               Contact Us
@@ -103,6 +115,7 @@ export default function Navbar() {
               className="inline-flex items-center justify-center p-2 rounded-full text-primary hover:bg-gray-100 transition-colors md:hidden focus:outline-none focus:ring-2 focus:ring-primary/20"
               aria-label="Toggle navigation menu"
               aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-menu"
             >
               {isMobileMenuOpen ? (
                 <X className="w-6 h-6 animate-in fade-in zoom-in duration-200" />
@@ -124,7 +137,7 @@ export default function Navbar() {
           />
 
           {/* Drawer content */}
-          <div className="fixed right-0 top-0 bottom-0 w-[280px] max-w-sm bg-white p-6 shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300 ease-out border-l border-gray-100">
+          <div id="mobile-menu" className="fixed right-0 top-0 bottom-0 w-[280px] max-w-sm bg-white p-6 shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300 ease-out border-l border-gray-100">
             <div className="flex flex-col gap-8 mt-16">
               
               {/* Mobile links list */}
@@ -135,6 +148,7 @@ export default function Navbar() {
                     <Link
                       key={item.text}
                       href={item.href}
+                      aria-current={pathname === item.href ? "page" : undefined}
                       onClick={toggleMobileMenu}
                       className="flex items-center gap-4 px-4 py-3 rounded-xl text-primary font-body text-base font-semibold hover:bg-primary/5 transition-all duration-200 active:bg-primary/10 border border-transparent hover:border-gray-100"
                     >
@@ -151,7 +165,7 @@ export default function Navbar() {
             {/* Mobile CTA */}
             <div className="mt-auto pt-6 border-t border-gray-100">
               <Link
-                href="/#contact"
+                href="/contact"
                 onClick={toggleMobileMenu}
                 className="flex w-full items-center justify-center bg-primary text-white text-base font-semibold py-3.5 rounded-button shadow-md hover:bg-accent hover:text-primary transition-all duration-300 active:scale-[0.98]"
               >
