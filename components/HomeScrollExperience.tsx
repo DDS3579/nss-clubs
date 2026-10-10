@@ -296,6 +296,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   const rotationOffsetRef = useRef(0);
   const nucleusSeparationRef = useRef(0);
   const zoomActiveRef = useRef(false);
+  const atomPausedRef = useRef(false);
   const zoomAnimRef = useRef<ZoomAnimState | null>(null);
   const cardWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -516,12 +517,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     const tick = (now: number) => {
       const cache = layoutCacheRef.current;
 
-      const heroAnchor = heroRef.current?.getAtomOrigin() ?? null;
+      // Cheap "is the hero mounted?" check. (This used to call getAtomOrigin(), which
+      // runs getBoundingClientRect() — a forced layout read — on every single frame.
+      // The real measurements are cached by updateLayoutGeometry.)
+      const heroMounted = heroRef.current !== null;
       const clubsAnchor = clubsAnchorRef.current;
       const floating = floatingRef.current;
       const canvasWrap = canvasWrapRef.current;
 
-      if (!heroAnchor || !clubsAnchor || !floating || !canvasWrap) {
+      if (!heroMounted || !clubsAnchor || !floating || !canvasWrap) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
@@ -579,8 +583,10 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       if (aboutProgressRef.current > 0.001) {
         const fadeOut = 1 - clamp01((aboutProgressRef.current - 0.55) / 0.35);
         floating.style.opacity = `${fadeOut}`;
+        atomPausedRef.current = fadeOut <= 0.01;
       } else {
         floating.style.opacity = '1';
+        atomPausedRef.current = false;
       }
 
       // Direct DOM class manipulation for about section
@@ -1946,6 +1952,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
               rotationOffsetRef={rotationOffsetRef}
               nucleusSeparationRef={nucleusSeparationRef}
               zoomActiveRef={zoomActiveRef}
+              pausedRef={atomPausedRef}
               onElectronClick={handleElectronClick}
             />
           </div>
