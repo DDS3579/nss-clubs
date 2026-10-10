@@ -95,7 +95,3 @@ html.lenis body {
 .lenis.lenis-stopped {
   overflow: hidden;
 }
-
-.lenis.lenis-scrolling {
-  overflow: auto;
-}
