@@ -1,8 +1,15 @@
 import type { QueryParams } from "next-sanity";
 import { client } from "./client";
 
-/** How long a fetched result is reused before Next.js re-checks Sanity. */
-export const DEFAULT_REVALIDATE_SECONDS = 60;
+/**
+ * How long a fetched result is reused before Next.js re-checks Sanity.
+ *
+ * - Webhook set up (SANITY_REVALIDATE_SECRET exists): edits arrive instantly through
+ *   app/api/revalidate, so this is only a 15-minute safety net. That keeps requests
+ *   to Sanity very low (important: the free plan blocks the site if its quota runs out).
+ * - No webhook: re-check every minute so edits still show up quickly.
+ */
+export const DEFAULT_REVALIDATE_SECONDS = process.env.SANITY_REVALIDATE_SECRET ? 900 : 60;
 
 /**
  * The one way the site reads from Sanity.
