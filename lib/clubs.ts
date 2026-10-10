@@ -210,7 +210,7 @@ export function getClubAtSlot(orbitIdx: number, electronIdx: number): Club | und
  * matches the old hand-written ROTATION_OFFSETS table exactly
  * (stem 60°, sports -120°, literature 0, arts 180°, entertainment -60°, social 120°).
  */
-export function getZoomRotation(slug: NodeSlug): number {
+export function getZoomRotation(slug: string): number {
   if (slug === "executive-team") return 0;
   const club = CLUBS.find((c) => c.slug === slug);
   if (!club) return 0;
