@@ -8356,7 +8356,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
                         </div>
                         <div className="animate-fade-in-delayed w-full mt-0">
                           <Link
-                            href="#executive-team"
+                            href="/executive-team"
                             className="inline-flex items-center justify-center w-full bg-primary hover:bg-primary/95 text-white text-sm font-bold tracking-wide px-8 py-3.5 rounded-xl transition-all duration-300 active:scale-95 shadow-[0_4px_12px_rgba(2,59,142,0.15)] font-body"
                           >
                             Meet the Executive Team
