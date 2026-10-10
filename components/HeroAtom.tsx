@@ -31,6 +31,8 @@ interface HeroAtomProps {
   nucleusSeparationRef?: React.MutableRefObject<number>;
   /** Set true while a zoom is running or open: switches the canvas to extra-sharp. */
   zoomActiveRef?: React.MutableRefObject<boolean>;
+  /** Set true while the atom is faded out (further down the page): skips all drawing. */
+  pausedRef?: React.MutableRefObject<boolean>;
   /** @deprecated No longer used. Kept only so HomeScrollExperience still compiles. */
   aboutProgressRef?: React.MutableRefObject<number>;
   /** @deprecated No longer used. Kept only so HomeScrollExperience still compiles. */
@@ -91,6 +93,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
   rotationOffsetRef,
   nucleusSeparationRef,
   zoomActiveRef,
+  pausedRef,
   className,
   onElectronClick,
   onElectronHover,
@@ -307,6 +310,13 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     /* ───────────────────────── frame loop ───────────────────────── */
 
     function frame(timestamp: number) {
+      // Invisible (scrolled past the clubs section): do no work at all
+      if (pausedRef?.current) {
+        lastTimestamp = timestamp;
+        animationId = requestAnimationFrame(frame);
+        return;
+      }
+
       // Cap at roughly 60 fps (saves battery on 120 Hz phones)
       if (lastTimestamp && timestamp - lastTimestamp < 14) {
         animationId = requestAnimationFrame(frame);
@@ -480,7 +490,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       canvas.removeEventListener("click", handleClick);
     };
     // Only stable refs/callbacks here on purpose: a parent re-render must never restart the atom.
-  }, [progressRef, rotationOffsetRef, nucleusSeparationRef, zoomActiveRef, setHovered]);
+  }, [progressRef, rotationOffsetRef, nucleusSeparationRef, zoomActiveRef, pausedRef, setHovered]);
 
   return (
     <div
