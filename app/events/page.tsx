@@ -17,7 +17,7 @@ export default async function EventsPage() {
 
   return (
     <>
-      <main>
+      <main id="main-content">
         <PageHero
           eyebrow="What is happening"
           title="Events"

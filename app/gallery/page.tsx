@@ -39,7 +39,7 @@ export default async function GalleryPage() {
 
   return (
     <>
-      <main>
+      <main id="main-content">
         <PageHero
           eyebrow="Memories"
           title="Gallery"

@@ -58,7 +58,7 @@ export default async function EventPage({ params }: PageProps) {
 
   return (
     <>
-      <main>
+      <main id="main-content">
         {/* Banner */}
         <div className="relative h-56 bg-primary sm:h-80 lg:h-104">
           {event.coverImage && (

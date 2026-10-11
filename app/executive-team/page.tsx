@@ -60,7 +60,7 @@ export default async function ExecutiveTeamPage() {
 
   return (
     <>
-      <main>
+      <main id="main-content">
         <PageHero
           eyebrow={current ? `Academic year ${current.year}` : "Leadership"}
           title="Executive Team"

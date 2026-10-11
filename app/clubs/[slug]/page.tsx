@@ -44,7 +44,7 @@ export default async function ClubPage({ params }: PageProps) {
   const viceHeads = data?.viceHeads ?? [];
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main id="main-content" className="min-h-screen bg-gray-50">
       {/* Hero Banner */}
       <div className="relative h-64 md:h-96 w-full bg-gray-200">
         {data?.heroImage && (
