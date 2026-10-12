@@ -49,6 +49,11 @@
     --transition-fast: 150ms ease-in-out;
   }
 
+  /* Keep the layout the same width whether or not the scrollbar is showing */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     @apply bg-bg text-text font-body;
   }
