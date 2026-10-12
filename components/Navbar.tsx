@@ -49,10 +49,8 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 w-full bg-white transition-all duration-300 ${
-          isScrolled
-            ? "h-16 shadow-md"
-            : "h-20"
+        className={`sticky top-0 z-50 h-16 w-full bg-white transition-shadow duration-300 ${
+          isScrolled ? "shadow-md" : ""
         }`}
       >
         <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6 lg:px-8">
