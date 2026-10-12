@@ -44,10 +44,10 @@ export default function ClubsSection({
             className={`flex flex-col items-center justify-center text-center transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) ${selectedClub ? "opacity-0 translate-x-[80px] pointer-events-none absolute" : "opacity-100 translate-x-0"}`}
           >
             <h2 className="font-display text-[clamp(3.5rem,11vw,8.5rem)] font-black leading-[0.88] text-primary">
-              Our<span className="block text-accent">Clubs.</span>
+              Our<span className="block text-[#b07a2c]">Clubs.</span>
             </h2>
             <p className="mt-4 font-body text-slate-400 text-sm font-medium animate-pulse">
-              Click any electron node or the nucleus to explore
+              Tap or click an electron, or the nucleus, to explore
             </p>
           </div>
           <div
