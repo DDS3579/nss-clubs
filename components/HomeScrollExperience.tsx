@@ -20,6 +20,9 @@ import useScrollStateMachine, {
 import useMorphCoordinates from "@/hooks/useMorphCoordinates";
 import useLenis from "@/hooks/useLenis";
 
+/* ─── layout ─── */
+const HEADER_H = 64; // height of the navbar (see components/Navbar.tsx)
+
 /* ─── zoom animation constants ─── */
 const ZOOM_DURATION = 2400;
 const NUCLEUS_ZOOM_DURATION = 3200;
@@ -171,42 +174,41 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     };
   }, [clubsAnchorRef, phaseRef, lenisStop]);
 
-  /* ── Electron & Nucleus Click Handler ── */
+  /* ── Electron & Nucleus Click Handler ──
+     Clicking scrolls so the Clubs section fills the screen EXACTLY (top edge right under
+     the navbar), then the zoom starts from that true position. No extra jumps. */
   const handleElectronClick = useCallback(
     (slug: string) => {
-      if (
-        phaseRef.current === "zooming" ||
-        phaseRef.current === "zoomed" ||
-        phaseRef.current === "about"
-      )
+      const phase = phaseRef.current;
+      if (phase === "zooming" || phase === "zoomed" || phase === "about") return;
+
+      const clubsSection = document.getElementById("clubs");
+      if (!clubsSection) return;
+
+      // Where the page must be scrolled for the section to sit exactly under the navbar
+      const alignedY = clubsSection.getBoundingClientRect().top + window.scrollY - HEADER_H;
+      const distance = Math.abs(window.scrollY - alignedY);
+
+      const startZoom = () => {
+        const pendingSlug = pendingZoomSlugRef.current;
+        if (!pendingSlug) return;
+        pendingZoomSlugRef.current = null;
+        updateLayoutGeometry(); // fresh measurements at the final scroll position
+        initZoom(pendingSlug);
+      };
+
+      pendingZoomSlugRef.current = slug;
+      if (distance < 2) {
+        startZoom(); // already aligned
         return;
-      if (phaseRef.current === "hero") {
-        pendingZoomSlugRef.current = slug;
-        lenisScrollTo("#clubs", {
-          duration: 1.2,
-          onComplete: () => {
-            const pendingSlug = pendingZoomSlugRef.current;
-            if (pendingSlug) {
-              pendingZoomSlugRef.current = null;
-            updateLayoutGeometry();
-              // Center the atom in viewport before zoom (lower in viewport = scroll more down)
-              const clubsAnchor = clubsAnchorRef.current;
-              if (clubsAnchor) {
-                const rect = clubsAnchor.getBoundingClientRect();
-                const atomCenterY = rect.top + rect.height / 2 + window.scrollY;
-                const targetScrollY = atomCenterY - window.innerHeight / 2 + 25;
-                lenisScrollTo(targetScrollY, { immediate: true });
-                updateLayoutGeometry();
-              }
-              initZoom(pendingSlug);
-            }
-          },
-        });
-      } else if (phaseRef.current === "clubs") {
-        initZoom(slug);
       }
+      lenisScrollTo(clubsSection, {
+        offset: -HEADER_H,
+        duration: distance > window.innerHeight * 0.6 ? 1.2 : 0.8,
+        onComplete: startZoom,
+      });
     },
-    [initZoom, phaseRef, pendingZoomSlugRef, lenisScrollTo, updateLayoutGeometry, clubsAnchorRef],
+    [initZoom, phaseRef, pendingZoomSlugRef, lenisScrollTo, updateLayoutGeometry],
   );
 
   /* ── Close club card and reverse zoom ── */
@@ -217,12 +219,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
     const clubsAnchor = clubsAnchorRef.current;
     if (!clubsAnchor) return;
 
-    // Instantly scroll to center the atom in viewport (lower in viewport = scroll more down)
-    const rect = clubsAnchor.getBoundingClientRect();
-    const atomCenterY = rect.top + rect.height / 2 + window.scrollY;
-    const targetScrollY = atomCenterY - window.innerHeight / 2;
-    lenisScrollTo(targetScrollY, { immediate: true });
-    // Force layout cache sync to get correct coordinates at the new scroll position
+    // The page is locked while a club is open, so nothing has moved: just refresh the cache.
     updateLayoutGeometry();
 
     const clubsRect = clubsAnchor.getBoundingClientRect();
@@ -253,9 +250,40 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       clubsFloatY,
       clubsScale,
     };
-  }, [selectedClub, phaseRef, clubsAnchorRef, lenisScrollTo, updateLayoutGeometry]);
+  }, [selectedClub, phaseRef, clubsAnchorRef, updateLayoutGeometry]);
 
   // Pending zoom triggers are now handled synchronously inside the frame tick loop below to prevent state-race conditions.
+
+  /* ── In-page links (Explore Clubs, About Us, navbar) glide to the section instead of jumping ── */
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (phaseRef.current === "zooming" || phaseRef.current === "zoomed") return;
+
+      const anchor = (e.target as Element | null)?.closest?.("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement) || anchor.target === "_blank") return;
+
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname !== window.location.pathname) return;
+
+      if (!url.hash) {
+        // The "Home" link while already on the homepage: glide back to the top
+        if (url.search !== window.location.search) return;
+        e.preventDefault();
+        lenisScrollTo(0, { offset: 0, duration: 1.2 });
+        return;
+      }
+
+      const section = document.getElementById(decodeURIComponent(url.hash.slice(1)));
+      if (!section) return;
+      e.preventDefault();
+      lenisScrollTo(section, { offset: -HEADER_H, duration: 1.2 });
+      window.history.pushState(null, "", url.hash);
+    };
+    // Capture phase, so we run before Next.js turns the click into an instant jump
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [lenisScrollTo, phaseRef]);
 
   /* ══════════════════════════════════════════════════════════════
      MAIN ANIMATION LOOP — Pure DOM writes via refs
