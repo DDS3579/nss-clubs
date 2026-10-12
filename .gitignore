@@ -52,3 +52,6 @@ sanity.types.ts
 
 .env*
 !.env.example
+
+
+.freebuff/
