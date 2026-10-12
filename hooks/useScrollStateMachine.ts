@@ -342,6 +342,11 @@ export default function useScrollStateMachine({
     const t2 = setTimeout(updateLayoutGeometry, 500);
     const t3 = setTimeout(updateLayoutGeometry, 2000);
 
+    // Text can re-flow once the web fonts finish loading, which moves everything below it
+    if (typeof document !== "undefined" && document.fonts) {
+      document.fonts.ready.then(() => updateLayoutGeometry());
+    }
+
     const observer = new ResizeObserver(() => {
       updateLayoutGeometry();
     });
