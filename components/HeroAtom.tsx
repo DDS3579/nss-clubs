@@ -161,6 +161,7 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
     let animationId = 0;
     let elapsed = 0; // measured in "60 fps frames", advances with real time
     let lastTimestamp = 0;
+    let dockedSince = 0; // when the atom arrived in the Clubs section (0 = not docked)
 
     /* ───────────────────────── drawing ───────────────────────── */
 
@@ -327,11 +328,19 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       lastTimestamp = timestamp;
       if (!reduceMotion) elapsed += dt;
 
-      // Extra-sharp only while a zoom is running
-      const wantedDpr = zoomActiveRef?.current ? ZOOM_DPR : BASE_DPR;
-      if (wantedDpr !== currentDpr) applyResolution(wantedDpr);
-
       const p = clamp01(progressRef?.current ?? 0);
+
+      // Switch to the extra-sharp canvas while the atom sits docked in the Clubs section, a
+      // moment BEFORE anyone can click. Doing it at the click made the page freeze for a
+      // fraction of a second (a 2000+ pixel canvas has to be created) right as the zoom began.
+      if (p > 0.97) {
+        if (!dockedSince) dockedSince = timestamp;
+      } else {
+        dockedSince = 0;
+      }
+      const warm = dockedSince > 0 && timestamp - dockedSince > 400;
+      const wantedDpr = zoomActiveRef?.current || warm ? ZOOM_DPR : BASE_DPR;
+      if (wantedDpr !== currentDpr) applyResolution(wantedDpr);
       const eased = easeInOutQuart(p);
       const settle = easeInOutQuart(clamp01((p - 0.56) / 0.44));
       const sep = clamp01(nucleusSeparationRef?.current ?? 0);

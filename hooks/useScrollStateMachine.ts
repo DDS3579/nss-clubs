@@ -222,7 +222,7 @@ export default function useScrollStateMachine({
       planetCoords[morph.key] = getPlanetPagePoint(morph.refKeys);
     });
 
-    layoutCacheRef.current = {
+    const measured: LayoutCache = {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       scrollX: sx,
@@ -248,6 +248,23 @@ export default function useScrollStateMachine({
         height: svgEl.getBoundingClientRect().height,
       } : null,
     };
+
+    // While a club is open the layout changes (the card appears, scrolling locks, the scrollbar
+    // goes). Keep the atom's resting place from BEFORE that, so the atom never slides around
+    // while it is zooming and lands exactly where it was when the card closes. Only the card's
+    // own position (the zoom target) is kept live.
+    const clubOpen =
+      Boolean(selectedClub) || phaseRef.current === "zooming" || phaseRef.current === "zoomed";
+    layoutCacheRef.current = clubOpen
+      ? {
+          ...layoutCacheRef.current,
+          windowWidth: measured.windowWidth,
+          windowHeight: measured.windowHeight,
+          scrollX: measured.scrollX,
+          scrollY: measured.scrollY,
+          cardWrapper: measured.cardWrapper,
+        }
+      : measured;
 
     // If the card is open, keep projector coordinates in sync with current cache/scroll
     if (selectedClub && phaseRef.current !== "about" && layoutCacheRef.current.cardWrapper) {
