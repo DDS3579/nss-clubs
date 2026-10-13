@@ -51,6 +51,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   const nucleusSeparationRef = useRef(0);
   const zoomActiveRef = useRef(false);
   const atomPausedRef = useRef(false);
+  const atomDisplayRef = useRef({ cx: 0, cy: 0, size: 0 }); // where the atom is drawn right now
   const zoomAnimRef = useRef<ZoomAnimState | null>(null);
   const cardWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -139,14 +140,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
   /* ── Zoom initialization ── */
   const initZoom = useCallback((slug: string) => {
-    const clubsAnchor = clubsAnchorRef.current;
-    if (!clubsAnchor) return;
-    const clubsRect = clubsAnchor.getBoundingClientRect();
-    const clubsCx = clubsRect.left + clubsRect.width / 2;
-    const clubsCy = clubsRect.top + clubsRect.height / 2;
-    const clubsScale = clubsRect.width / CANVAS_INTRINSIC;
-    const clubsFloatX = clubsCx - CANVAS_INTRINSIC / 2;
-    const clubsFloatY = clubsCy - CANVAS_INTRINSIC / 2;
+    // Start exactly where the atom is drawn right now. The old code measured the page again
+    // at this moment, which can differ by a few pixels from what is on screen. That was the
+    // little "shift" just before the zoom opened.
+    const shown = atomDisplayRef.current;
+    if (shown.size <= 0) return;
+    const clubsScale = shown.size / CANVAS_INTRINSIC;
+    const clubsFloatX = shown.cx - CANVAS_INTRINSIC / 2;
+    const clubsFloatY = shown.cy - CANVAS_INTRINSIC / 2;
     const isNucleus = slug === "executive-team";
     const targetRotation = getZoomRotation(slug);
     const electronCanvasX = isNucleus
@@ -172,7 +173,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       clubsFloatY,
       clubsScale,
     };
-  }, [clubsAnchorRef, phaseRef, lenisStop]);
+  }, [phaseRef, lenisStop]);
 
   /* ── Electron & Nucleus Click Handler ──
      Clicking scrolls so the Clubs section fills the screen EXACTLY (top edge right under
@@ -214,43 +215,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   /* ── Close club card and reverse zoom ── */
   const handleCloseClub = useCallback(() => {
     if (phaseRef.current !== "zoomed") return;
-    const slug = selectedClub;
-    if (!slug) return;
-    const clubsAnchor = clubsAnchorRef.current;
-    if (!clubsAnchor) return;
+    const zoom = zoomAnimRef.current;
+    if (!zoom) return;
 
-    // The page is locked while a club is open, so nothing has moved: just refresh the cache.
-    updateLayoutGeometry();
-
-    const clubsRect = clubsAnchor.getBoundingClientRect();
-    const clubsCx = clubsRect.left + clubsRect.width / 2;
-    const clubsCy = clubsRect.top + clubsRect.height / 2;
-    const clubsScale = clubsRect.width / CANVAS_INTRINSIC;
-    const clubsFloatX = clubsCx - CANVAS_INTRINSIC / 2;
-    const clubsFloatY = clubsCy - CANVAS_INTRINSIC / 2;
-    const isNucleus = slug === "executive-team";
-    const targetRotation = getZoomRotation(slug);
-    const electronCanvasX = isNucleus
-      ? CANVAS_INTRINSIC / 2
-      : ELECTRON_TARGET_X;
-    const electronCanvasY = isNucleus
-      ? CANVAS_INTRINSIC / 2
-      : ELECTRON_TARGET_Y;
-
+    // Fly back to exactly where the zoom started. Everything needed was saved at that moment,
+    // and the page cannot have moved because scrolling is locked while a club is open.
     setCardRevealVisible(false);
     phaseRef.current = "zooming";
-    zoomAnimRef.current = {
-      direction: "reverse",
-      startTime: performance.now(),
-      slug,
-      targetRotation,
-      electronCanvasX,
-      electronCanvasY,
-      clubsFloatX,
-      clubsFloatY,
-      clubsScale,
-    };
-  }, [selectedClub, phaseRef, clubsAnchorRef, updateLayoutGeometry]);
+    zoomAnimRef.current = { ...zoom, direction: "reverse", startTime: performance.now() };
+  }, [phaseRef]);
 
   // Pending zoom triggers are now handled synchronously inside the frame tick loop below to prevent state-race conditions.
 
@@ -353,6 +326,12 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           size = lerp(heroRect.width, clubsRect.width, atomProgressRef.current);
         }
       }
+
+      // Remember what is on screen, so a zoom can start (and end) exactly here
+      const shown = atomDisplayRef.current;
+      shown.cx = cx;
+      shown.cy = cy;
+      shown.size = size;
 
       // Direct DOM writes — bypass React VDOM
       floating.style.transform = `translate(${cx - CANVAS_INTRINSIC / 2}px, ${cy - CANVAS_INTRINSIC / 2}px)`;
