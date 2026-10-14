@@ -4,7 +4,8 @@ import type { CSSProperties } from "react";
 const FOOTER_LINKS = [
   { label: "Explore Clubs", href: "/#clubs" },
   { label: "Events", href: "/events" },
-  { label: "Gallery", href: "/#gallery" },
+  { label: "Gallery", href: "/gallery" },
+  { label: "Executive Team", href: "/executive-team" },
   { label: "About", href: "/#about" },
 ];
 

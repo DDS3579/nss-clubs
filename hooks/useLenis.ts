@@ -58,20 +58,25 @@ interface UseLenisReturn {
 }
 
 /**
- * useLenis — Lenis Smooth Scroll lifecycle hook.
+ * useLenis — Lenis smooth-scroll lifecycle hook.
  *
  * Encapsulates:
  * 1. Client-only Lenis initialization (SSR-safe via useEffect)
  * 2. Dedicated RAF loop for lenis.raf()
- * 3. CSS custom property sync (--lenis-scroll-y, --lenis-progress, etc.)
- * 4. Programmatic section snapping with velocity-commit detection
- * 5. Free-scroll zones for gallery/footer
+ * 3. Programmatic section snapping with velocity-commit detection
+ * 4. Free-scroll zones for the gallery
+ * 5. "Reduce motion" support: no wheel smoothing, no snapping, instant jumps
  * 6. Proper destroy() on unmount to prevent memory leaks
  *
- * CRITICAL CONSTRAINTS:
- * - NO getBoundingClientRect() inside scroll callback or RAF
- * - NO React state updates for continuous values
- * - CSS custom properties are updated via direct DOM writes
+ * Notes:
+ * - Lenis only smooths the MOUSE WHEEL. Touch scrolling (phones/tablets) stays
+ *   native (`syncTouch: false`), so it feels the way the phone normally scrolls.
+ *   Snapping and the "magnetic" effect therefore only apply to wheel users.
+ * - This hook used to write four CSS variables to <html> on every scroll event
+ *   (--lenis-scroll-y, --lenis-progress, ...). Nothing ever read them, so they
+ *   are gone.
+ * - NO getBoundingClientRect() inside the scroll callback (only inside the
+ *   debounced snap, once scrolling has settled).
  */
 export default function useLenis({
   phaseRef,
@@ -82,6 +87,7 @@ export default function useLenis({
   const snapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSnappingRef = useRef(false);
   const magneticActiveRef = useRef(false);
+  const reduceMotionRef = useRef(false);
   const originalOptionsRef = useRef<{
     duration: number;
     wheelMultiplier: number;
@@ -90,12 +96,16 @@ export default function useLenis({
 
   /* ── Initialize Lenis (client-only) ── */
   useEffect(() => {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reduceMotionRef.current = motionQuery.matches;
+
     const lenis = new Lenis({
       duration: 1.2,
       easing: EXPO_EASE_OUT,
       orientation: "vertical",
       gestureOrientation: "vertical",
-      smoothWheel: true,
+      smoothWheel: !motionQuery.matches,
+      syncTouch: false, // touch scrolling stays native
       wheelMultiplier: 1,
       touchMultiplier: 2,
       infinite: false,
@@ -110,23 +120,33 @@ export default function useLenis({
       touchMultiplier: 2,
     };
 
-    /* ── Scroll event: sync CSS custom properties & magnetic logic ── */
+    const restoreNormalPhysics = () => {
+      magneticActiveRef.current = false;
+      const lenisInstance = lenisRef.current;
+      if (lenisInstance && originalOptionsRef.current) {
+        lenisInstance.options.duration = originalOptionsRef.current.duration;
+        lenisInstance.options.wheelMultiplier =
+          originalOptionsRef.current.wheelMultiplier;
+        lenisInstance.options.touchMultiplier =
+          originalOptionsRef.current.touchMultiplier;
+      }
+    };
+
+    /* If the user flips "reduce motion" while the page is open */
+    const onMotionChange = (e: MediaQueryListEvent) => {
+      reduceMotionRef.current = e.matches;
+      lenis.options.smoothWheel = !e.matches;
+      if (e.matches) {
+        restoreNormalPhysics();
+        if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
+      }
+    };
+    motionQuery.addEventListener("change", onMotionChange);
+
+    /* ── Scroll event: magnetic + snapping logic (no DOM writes) ── */
     lenis.on("scroll", (e: Lenis) => {
-      // Direct DOM writes — no React, no layout reads
-      const root = document.documentElement;
-      root.style.setProperty("--lenis-scroll-y", e.scroll + "px");
-      root.style.setProperty(
-        "--lenis-progress",
-        String(e.progress)
-      );
-      root.style.setProperty(
-        "--lenis-velocity",
-        String(e.velocity)
-      );
-      root.style.setProperty(
-        "--lenis-direction",
-        String(e.direction)
-      );
+      // Reduce motion: plain scrolling, no pulling or snapping
+      if (reduceMotionRef.current) return;
 
       // ── Magnetic Scroll Logic for #clubs section ──
       const currentPhase = phaseRef.current;
@@ -151,28 +171,11 @@ export default function useLenis({
 
         // Check for velocity break — user scrolling aggressively to escape
         if (Math.abs(e.velocity) > MAGNETIC_BREAK_VELOCITY) {
-          // Deactivate magnetic effect immediately
-          magneticActiveRef.current = false;
-          const lenisInstance = lenisRef.current;
-          if (lenisInstance && originalOptionsRef.current) {
-            lenisInstance.options.duration = originalOptionsRef.current.duration;
-            lenisInstance.options.wheelMultiplier =
-              originalOptionsRef.current.wheelMultiplier;
-            lenisInstance.options.touchMultiplier =
-              originalOptionsRef.current.touchMultiplier;
-          }
+          restoreNormalPhysics();
         }
       } else if (magneticActiveRef.current) {
         // Left clubs phase or entered zoom/morph — restore normal physics
-        magneticActiveRef.current = false;
-        const lenisInstance = lenisRef.current;
-        if (lenisInstance && originalOptionsRef.current) {
-          lenisInstance.options.duration = originalOptionsRef.current.duration;
-          lenisInstance.options.wheelMultiplier =
-            originalOptionsRef.current.wheelMultiplier;
-          lenisInstance.options.touchMultiplier =
-            originalOptionsRef.current.touchMultiplier;
-        }
+        restoreNormalPhysics();
       }
 
       // ── Programmatic snap detection ──
@@ -189,7 +192,7 @@ export default function useLenis({
       }
 
       snapTimeoutRef.current = setTimeout(() => {
-        if (isSnappingRef.current) return;
+        if (isSnappingRef.current || reduceMotionRef.current) return;
         const currentLenis = lenisRef.current;
         if (!currentLenis || !currentLenis.isSmooth) return;
 
@@ -247,19 +250,13 @@ export default function useLenis({
 
     /* ── Cleanup on unmount ── */
     return () => {
+      motionQuery.removeEventListener("change", onMotionChange);
       if (snapTimeoutRef.current) {
         clearTimeout(snapTimeoutRef.current);
       }
       cancelAnimationFrame(rafIdRef.current);
       lenis.destroy();
       lenisRef.current = null;
-
-      // Clean up CSS custom properties
-      const root = document.documentElement;
-      root.style.removeProperty("--lenis-scroll-y");
-      root.style.removeProperty("--lenis-progress");
-      root.style.removeProperty("--lenis-velocity");
-      root.style.removeProperty("--lenis-direction");
     };
   // phaseRef and eventsMorphRef are stable refs — safe to omit from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -287,18 +284,28 @@ export default function useLenis({
         return;
       }
 
+      // Reduce motion: jump straight there instead of gliding
+      const jump = reduceMotionRef.current || (options?.immediate ?? false);
+
+      // Guarantee onComplete runs exactly once, whether or not Lenis calls it for jumps
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        isSnappingRef.current = false;
+        options?.onComplete?.();
+      };
+
       isSnappingRef.current = true;
       lenis.scrollTo(target, {
         offset: options?.offset ?? -HEADER_H,
         duration: options?.duration ?? 1.2,
         easing: EXPO_EASE_OUT,
-        immediate: options?.immediate ?? false,
+        immediate: jump,
         lock: options?.lock ?? false,
-        onComplete: () => {
-          isSnappingRef.current = false;
-          options?.onComplete?.();
-        },
+        onComplete: finish,
       });
+      if (jump) finish();
     },
     []
   );

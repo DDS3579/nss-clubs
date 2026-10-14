@@ -26,7 +26,7 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
   }));
 
   return (
-    <section className="relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden bg-white pt-6 pb-12 sm:pt-4 sm:pb-16 lg:min-h-[calc(100svh-4rem)] lg:-mt-8 lg:pb-20">
+    <section className="relative flex min-h-[calc(100svh-4rem)] items-center overflow-hidden bg-white pt-6 pb-12 sm:pt-4 sm:pb-16 lg:pb-20">
       {/* Background radial highlights */}
       <div className="absolute top-1/4 left-1/10 w-72 h-72 rounded-full bg-primary/5 blur-3xl -z-10 pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/10 w-96 h-96 rounded-full bg-accent/5 blur-3xl -z-10 pointer-events-none" />
@@ -44,7 +44,7 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
             <span className="block text-primary text-[56px] animate-in fade-in slide-in-from-bottom duration-500">
               Discover.
             </span>
-            <span className="block text-accent text-[56px] animate-in fade-in slide-in-from-bottom duration-700 delay-100">
+            <span className="block text-[#b07a2c] text-[56px] animate-in fade-in slide-in-from-bottom duration-700 delay-100">
               Create.
             </span>
             <span className="block text-primary text-[56px] animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
@@ -82,13 +82,13 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
           {/* Column 1: Text & CTAs */}
           <div className="lg:col-span-6 flex flex-col items-start text-left">
             <h1 className="font-display font-black leading-none tracking-tight text-text w-full">
-              <span className="block text-primary text-8xl mb-0 animate-in fade-in slide-in-from-bottom duration-500">
+              <span className="block text-primary text-7xl xl:text-8xl mb-0 animate-in fade-in slide-in-from-bottom duration-500">
                 Discover.
               </span>
-              <span className="block text-accent text-8xl mb-0 animate-in fade-in slide-in-from-bottom duration-700 delay-100">
+              <span className="block text-[#b07a2c] text-7xl xl:text-8xl mb-0 animate-in fade-in slide-in-from-bottom duration-700 delay-100">
                 Create.
               </span>
-              <span className="block text-primary text-8xl animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
+              <span className="block text-primary text-7xl xl:text-8xl animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
                 Lead.
               </span>
             </h1>
@@ -117,7 +117,7 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
 
           {/* Column 2: HeroAtom */}
           <div className="lg:col-span-6 flex items-center justify-center w-full">
-            <div ref={desktopOriginRef} className="hero-atom-origin relative w-[640px] h-[640px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
+            <div ref={desktopOriginRef} className="hero-atom-origin relative aspect-square w-[min(100%,calc(100svh-8rem),40rem)] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
           </div>
 
         </div>

@@ -1,19 +1,11 @@
 "use client";
 import { useRef, useState, useCallback } from "react";
 import { DOTS } from "../components/EventsConstellation";
+import { PLANET_DOT_MORPHS } from "./useScrollStateMachine";
 import type { LayoutCache, PlanetRefKey } from "./useScrollStateMachine";
+import { clamp01, easeInOutQuart, lerp } from "../lib/math";
 
 /* ─── helpers ─── */
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
-}
-function clamp01(v: number) {
-  return Math.min(1, Math.max(0, v));
-}
-function easeInOutQuart(t: number) {
-  return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
-}
-
 function hexToRgb(hex: string) {
   const normalized = hex.replace("#", "");
   const value = parseInt(normalized, 16);
@@ -39,25 +31,6 @@ type MorphPoint = {
   y: number;
   size: number;
 };
-
-interface PlanetDotMorph {
-  key: string;
-  refKeys: PlanetRefKey[];
-  dotId: number;
-  fromColor: string;
-  toColor: string;
-  stagger: number;
-}
-
-const PLANET_DOT_MORPHS: PlanetDotMorph[] = [
-  { key: "mercury", refKeys: ["mercury"], dotId: 0, fromColor: "#b8c0c9", toColor: "#1a3378", stagger: 0 },
-  { key: "venus", refKeys: ["venus"], dotId: 5, fromColor: "#d9a763", toColor: "#1a3378", stagger: 0.06 },
-  { key: "earth", refKeys: ["earth"], dotId: 2, fromColor: "#3e8fb0", toColor: "#1a3378", stagger: 0.12 },
-  { key: "sun", refKeys: ["sun"], dotId: 4, fromColor: "#ffb703", toColor: "#c8903a", stagger: 0.3 },
-  { key: "mars", refKeys: ["mars"], dotId: 1, fromColor: "#cf5a3c", toColor: "#1a3378", stagger: 0.18 },
-  { key: "jupiter", refKeys: ["jupiter"], dotId: 3, fromColor: "#d4924c", toColor: "#1a3378", stagger: 0.24 },
-  { key: "saturn", refKeys: ["saturn-wrap"], dotId: 12, fromColor: "#d0a45f", toColor: "#1a3378", stagger: 0.28 },
-];
 
 const MORPH_DURATION_FRACTION = 0.7;
 const MORPH_DOT_IDS = PLANET_DOT_MORPHS.map((item) => item.dotId);
