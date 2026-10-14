@@ -2,6 +2,16 @@
 
 The website of NSS Clubs: an executive team (the nucleus) and six clubs (the electrons): Social, Entertainment, Sports, Literature, Arts and Crafts, STEM. Built with Next.js (App Router), Tailwind CSS v4 and Sanity as the content system.
 
+## Start here
+
+| If you are... | Read |
+|---|---|
+| **Editing content** (events, photos, the executive team, club pages, announcements) | **[docs/SANITY-GUIDE.md](docs/SANITY-GUIDE.md)**: a step-by-step guide, no coding needed |
+| **A developer or the new tech lead** | This README: setup, where things live, deploying, handover |
+| **Wondering what was planned or changed** | `docs/plan.md` |
+
+Every year, the new team should do the **yearly checklist** at the end of the Sanity guide (section 10).
+
 ## Quick start
 
 ```bash
@@ -35,6 +45,7 @@ None of these are secrets (they are public by design), but `.env.local` is not c
 | `app/executive-team` | Current and previous teams |
 | `app/contact` | Contact page |
 | `app/studio` | The content editor (Sanity Studio) at `/studio` |
+| `docs/SANITY-GUIDE.md` | **The editors' manual**: how to add events, photos, the executive team and more |
 | `lib/clubs.ts` | **The six clubs + executive team: names, colours, orbit slots.** Edit here to change club details shown on the atom |
 | `lib/site.ts` | Site name and **contact details** (email, phone, address, social links) |
 | `lib/dates.ts` | Event date formatting. The time zone is one constant at the top |
@@ -52,15 +63,28 @@ None of these are secrets (they are public by design), but `.env.local` is not c
 
 ## Content (Sanity)
 
-Edit content at `/studio` (log in with a Sanity account that has been invited to the project).
+All content is edited in the **Studio** at `/studio` on the live site (for example `https://YOUR-SITE/studio`) by anyone invited to the Sanity project. **The full how-to for editors is in [docs/SANITY-GUIDE.md](docs/SANITY-GUIDE.md).** In short:
+
+- **Edit, then click Publish.** Unpublished (draft) changes never show on the site.
+- Updates appear within about a minute (within seconds if instant updates are set up, see below).
+- Create things in this order: **Team members → Clubs → Events → Photos → Executive board → Homepage Settings.**
+- **Never change a club's slug**: the six club slugs are fixed (`stem`, `sports`, `literature`, `arts`, `entertainment`, `social`).
 
 Document types: **homepage** (single document), **teamMember**, **executiveTeam** (roles for one academic year), **club**, **event**, **galleryItem**, **album** (a Google Drive album: link + cover photo), **announcement**, **popup**.
 
-- **Photos:** featured photos are uploaded to Sanity as *galleryItem*. Full albums stay on Google Drive: create an *album* with the Drive link (shared as "Anyone with the link") and a cover photo.
-- **Executive team:** create one *executiveTeam* per academic year (for example `2083/84`). The newest year is shown as the current team.
-- **Announcements:** small dismissible cards at the top of the homepage (up to 3). Turn *Active* off or set an *Expiry Date* to hide one. The expiry day itself still shows.
-- **Popups:** one modal on the homepage, shown once per visitor session (the newest live one wins). Needs *Active* on and the current time between *Start* and *Expiry*. The button link must start with `https://`.
-- **Updates:** with instant updates set up (below), edits appear within seconds. Without it, within about a minute.
+| Content | Shows up on |
+|---|---|
+| Homepage Settings (message, featured events, 6-photo showcase) | Homepage |
+| Event | Events page, its own page, its club's page |
+| Club | `/clubs/<slug>` |
+| Media Gallery item | Gallery page, its club's and event's pages |
+| Photo Album | Gallery page, its event's page |
+| Executive Board (newest `Academic Year` = current team) | Executive Team page |
+| Announcement (up to 3) / Popup (newest live one, once per visit) | Homepage only |
+
+Things that live **in the code**, not in Sanity (ask a developer): contact details (`lib/site.ts`), the numbers in the About section (`components/home/AboutSection.tsx`) and the stats on the club zoom cards (`lib/clubs.ts`).
+
+Known quirks (stored but not used by the site): the *Featured Event?* switch on events, the *Featured in Main Gallery?* switch on gallery items, and *Legacy Statistics* on the homepage. The homepage uses the lists in **Homepage Settings** instead. Wire them up or remove them from the schema.
 
 ### Backend rules
 
@@ -101,3 +125,11 @@ The president changes every year, so do not let any account live only in one per
 - Keep that email's password with the club advisor and pass it on each year.
 - Invite the new president and executive members to the Sanity project (sanity.io/manage → Members) and remove outgoing ones.
 - Update `lib/site.ts` (contact details) and add the new *executiveTeam* in the Studio.
+- Walk through the **yearly checklist** in [docs/SANITY-GUIDE.md](docs/SANITY-GUIDE.md) (section 10).
+- Make a yearly safety backup of the content: from the project folder run `npx sanity login`, then `npx sanity dataset export production`, and keep the file with the club's records.
+
+## For developers: adding to the Studio
+
+- New content types go in `sanity/schemaTypes` and must be registered in `sanity/schemaTypes/index.ts`.
+- They only show in the sidebar once added to `sanity/structure.ts`. For example **Photo Albums** is `S.documentTypeListItem('album').title('Photo Albums')` inside the "Clubs & Events" list.
+- After adding a type, add its tag to the revalidation list in `app/api/revalidate/route.ts` and use it in `tags` when querying, so instant updates keep working.
