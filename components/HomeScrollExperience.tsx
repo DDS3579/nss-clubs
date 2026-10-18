@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, memo } from "react";
+import { flushSync } from "react-dom";
 import Hero from "./Hero";
 import EventsConstellation from "./EventsConstellation";
 import GalleryOrbit from "./home/GalleryOrbit";
@@ -9,7 +10,11 @@ import ClubsSection from "./home/ClubsSection";
 import ConstellationFooter from "./layout/ConstellationFooter";
 import type { HomepageData } from "@/sanity/lib/types";
 import { getZoomRotation } from "@/lib/clubs";
-import { clamp01, easeInOutQuart, lerp } from "@/lib/math";
+import { clamp01, lerp } from "@/lib/math";
+
+/** Softer than quart: no long dead start, no sudden middle. */
+const easeInOutCubic = (t: number) =>
+  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 import "./home/home-experience.css";
 
 /* ─── custom hooks ─── */
@@ -20,12 +25,19 @@ import useScrollStateMachine, {
 import useMorphCoordinates from "@/hooks/useMorphCoordinates";
 import useLenis from "@/hooks/useLenis";
 
+/* Heavy sections only re-render when their own props change */
+const HeroMemo = memo(Hero);
+const AboutSectionMemo = memo(AboutSection);
+const EventsConstellationMemo = memo(EventsConstellation);
+const GalleryOrbitMemo = memo(GalleryOrbit);
+const ConstellationFooterMemo = memo(ConstellationFooter);
+
 /* ─── layout ─── */
 const HEADER_H = 64; // height of the navbar (see components/Navbar.tsx)
 
 /* ─── zoom animation constants ─── */
-const ZOOM_DURATION = 2400;
-const NUCLEUS_ZOOM_DURATION = 3200;
+const ZOOM_DURATION = 1900;
+const NUCLEUS_ZOOM_DURATION = 2500;
 const ZOOM_SCALE_FACTOR = 5.5;
 const ELECTRON_TARGET_X = 520;
 const ELECTRON_TARGET_Y = 320;
@@ -69,7 +81,14 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
   /* ── Stable callback for projector coord updates from scroll hook ── */
   const onProjectorCoordsChange = useCallback((coords: { x1: number; y1: number; x2: number; y2: number; x3: number; y3: number } | null) => {
-    setProjectorCoords(coords);
+    setProjectorCoords((prev) => {
+      if (!prev || !coords) return coords;
+      const same =
+        prev.x1 === coords.x1 && prev.y1 === coords.y1 &&
+        prev.x2 === coords.x2 && prev.y2 === coords.y2 &&
+        prev.x3 === coords.x3 && prev.y3 === coords.y3;
+      return same ? prev : coords;
+    });
   }, []);
 
   /* ── Shared layout cache ref (owned here, passed to both hooks) ── */
@@ -157,12 +176,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       ? CANVAS_INTRINSIC / 2
       : ELECTRON_TARGET_Y;
 
-    setSelectedClub(slug);
-    setCardRevealVisible(false);
-    phaseRef.current = "zooming";
-    zoomActiveRef.current = true; // atom canvas switches to extra-sharp
-    lenisStop(); // Freeze Lenis during zoom animation to prevent scroll interference
-    zoomAnimRef.current = {
+    const zoomState: ZoomAnimState = {
       direction: "forward",
       startTime: performance.now(),
       slug,
@@ -173,7 +187,20 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       clubsFloatY,
       clubsScale,
     };
-  }, [phaseRef, lenisStop]);
+    phaseRef.current = "zooming";
+    zoomActiveRef.current = true; // atom canvas switches to extra-sharp
+    zoomAnimRef.current = zoomState;
+    lenisStop(); // Freeze Lenis during zoom animation to prevent scroll interference
+
+    // Mount the club card RIGHT NOW and measure it, so the zoom's destination is correct
+    // from the very first frame (before, the card appeared a moment later and the target jumped).
+    flushSync(() => {
+      setSelectedClub(slug);
+      setCardRevealVisible(false);
+    });
+    updateLayoutGeometry();
+    zoomState.startTime = performance.now(); // start the clock after the heavy work
+  }, [phaseRef, lenisStop, updateLayoutGeometry]);
 
   /* ── Electron & Nucleus Click Handler ──
      Clicking scrolls so the Clubs section fills the screen EXACTLY (top edge right under
@@ -181,7 +208,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   const handleElectronClick = useCallback(
     (slug: string) => {
       const phase = phaseRef.current;
-      if (phase === "zooming" || phase === "zoomed" || phase === "about") return;
+      if (
+        phase === "zooming" ||
+        phase === "zoomed" ||
+        phase === "about" ||
+        phase === "events" ||
+        phase === "gallery"
+      ) {
+        return;
+      }
 
       const clubsSection = document.getElementById("clubs");
       if (!clubsSection) return;
@@ -203,11 +238,15 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         startZoom(); // already aligned
         return;
       }
+      const scrollDuration = distance > window.innerHeight * 0.6 ? 1.2 : 0.8;
       lenisScrollTo(clubsSection, {
         offset: -HEADER_H,
-        duration: distance > window.innerHeight * 0.6 ? 1.2 : 0.8,
+        duration: scrollDuration,
         onComplete: startZoom,
       });
+      // Safety net: if a finger interrupts the glide, still open the club.
+      // (startZoom does nothing the second time it is called.)
+      window.setTimeout(startZoom, scrollDuration * 1000 + 300);
     },
     [initZoom, phaseRef, pendingZoomSlugRef, lenisScrollTo, updateLayoutGeometry],
   );
@@ -306,21 +345,21 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       if (heroRect && clubsRect) {
         if (aboutProgressRef.current > 0.001 && aboutAnchor) {
-          const targetX = aboutAnchor.pageLeft - window.scrollX + aboutAnchor.width / 2;
-          const targetY = aboutAnchor.pageTop - window.scrollY + aboutAnchor.height / 2;
+          const targetX = aboutAnchor.pageLeft + aboutAnchor.width / 2;
+          const targetY = aboutAnchor.pageTop + aboutAnchor.height / 2;
           const targetSize = aboutAnchor.width;
 
-          const fromCx = clubsRect.pageLeft - window.scrollX + clubsRect.width / 2;
-          const fromCy = clubsRect.pageTop - window.scrollY + clubsRect.height / 2;
+          const fromCx = clubsRect.pageLeft + clubsRect.width / 2;
+          const fromCy = clubsRect.pageTop + clubsRect.height / 2;
 
           cx = lerp(fromCx, targetX, aboutProgressRef.current);
           cy = lerp(fromCy, targetY, aboutProgressRef.current);
           size = lerp(clubsRect.width, targetSize, aboutProgressRef.current);
         } else {
-          const fromCx = heroRect.pageLeft - window.scrollX + heroRect.width / 2;
-          const fromCy = heroRect.pageTop - window.scrollY + heroRect.height / 2;
-          const toCx = clubsRect.pageLeft - window.scrollX + clubsRect.width / 2;
-          const toCy = clubsRect.pageTop - window.scrollY + clubsRect.height / 2;
+          const fromCx = heroRect.pageLeft + heroRect.width / 2;
+          const fromCy = heroRect.pageTop + heroRect.height / 2;
+          const toCx = clubsRect.pageLeft + clubsRect.width / 2;
+          const toCy = clubsRect.pageTop + clubsRect.height / 2;
           cx = lerp(fromCx, toCx, atomProgressRef.current);
           cy = lerp(fromCy, toCy, atomProgressRef.current);
           size = lerp(heroRect.width, clubsRect.width, atomProgressRef.current);
@@ -340,9 +379,11 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       if (aboutProgressRef.current > 0.001) {
         const fadeOut = 1 - clamp01((aboutProgressRef.current - 0.55) / 0.35);
         floating.style.opacity = `${fadeOut}`;
+        floating.style.visibility = fadeOut <= 0.01 ? "hidden" : "visible";
         atomPausedRef.current = fadeOut <= 0.01;
       } else {
         floating.style.opacity = '1';
+        floating.style.visibility = "visible";
         atomPausedRef.current = false;
       }
 
@@ -378,7 +419,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       // Morph ghosts — direct DOM style writes via the hook
       updateMorphGhosts(eventsMorphRef.current);
 
-      // ── Zoom animation (reads zoomAnimRef, writes to floating/canvasWrap styles) ──
+      // ── Zoom animation ──
       if (
         (phaseRef.current === "zooming" || phaseRef.current === "zoomed") &&
         zoomAnimRef.current
@@ -386,102 +427,61 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         const zoom = zoomAnimRef.current;
         const isNucleusZoom = zoom.slug === "executive-team";
         const duration = isNucleusZoom ? NUCLEUS_ZOOM_DURATION : ZOOM_DURATION;
-        const zTargetScale = zoom.clubsScale * ZOOM_SCALE_FACTOR;
-        const coords = getProjectorAndTargetCoordsCached(
+        const half = CANVAS_INTRINSIC / 2;
+        const endScale = zoom.clubsScale * ZOOM_SCALE_FACTOR;
+
+        // Where the clicked electron must END UP, in page coordinates
+        const target = getProjectorAndTargetCoordsCached(
           cache.cardWrapper,
           window.scrollX,
           window.scrollY,
           cache.windowWidth,
-          cache.windowHeight
+          cache.windowHeight,
         );
-        const zTargetVpX = coords.zTargetVpX;
-        const zTargetVpY = coords.zTargetVpY;
-        const halfC = CANVAS_INTRINSIC / 2;
-        const zoomedFloatX =
-          zTargetVpX - halfC - (zoom.electronCanvasX - halfC) * zTargetScale;
-        const zoomedFloatY =
-          zTargetVpY - halfC - (zoom.electronCanvasY - halfC) * zTargetScale;
+        const endX = target.zTargetVpX + window.scrollX;
+        const endY = target.zTargetVpY + window.scrollY;
 
-        if (phaseRef.current === "zoomed") {
-          rotationOffsetRef.current = zoom.targetRotation;
-          if (isNucleusZoom) nucleusSeparationRef.current = 1;
-          floating.style.transform = `translate(${zoomedFloatX}px, ${zoomedFloatY}px)`;
-          canvasWrap.style.transform = `scale(${zTargetScale})`;
+        // Where it STARTED, in page coordinates
+        const startX = zoom.clubsFloatX + half + (zoom.electronCanvasX - half) * zoom.clubsScale;
+        const startY = zoom.clubsFloatY + half + (zoom.electronCanvasY - half) * zoom.clubsScale;
+
+        // t: how much of the animation time has passed (0 to 1)
+        // k: 0 = resting in the Clubs section, 1 = fully zoomed. Closing plays the same path backwards.
+        const isZoomed = phaseRef.current === "zoomed";
+        const forward = zoom.direction === "forward";
+        const t = isZoomed ? 1 : clamp01((now - zoom.startTime) / duration);
+        const k = isZoomed ? 1 : forward ? t : 1 - t;
+
+        let flyT: number; // how far the camera has flown (0 to 1)
+        if (isNucleusZoom) {
+          nucleusSeparationRef.current = easeInOutCubic(clamp01(k / 0.3));
+          flyT = easeInOutCubic(clamp01((k - 0.22) / 0.56));
         } else {
-          const zElapsed = now - zoom.startTime;
-          const totalT = clamp01(zElapsed / duration);
-          if (zoom.direction === "forward") {
-            if (isNucleusZoom) {
-              const sepT = clamp01(totalT / 0.3);
-              nucleusSeparationRef.current = easeInOutQuart(sepT);
-              const zoomT = clamp01((totalT - 0.22) / 0.56);
-              const zEased = easeInOutQuart(zoomT);
-              const curFloatX = lerp(zoom.clubsFloatX, zoomedFloatX, zEased);
-              const curFloatY = lerp(zoom.clubsFloatY, zoomedFloatY, zEased);
-              const curScale = lerp(zoom.clubsScale, zTargetScale, zEased);
-              floating.style.transform = `translate(${curFloatX}px, ${curFloatY}px)`;
-              canvasWrap.style.transform = `scale(${curScale})`;
-              if (totalT > 0.72) setCardRevealVisible(true);
-              if (totalT >= 1) phaseRef.current = "zoomed";
-            } else {
-              const rotT =
-                zoom.targetRotation === 0 ? 1 : clamp01(totalT / 0.35);
-              rotationOffsetRef.current =
-                easeInOutQuart(rotT) * zoom.targetRotation;
-              const zoomT = clamp01((totalT - 0.15) / 0.65);
-              const zEased = easeInOutQuart(zoomT);
-              const curFloatX = lerp(zoom.clubsFloatX, zoomedFloatX, zEased);
-              const curFloatY = lerp(zoom.clubsFloatY, zoomedFloatY, zEased);
-              const curScale = lerp(zoom.clubsScale, zTargetScale, zEased);
-              floating.style.transform = `translate(${curFloatX}px, ${curFloatY}px)`;
-              canvasWrap.style.transform = `scale(${curScale})`;
-              if (totalT > 0.72) setCardRevealVisible(true);
-              if (totalT >= 1) phaseRef.current = "zoomed";
-            }
-          } else {
-            if (isNucleusZoom) {
-              const zoomRevT = clamp01((totalT - 0.05) / 0.55);
-              const zRevEased = easeInOutQuart(zoomRevT);
-              const curFloatX = lerp(zoomedFloatX, zoom.clubsFloatX, zRevEased);
-              const curFloatY = lerp(zoomedFloatY, zoom.clubsFloatY, zRevEased);
-              const curScale = lerp(zTargetScale, zoom.clubsScale, zRevEased);
-              floating.style.transform = `translate(${curFloatX}px, ${curFloatY}px)`;
-              canvasWrap.style.transform = `scale(${curScale})`;
-              const rejoinT = clamp01((totalT - 0.55) / 0.45);
-              nucleusSeparationRef.current = 1 - easeInOutQuart(rejoinT);
-              if (totalT >= 1) {
-                phaseRef.current = "clubs";
-                zoomAnimRef.current = null;
-                rotationOffsetRef.current = 0;
-                nucleusSeparationRef.current = 0;
-                zoomActiveRef.current = false;
-                setSelectedClub(null);
-                setCardRevealVisible(false);
-                lenisStart(); // Resume Lenis after reverse zoom completes
-              }
-            } else {
-              const zoomRevT = clamp01((totalT - 0.05) / 0.65);
-              const zRevEased = easeInOutQuart(zoomRevT);
-              const curFloatX = lerp(zoomedFloatX, zoom.clubsFloatX, zRevEased);
-              const curFloatY = lerp(zoomedFloatY, zoom.clubsFloatY, zRevEased);
-              const curScale = lerp(zTargetScale, zoom.clubsScale, zRevEased);
-              floating.style.transform = `translate(${curFloatX}px, ${curFloatY}px)`;
-              canvasWrap.style.transform = `scale(${curScale})`;
-              const rotRevT =
-                zoom.targetRotation === 0 ? 1 : clamp01((totalT - 0.5) / 0.5);
-              rotationOffsetRef.current =
-                (1 - easeInOutQuart(rotRevT)) * zoom.targetRotation;
-              if (totalT >= 1) {
-                phaseRef.current = "clubs";
-                zoomAnimRef.current = null;
-                rotationOffsetRef.current = 0;
-                zoomActiveRef.current = false;
-                setSelectedClub(null);
-                setCardRevealVisible(false);
-                lenisStart(); // Resume Lenis after reverse zoom completes
-              }
-            }
-          }
+          const rotT = zoom.targetRotation === 0 ? 1 : clamp01(k / 0.35);
+          rotationOffsetRef.current = easeInOutCubic(rotT) * zoom.targetRotation;
+          flyT = easeInOutCubic(clamp01((k - 0.15) / 0.65));
+        }
+
+        // Camera-dolly feel: the zoom grows by an even RATIO each moment, while the
+        // electron glides along a straight line to its destination.
+        const scale = zoom.clubsScale * Math.pow(endScale / zoom.clubsScale, flyT);
+        const elX = lerp(startX, endX, flyT);
+        const elY = lerp(startY, endY, flyT);
+        floating.style.transform = `translate(${elX - half - (zoom.electronCanvasX - half) * scale}px, ${elY - half - (zoom.electronCanvasY - half) * scale}px)`;
+        canvasWrap.style.transform = `scale(${scale})`;
+
+        if (forward) {
+          if (t > 0.72) setCardRevealVisible(true);
+          if (t >= 1 && !isZoomed) phaseRef.current = "zoomed";
+        } else if (t >= 1) {
+          phaseRef.current = "clubs";
+          zoomAnimRef.current = null;
+          rotationOffsetRef.current = 0;
+          nucleusSeparationRef.current = 0;
+          zoomActiveRef.current = false;
+          setSelectedClub(null);
+          setCardRevealVisible(false);
+          lenisStart(); // Resume Lenis after the reverse zoom completes
         }
       }
 
@@ -495,7 +495,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   return (
     <div className="home-scroll-experience bg-bg">
       <div id="hero" className="scroll-mt-16 [&_.hero-atom-origin]:invisible">
-        <Hero ref={heroRef} />
+        <HeroMemo ref={heroRef} />
       </div>
 
       <ClubsSection
@@ -507,7 +507,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         handleCloseClub={handleCloseClub}
       />
 
-      <AboutSection
+      <AboutSectionMemo
         data={data}
         aboutAnchorRef={aboutAnchorRef}
         planetMercuryRef={planetMercuryRef}
@@ -521,13 +521,13 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       />
 
       {/* ═══ EVENTS CONSTELLATION SECTION ═══ */}
-      <EventsConstellation
+      <EventsConstellationMemo
         events={data?.featuredEvents || []}
         morphedDotIds={morphedDotIds}
         svgRef={constellationSvgRef}
       />
-      <GalleryOrbit items={data?.featuredGallery || []} />
-      <ConstellationFooter />
+      <GalleryOrbitMemo items={data?.featuredGallery || []} />
+      <ConstellationFooterMemo />
 
       <AtomOverlay
         floatingRef={floatingRef}
