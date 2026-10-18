@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { Home, Compass, Info, Calendar, Image as ImageIcon, Users, Menu, X } from "lucide-react";
+import { Home, Compass, Info, Calendar, Image as ImageIcon, Users, Trophy, Cpu, Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", text: "Home", icon: Home },
@@ -13,6 +13,8 @@ const NAV_ITEMS = [
   { href: "/events", text: "Events", icon: Calendar },
   { href: "/gallery", text: "Gallery", icon: ImageIcon },
   { href: "/executive-team", text: "Executive Team", icon: Users },
+  { href: "/presidents-legacy", text: "President's Legacy", icon: Trophy },
+  { href: "/it-team", text: "IT Team", icon: Cpu },
 ];
 
 export default function Navbar() {
@@ -90,7 +92,7 @@ export default function Navbar() {
                   </div>
 
                   {/* Sliding text */}
-                  <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-primary font-body text-xs font-semibold tracking-wide uppercase transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:max-w-[140px] group-hover:opacity-100 group-hover:ml-2">
+                  <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-primary font-body text-xs font-semibold tracking-wide uppercase transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:max-w-[170px] group-hover:opacity-100 group-hover:ml-2">
                     {item.text}
                   </span>
                 </Link>
@@ -135,11 +137,11 @@ export default function Navbar() {
           />
 
           {/* Drawer content */}
-          <div id="mobile-menu" className="fixed right-0 top-0 bottom-0 w-[280px] max-w-sm bg-white p-6 shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300 ease-out border-l border-gray-100">
+          <div id="mobile-menu" className="fixed right-0 top-0 bottom-0 w-[280px] max-w-sm bg-white p-6 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ease-out border-l border-gray-100">
             <div className="flex flex-col gap-8 mt-16">
               
               {/* Mobile links list */}
-              <nav className="flex flex-col gap-4">
+              <nav className="flex flex-col gap-2">
                 {NAV_ITEMS.map((item) => {
                   const IconComponent = item.icon;
                   return (
