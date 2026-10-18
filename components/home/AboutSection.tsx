@@ -268,7 +268,10 @@ export default function AboutSection({
 
       </section>
 
-      <div className="fixed inset-0 z-30 pointer-events-none" aria-hidden="true">
+      <div
+        className="pointer-events-none absolute left-0 top-0 z-[26] h-0 w-full overflow-x-clip"
+        aria-hidden="true"
+      >
         {PLANET_DOT_MORPHS.map((morph, index) => (
           <div
             key={morph.key}
