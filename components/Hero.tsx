@@ -41,13 +41,13 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
 
           {/* Heading */}
           <h1 className="font-display font-black leading-[0.92] tracking-tight text-text w-full">
-            <span className="block text-primary text-[56px] animate-in fade-in slide-in-from-bottom duration-500">
+            <span className="block text-primary text-[clamp(2.5rem,15vw,3.5rem)] animate-in fade-in slide-in-from-bottom duration-500">
               Discover.
             </span>
-            <span className="block text-[#b07a2c] text-[56px] animate-in fade-in slide-in-from-bottom duration-700 delay-100">
+            <span className="block text-[#b07a2c] text-[clamp(2.5rem,15vw,3.5rem)] animate-in fade-in slide-in-from-bottom duration-700 delay-100">
               Create.
             </span>
-            <span className="block text-primary text-[56px] animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
+            <span className="block text-primary text-[clamp(2.5rem,15vw,3.5rem)] animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
               Lead.
             </span>
           </h1>
