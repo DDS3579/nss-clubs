@@ -6,6 +6,8 @@ const FOOTER_LINKS = [
   { label: "Events", href: "/events" },
   { label: "Gallery", href: "/gallery" },
   { label: "Executive Team", href: "/executive-team" },
+  { label: "President's Legacy", href: "/presidents-legacy" },
+  { label: "IT Team", href: "/it-team" },
   { label: "About", href: "/#about" },
 ];
 
