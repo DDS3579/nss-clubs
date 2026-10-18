@@ -145,6 +145,8 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     applyResolution(BASE_DPR);
+    canvas.style.touchAction = "manipulation"; // no 300ms tap delay, no double-tap zoom
+    canvas.style.setProperty("-webkit-tap-highlight-color", "transparent");
 
     /* The tooltip font: next/font gives Inter a generated name, so the plain
        word 'Inter' never matched. Read the real name from the CSS variable. */
@@ -341,17 +343,19 @@ const HeroAtom: React.FC<HeroAtomProps> = ({
       const warm = dockedSince > 0 && timestamp - dockedSince > 400;
       const wantedDpr = zoomActiveRef?.current || warm ? ZOOM_DPR : BASE_DPR;
       if (wantedDpr !== currentDpr) applyResolution(wantedDpr);
-      const eased = easeInOutQuart(p);
+      // The 3D spin finishes at 94% of the way, so a docked atom is perfectly flat and tappable
+      const spinT = clamp01(p / 0.94);
+      const eased = easeInOutQuart(spinT);
       const settle = easeInOutQuart(clamp01((p - 0.56) / 0.44));
       const sep = clamp01(nucleusSeparationRef?.current ?? 0);
 
       // 3D spin of the whole atom while travelling hero → clubs.
       // (Only during the transition: perspective would distort hit-testing afterwards.)
-      if (p > 0.001 && p < 0.999) {
+      if (p > 0.001 && spinT < 1) {
         const rotY = eased * 360;
         const rotX = Math.sin(Math.PI * eased) * 12;
         const rotZ = Math.sin(Math.PI * eased) * -15;
-        const pulse = 1 + Math.sin(Math.PI * p) * 0.15;
+        const pulse = 1 + Math.sin(Math.PI * spinT) * 0.15;
         container!.style.transform = `perspective(1000px) rotateY(${rotY}deg) rotateX(${rotX}deg) rotateZ(${rotZ}deg) scale(${pulse})`;
       } else {
         container!.style.transform = "";
