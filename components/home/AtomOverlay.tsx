@@ -47,34 +47,36 @@ export default function AtomOverlay({
 }: AtomOverlayProps) {
   return (
     <>
-      <div
-        ref={floatingRef}
-        className="fixed top-0 left-0 z-50 pointer-events-none"
-        style={{
-          width: CANVAS_INTRINSIC,
-          height: CANVAS_INTRINSIC,
-          willChange: "transform",
-          opacity: 0,
-        }}
-      >
+      <div className="pointer-events-none absolute left-0 top-0 z-[25] h-0 w-full overflow-x-clip">
         <div
-          ref={canvasWrapRef}
-          className="origin-center"
+          ref={floatingRef}
+          className="absolute top-0 left-0 pointer-events-none"
           style={{
             width: CANVAS_INTRINSIC,
             height: CANVAS_INTRINSIC,
             willChange: "transform",
+            opacity: 0,
           }}
         >
-          <div className="pointer-events-auto">
-            <HeroAtom
-              progressRef={atomProgressRef}
-              rotationOffsetRef={rotationOffsetRef}
-              nucleusSeparationRef={nucleusSeparationRef}
-              zoomActiveRef={zoomActiveRef}
-              pausedRef={atomPausedRef}
-              onElectronClick={handleElectronClick}
-            />
+          <div
+            ref={canvasWrapRef}
+            className="origin-center"
+            style={{
+              width: CANVAS_INTRINSIC,
+              height: CANVAS_INTRINSIC,
+              willChange: "transform",
+            }}
+          >
+            <div className="pointer-events-auto">
+              <HeroAtom
+                progressRef={atomProgressRef}
+                rotationOffsetRef={rotationOffsetRef}
+                nucleusSeparationRef={nucleusSeparationRef}
+                zoomActiveRef={zoomActiveRef}
+                pausedRef={atomPausedRef}
+                onElectronClick={handleElectronClick}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -91,7 +93,7 @@ export default function AtomOverlay({
             : "#023B8E";
           return (
             <svg
-              className="fixed top-0 left-0 w-full h-full pointer-events-none z-40 transition-opacity duration-700 ease-out animate-flicker-in"
+              className="pointer-events-none z-[24] transition-opacity duration-700 ease-out animate-flicker-in"
               style={{ opacity: cardRevealVisible ? 1 : 0 }}
             >
               <defs>
