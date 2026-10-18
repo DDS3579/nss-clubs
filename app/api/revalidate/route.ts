@@ -21,6 +21,10 @@ const KNOWN_TYPES = [
   "executiveTeam",
   "announcement",
   "popup",
+  "presidentLegacy",
+  "itTeamPage",
+  "itTeamMember",
+  "itProject",
 ] as const;
 
 function secretsMatch(provided: string, expected: string): boolean {
