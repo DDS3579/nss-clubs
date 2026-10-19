@@ -20,6 +20,7 @@ export const structure: StructureResolver = (S) =>
             .items([
               S.documentTypeListItem('executiveTeam').title('Executive Boards'),
               S.documentTypeListItem('teamMember').title('All Team Members'),
+              S.documentTypeListItem('presidentLegacy').title("President's Legacy"),
             ])
         ),
 
@@ -34,6 +35,21 @@ export const structure: StructureResolver = (S) =>
               S.documentTypeListItem('event').title('Events'),
               S.documentTypeListItem('album').title('Photo Albums'),
               S.documentTypeListItem('galleryItem').title('Media Gallery'),
+            ])
+        ),
+
+      // 3b. NSS IT TEAM GROUP
+      S.listItem()
+        .title('NSS IT Team')
+        .child(
+          S.list()
+            .title('NSS IT Team')
+            .items([
+              S.listItem()
+                .title('Team Page Text')
+                .child(S.document().schemaType('itTeamPage').documentId('itTeamPage')),
+              S.documentTypeListItem('itTeamMember').title('IT Team Members'),
+              S.documentTypeListItem('itProject').title('IT Projects'),
             ])
         ),
 

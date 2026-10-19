@@ -10,7 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const eventSlugs = await getEventSlugs();
   const now = new Date();
 
-  const staticPages = ["", "/events", "/gallery", "/executive-team", "/contact"].map((path) => ({
+  const staticPages = ["", "/events", "/gallery", "/executive-team", "/presidents-legacy", "/it-team", "/contact"].map((path) => ({
     url: `${SITE.url}${path}`,
     lastModified: now,
   }));

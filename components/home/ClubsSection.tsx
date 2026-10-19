@@ -52,8 +52,8 @@ export default function ClubsSection({
           </div>
           <div
             ref={cardWrapperRef}
-            className={`transition-all duration-500 ease-out ${cardRevealVisible ? "opacity-100 translate-x-0 scale-100" : "opacity-0 translate-x-10 scale-[0.97] pointer-events-none"}`}
-            style={{ willChange: "transform, opacity" }}
+            className={`absolute inset-x-0 bottom-0 flex justify-center transition-opacity duration-500 ease-out lg:static lg:inset-auto lg:block ${cardRevealVisible ? "opacity-100" : "pointer-events-none opacity-0"}`}
+            style={{ willChange: "opacity" }}
           >
             {ALL_NODES.map((club) => {
               const isActive = selectedClub === club.slug;
@@ -62,12 +62,12 @@ export default function ClubsSection({
                 return (
                   <div
                     key={club.slug}
-                    className="animate-slide-in-card metallic-card metallic-card-gold relative flex flex-col justify-between pt-10 pb-6 px-10 sm:pt-12 sm:pb-8 sm:px-12 rounded-3xl bg-accent w-full max-w-lg min-h-[460px] overflow-hidden"
+                    className="animate-slide-in-card metallic-card metallic-card-gold relative flex flex-col justify-between pt-8 pb-5 px-6 sm:pt-12 sm:pb-8 sm:px-12 rounded-3xl bg-accent w-full max-w-lg min-h-0 sm:min-h-[460px] overflow-hidden"
                   >
                     <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-primary/20" />
                     <button
                       onClick={handleCloseClub}
-                      className="absolute top-6 right-6 p-2 rounded-full text-primary/60 hover:text-primary hover:bg-primary/5 transition-all duration-200 z-20"
+                      className="absolute top-4 right-4 p-3 rounded-full sm:top-6 sm:right-6 text-primary/60 hover:text-primary hover:bg-primary/5 transition-all duration-200 z-20"
                       aria-label="Back to clubs"
                     >
                       <svg
@@ -84,7 +84,7 @@ export default function ClubsSection({
                         />
                       </svg>
                     </button>
-                    <div className="flex flex-col h-full justify-between gap-6">
+                    <div className="flex flex-col h-full justify-between gap-4 sm:gap-6">
                       <div>
                         <div className="flex items-center gap-2 mb-2.5 opacity-90 animate-flicker-in">
                           <ClubIcon
@@ -95,7 +95,7 @@ export default function ClubsSection({
                             {club.category}
                           </span>
                         </div>
-                        <h3 className="animate-flicker-in text-carved-light font-display text-4xl sm:text-5xl font-black mb-6 tracking-tight">
+                        <h3 className="animate-flicker-in text-carved-light font-display text-3xl sm:text-5xl font-black mb-4 sm:mb-6 tracking-tight">
                           {club.name}
                         </h3>
                         <div className="animate-fade-in-delayed flex flex-wrap gap-x-2 gap-y-1 text-xs font-semibold text-slate-800/80 font-body">
@@ -132,7 +132,7 @@ export default function ClubsSection({
                       </div>
                       <div className="animate-fade-in-delayed w-full mt-0">
                         <Link
-                          href="#executive-team"
+                          href="/executive-team"
                           className="inline-flex items-center justify-center w-full bg-primary hover:bg-primary/95 text-white text-sm font-bold tracking-wide px-8 py-3.5 rounded-xl transition-all duration-300 active:scale-95 shadow-[0_4px_12px_rgba(2,59,142,0.15)] font-body"
                         >
                           Meet the Executive Team
@@ -145,7 +145,7 @@ export default function ClubsSection({
               return (
                 <div
                   key={club.slug}
-                  className="animate-slide-in-card metallic-card metallic-card-standard relative flex flex-col justify-between pt-10 pb-6 px-10 sm:pt-12 sm:pb-8 sm:px-12 rounded-3xl bg-primary w-full max-w-lg min-h-[460px] overflow-hidden"
+                  className="animate-slide-in-card metallic-card metallic-card-standard relative flex flex-col justify-between pt-8 pb-5 px-6 sm:pt-12 sm:pb-8 sm:px-12 rounded-3xl bg-primary w-full max-w-lg min-h-0 sm:min-h-[460px] overflow-hidden"
                   style={{
                     boxShadow: `inset 0 1.5px 0.5px rgba(255, 255, 255, 0.22), inset 0 -1.5px 1px rgba(0, 0, 0, 0.3), 0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 15px 35px -5px ${club.color}25`,
                   }}
@@ -156,7 +156,7 @@ export default function ClubsSection({
                   />
                   <button
                     onClick={handleCloseClub}
-                    className="absolute top-6 right-6 p-2 rounded-full text-white/60 hover:text-white hover:bg-white/8 transition-all duration-200 z-20"
+                    className="absolute top-4 right-4 p-3 rounded-full sm:top-6 sm:right-6 text-white/60 hover:text-white hover:bg-white/8 transition-all duration-200 z-20"
                     aria-label="Back to clubs"
                   >
                     <svg
@@ -173,7 +173,7 @@ export default function ClubsSection({
                       />
                     </svg>
                   </button>
-                  <div className="flex flex-col h-full justify-between gap-6">
+                  <div className="flex flex-col h-full justify-between gap-4 sm:gap-6">
                     <div>
                       <div className="flex items-center gap-2 mb-2.5 opacity-90 animate-flicker-in">
                         <ClubIcon
@@ -184,7 +184,7 @@ export default function ClubsSection({
                           {club.category}
                         </span>
                       </div>
-                      <h3 className="animate-flicker-in text-carved-dark font-display text-4xl sm:text-5xl font-black mb-6 tracking-tight">
+                      <h3 className="animate-flicker-in text-carved-dark font-display text-3xl sm:text-5xl font-black mb-4 sm:mb-6 tracking-tight">
                         {club.name}
                       </h3>
                       <div className="animate-fade-in-delayed flex flex-wrap gap-x-2 gap-y-1 text-xs font-medium text-slate-300/80 font-body">

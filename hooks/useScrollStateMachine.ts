@@ -115,7 +115,7 @@ function getProjectorAndTargetCoordsCached(
       };
     } else {
       const zTargetVpX = cardRect.left + cardRect.width * 0.5;
-      const zTargetVpY = cardRect.top - 180;
+      const zTargetVpY = Math.max(cardRect.top - 180, HEADER_H + 70);
       return {
         zTargetVpX,
         zTargetVpY,
@@ -384,13 +384,23 @@ export default function useScrollStateMachine({
     const gallerySection = document.getElementById("gallery");
     if (gallerySection) observer.observe(gallerySection);
 
-    window.addEventListener("resize", updateLayoutGeometry);
+    let lastW = window.innerWidth;
+    let lastH = window.innerHeight;
+    let resizeRaf = 0;
+    const onResize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // Address-bar slide: same width, small height change. Layout is unchanged, so skip it.
+      if (w === lastW && Math.abs(h - lastH) < 160) return;
+      lastW = w;
+      lastH = h;
+      cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(updateLayoutGeometry);
+    };
+    window.addEventListener("resize", onResize);
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      observer.disconnect();
-      window.removeEventListener("resize", updateLayoutGeometry);
+      cancelAnimationFrame(resizeRaf);
+      window.removeEventListener("resize", onResize);
     };
   }, [updateLayoutGeometry, cardWrapperRef]);
 
@@ -401,13 +411,20 @@ export default function useScrollStateMachine({
 
   /* ── Lock scroll when a club is selected (zoomed/zooming) ── */
   useEffect(() => {
-    if (selectedClub) {
-      document.documentElement.classList.add("overflow-hidden");
-    } else {
-      document.documentElement.classList.remove("overflow-hidden");
+    const root = document.documentElement;
+    if (!selectedClub) {
+      root.classList.remove("overflow-hidden");
+      return;
     }
+    root.classList.add("overflow-hidden");
+    // iPhones can ignore overflow:hidden on the page, so also stop finger-dragging scroll.
+    const blockTouchScroll = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault();
+    };
+    document.addEventListener("touchmove", blockTouchScroll, { passive: false });
     return () => {
-      document.documentElement.classList.remove("overflow-hidden");
+      root.classList.remove("overflow-hidden");
+      document.removeEventListener("touchmove", blockTouchScroll);
     };
   }, [selectedClub]);
 

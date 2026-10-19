@@ -129,8 +129,8 @@ export default function useMorphCoordinates({ layoutCacheRef }: UseMorphCoordina
 
       const localT = clamp01((progress - morph.stagger) / MORPH_DURATION_FRACTION);
       const easedT = easeInOutQuart(localT);
-      const x = lerp(from.x, to.x, easedT) - window.scrollX;
-      const y = lerp(from.y, to.y, easedT) - window.scrollY;
+      const x = lerp(from.x, to.x, easedT);
+      const y = lerp(from.y, to.y, easedT);
       const size = lerp(from.size, to.size, easedT);
       const color = mixHex(morph.fromColor, morph.toColor, easedT);
       const shine = mixHex("#ffffff", color, 0.52 + easedT * 0.24);

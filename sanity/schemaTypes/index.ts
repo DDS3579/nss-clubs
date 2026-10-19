@@ -8,6 +8,10 @@ import { announcementType } from "./announcementType";
 import { popupType } from "./popupType";
 import { homepageType } from "./homepageType";
 import { albumType } from "./albumType";
+import { presidentLegacyType } from "./presidentLegacyType";
+import { itTeamPageType } from "./itTeamPageType";
+import { itTeamMemberType } from "./itTeamMemberType";
+import { itProjectType } from "./itProjectType";
 
 export const schema = {
   types: [
@@ -21,5 +25,9 @@ export const schema = {
     popupType,
     homepageType,
     albumType,
+    presidentLegacyType,
+    itTeamPageType,
+    itTeamMemberType,
+    itProjectType,
   ],
 };
