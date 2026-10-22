@@ -404,7 +404,7 @@ export default function LegacyExplorer({ eras }: { eras: LegacyEraView[] }) {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate font-display text-base font-bold text-primary sm:text-lg">
+                      <p className="font-display text-base font-bold leading-snug text-primary sm:text-lg">
                         {era.presidentName}
                       </p>
                       {era.isCurrent && (
