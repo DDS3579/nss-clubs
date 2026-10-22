@@ -183,7 +183,7 @@ function EraCard({ era, onClose }: { era: LegacyEraView; onClose: () => void }) 
           type="button"
           onClick={onClose}
           aria-label="Close legacy card"
-          className="absolute right-3 top-3 rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+          className="absolute right-3 top-3 z-10 rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
