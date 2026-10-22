@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { Home, Compass, Info, Calendar, Image as ImageIcon, Users, Trophy, Cpu, Menu, X } from "lucide-react";
+import { Home, Compass, Info, Calendar, Image as ImageIcon, Users, Trophy, Medal, Cpu, Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", text: "Home", icon: Home },
   { href: "/#clubs", text: "Clubs", icon: Compass },
   { href: "/#about", text: "About", icon: Info },
   { href: "/events", text: "Events", icon: Calendar },
+  { href: "https://nss-olympiads.vercel.app/", text: "Olympiads", icon: Medal },
   { href: "/gallery", text: "Gallery", icon: ImageIcon },
   { href: "/executive-team", text: "Executive Team", icon: Users },
   { href: "/presidents-legacy", text: "President's Legacy", icon: Trophy },
