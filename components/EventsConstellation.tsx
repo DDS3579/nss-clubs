@@ -215,7 +215,7 @@ export default function EventsConstellation({
           const y1 = py(from.cy);
           const x2 = px(to.cx);
           const y2 = py(to.cy);
-          const len = Math.hypot(x2 - x1, y2 - y1);
+          const len = Math.hypot(x2 - x1, y2 - y1).toFixed(3);
 
           return (
             <line
