@@ -173,8 +173,8 @@ function EraCard({ era, onClose }: { era: LegacyEraView; onClose: () => void }) 
   ];
 
   return (
-    <article className="overflow-hidden rounded-card-lg bg-white shadow-lg ring-1 ring-primary/10">
-      <header className="sticky top-0 z-20 overflow-hidden bg-primary p-6 text-white">
+    <article className="rounded-card-lg bg-white shadow-lg ring-1 ring-primary/10">
+      <header className="sticky top-0 z-20 overflow-hidden rounded-t-card-lg bg-primary p-6 text-white">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-accent/25 blur-3xl"
