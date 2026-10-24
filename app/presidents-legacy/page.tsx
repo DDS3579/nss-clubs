@@ -23,6 +23,7 @@ function toView(era: LegacyEra): LegacyEraView {
     presidentName: era.presidentName,
     grade: era.grade,
     photoUrl: era.photo ? sanityCoverUrl(era.photo, 240, 240) : null,
+    photoLargeUrl: era.photo ? sanityCoverUrl(era.photo, 1100, 825) : null,
     tagline: era.tagline,
     message: era.message,
     eventsConductedCount: era.eventsConductedCount,
