@@ -52,6 +52,7 @@ export interface LegacyEraView {
   tagline: string | null;
   message: string | null;
   eventsConductedCount: number;
+  eventsConductedPlus: boolean;
   interSchoolCount: number;
   peakAchievements: string[];
   achievements: AchievementView[];
@@ -173,11 +174,13 @@ function AchievementTimeline({ items }: { items: AchievementView[] }) {
 /* ───────── the legacy card ───────── */
 
 function EraCard({ era, onClose }: { era: LegacyEraView; onClose: () => void }) {
+  const eventsText = `${era.eventsConductedCount}${era.eventsConductedPlus ? "+" : ""}`;
+
   const stats = [
-    { icon: Calendar, value: era.eventsConductedCount, label: "Events conducted" },
-    { icon: Users, value: era.interSchoolCount, label: "Inter-school events" },
-    { icon: ListChecks, value: era.reforms.length, label: "Reforms made" },
-  ];
+    { icon: Calendar, value: eventsText, label: "Events conducted" },
+    { icon: Users, value: String(era.interSchoolCount), label: "Inter-school / college events" },
+    { icon: ListChecks, value: String(era.reforms.length), label: "Reforms made" },
+  ].filter((stat) => stat.value !== "0");
 
   return (
     <article className="overflow-hidden rounded-[2rem] bg-white ring-1 ring-accent/50">
@@ -247,13 +250,13 @@ function EraCard({ era, onClose }: { era: LegacyEraView; onClose: () => void }) 
         </div>
       </header>
 
-      {/* ───── big numbers, overlapping the banner ───── */}
-      {era.hasDetails && (
-        <ul className="relative -mt-8 grid grid-cols-3 gap-3 px-5 sm:px-8">
+      {/* ───── big numbers, overlapping the banner (a tile with 0 is hidden) ───── */}
+      {era.hasDetails && stats.length > 0 && (
+        <ul className="relative -mt-8 flex gap-3 px-5 sm:px-8">
           {stats.map(({ icon: Icon, value, label }) => (
             <li
               key={label}
-              className="rounded-2xl bg-white p-4 text-center shadow-xl ring-1 ring-primary/10"
+              className="min-w-0 flex-1 rounded-2xl bg-white p-4 text-center shadow-xl ring-1 ring-primary/10"
             >
               <Icon className="mx-auto h-6 w-6 text-accent" aria-hidden="true" />
               <p className="mt-2 font-display text-3xl font-black text-primary">{value}</p>
@@ -271,6 +274,31 @@ function EraCard({ era, onClose }: { era: LegacyEraView; onClose: () => void }) 
           <p className="rounded-2xl bg-primary/5 px-5 py-8 text-center text-base text-text/80">
             The full story of this era is being added. Check back soon.
           </p>
+        )}
+
+        {era.eventsConducted.length > 0 && (
+          <Section icon={Calendar} title="Events conducted" badge={eventsText}>
+            <ul className="space-y-3">
+              {era.eventsConducted.map((event) => (
+                <li
+                  key={event.key}
+                  className="flex items-start gap-3 text-[15px] leading-relaxed text-text/85"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-accent"
+                  />
+                  <span>
+                    <span className="font-semibold text-primary">{event.title}</span>
+                    {event.date && <span className="text-text/60"> · {event.date}</span>}
+                    {event.description && (
+                      <span className="block text-sm text-text/70">{event.description}</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Section>
         )}
 
         {era.message && (
@@ -317,7 +345,10 @@ function EraCard({ era, onClose }: { era: LegacyEraView; onClose: () => void }) 
           <Section icon={ListChecks} title="Reforms made" badge={String(era.reforms.length)}>
             <ol className="space-y-3">
               {era.reforms.map((text, index) => (
-                <li key={index} className="flex items-start gap-3 text-[15px] leading-relaxed text-text/85">
+                <li
+                  key={index}
+                  className="flex items-start gap-3 text-[15px] leading-relaxed text-text/85"
+                >
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-accent">
                     {index + 1}
                   </span>
@@ -328,34 +359,10 @@ function EraCard({ era, onClose }: { era: LegacyEraView; onClose: () => void }) 
           </Section>
         )}
 
-        {era.eventsConducted.length > 0 && (
-          <Section
-            icon={Calendar}
-            title="Events conducted"
-            badge={String(era.eventsConductedCount)}
-          >
-            <ul className="divide-y divide-primary/10 overflow-hidden rounded-2xl ring-1 ring-primary/10">
-              {era.eventsConducted.map((event) => (
-                <li key={event.key} className="flex items-start justify-between gap-4 px-5 py-4">
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-semibold text-primary">{event.title}</p>
-                    {event.description && (
-                      <p className="mt-1 text-sm text-text/70">{event.description}</p>
-                    )}
-                  </div>
-                  {event.date && (
-                    <span className="shrink-0 text-xs font-semibold text-text/60">{event.date}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </Section>
-        )}
-
         {era.interSchoolEvents.length > 0 && (
           <Section
             icon={Users}
-            title="Inter-school events our students joined"
+            title="Inter-school & inter-college competitions"
             badge={String(era.interSchoolCount)}
           >
             <ul className="divide-y divide-primary/10 overflow-hidden rounded-2xl ring-1 ring-primary/10">
@@ -487,7 +494,11 @@ export default function LegacyExplorer({ eras }: { eras: LegacyEraView[] }) {
 
                   {era.hasDetails && (
                     <p className="hidden shrink-0 text-right text-xs text-text/60 md:block">
-                      <span className="font-bold text-primary">{era.eventsConductedCount}</span> events
+                      <span className="font-bold text-primary">
+                        {era.eventsConductedCount}
+                        {era.eventsConductedPlus ? "+" : ""}
+                      </span>{" "}
+                      events
                       <br />
                       <span className="font-bold text-primary">{era.interSchoolCount}</span>{" "}
                       inter-school

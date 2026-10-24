@@ -27,6 +27,7 @@ function toView(era: LegacyEra): LegacyEraView {
     tagline: era.tagline,
     message: era.message,
     eventsConductedCount: era.eventsConductedCount,
+    eventsConductedPlus: era.eventsConductedPlus,
     interSchoolCount: era.interSchoolCount,
     peakAchievements: era.peakAchievements,
     achievements: era.achievements.map((item) => ({

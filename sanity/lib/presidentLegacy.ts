@@ -65,6 +65,7 @@ export interface LegacyEra {
   tagline: Maybe<string>;
   message: Maybe<string>;
   eventsConductedCount: number;
+  eventsConductedPlus: boolean;
   interSchoolCount: number;
   peakAchievements: string[];
   achievements: Achievement[];
@@ -79,6 +80,7 @@ const legacyErasQuery = groq`*[_type == "presidentLegacy"] | order(academicYear 
   tagline,
   message,
   eventsConductedCount,
+  eventsConductedPlus,
   interSchoolCount,
   peakAchievements,
   reforms,
@@ -94,6 +96,7 @@ interface RawEra {
   tagline: Maybe<string>;
   message: Maybe<string>;
   eventsConductedCount: Maybe<number>;
+  eventsConductedPlus: Maybe<boolean>;
   interSchoolCount: Maybe<number>;
   peakAchievements: Maybe<string[]>;
   reforms: Maybe<string[]>;
@@ -127,6 +130,7 @@ export async function getLegacyEras(): Promise<LegacyEra[]> {
       tagline: item.tagline,
       message: item.message,
       eventsConductedCount: item.eventsConductedCount ?? eventsConducted.length,
+      eventsConductedPlus: item.eventsConductedPlus ?? false,
       interSchoolCount: item.interSchoolCount ?? interSchoolEvents.length,
       peakAchievements: cleanStrings(item.peakAchievements),
       achievements: compact(item.achievements),
@@ -148,6 +152,7 @@ export async function getLegacyEras(): Promise<LegacyEra[]> {
       tagline: null,
       message: null,
       eventsConductedCount: 0,
+      eventsConductedPlus: false,
       interSchoolCount: 0,
       peakAchievements: [],
       achievements: [],

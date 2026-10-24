@@ -71,6 +71,16 @@ export const presidentLegacyType = defineType({
     }),
 
     defineField({
+      name: "eventsConductedPlus",
+      title: 'Show the events number as "10+"',
+      type: "boolean",
+      group: "numbers",
+      initialValue: false,
+      description:
+        'Tick this while the number is only a minimum (shows "10+"). Untick it when you have the exact total.',
+    }),
+
+    defineField({
       name: "interSchoolCount",
       title: "Number of inter-school events the students joined",
       type: "number",
