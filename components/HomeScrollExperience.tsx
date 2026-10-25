@@ -4,7 +4,7 @@ import { flushSync } from "react-dom";
 import Hero from "./Hero";
 import EventsConstellation from "./EventsConstellation";
 import GalleryOrbit from "./home/GalleryOrbit";
-import AboutSection from "./home/AboutSection";
+import AboutSection, { type AboutPresident } from "./home/AboutSection";
 import AtomOverlay, { CANVAS_INTRINSIC } from "./home/AtomOverlay";
 import ClubsSection from "./home/ClubsSection";
 import ConstellationFooter from "./layout/ConstellationFooter";
@@ -68,7 +68,13 @@ interface ZoomAnimState {
   clubsScale: number;
 }
 
-export default function HomeScrollExperience({ data }: { data: HomepageData }) {
+export default function HomeScrollExperience({
+  data,
+  president,
+}: {
+  data: HomepageData;
+  president?: AboutPresident | null;
+}) {
   /* ── Component-level refs (zoom animation, floating element) ── */
   const floatingRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
@@ -665,6 +671,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
 
       <AboutSectionMemo
         data={data}
+        president={president}
         aboutAnchorRef={aboutAnchorRef}
         planetMercuryRef={planetMercuryRef}
         planetVenusRef={planetVenusRef}
