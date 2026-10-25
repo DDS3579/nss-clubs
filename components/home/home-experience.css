@@ -901,3 +901,152 @@
     animation: none;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════
+   ABOUT SECTION POLISH
+   (kept at the end of the file so it wins over the older rules above)
+   ═══════════════════════════════════════════════════════════ */
+
+/* A little more depth on the dark cards */
+#about .as-card-dark {
+  background: linear-gradient(160deg, #1f3d8f 0%, #172f72 100%);
+}
+
+/* ── Tablet and desktop: three equal-height cards, tops lined up, stats at the same level ── */
+@media (min-width: 769px) {
+  #about .solar-desktop {
+    align-items: stretch;
+  }
+  #about .solar-desktop .p-col > .as-card {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+  #about .solar-desktop .as-card-body {
+    margin-bottom: 22px;
+  }
+  #about .solar-desktop .as-card-stats {
+    margin-top: auto;
+  }
+}
+
+/* ── Planets sit exactly on the orbit line (the line runs through the sun's centre) ── */
+@media (min-width: 1025px) {
+  #about .p-zone {
+    min-height: 146px;
+    box-sizing: border-box;
+  }
+  #about .p-col:not(.p-col-sun) .p-zone {
+    padding-bottom: 36px;
+  }
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+  #about .p-zone {
+    min-height: 112px;
+    box-sizing: border-box;
+  }
+  #about .p-col:not(.p-col-sun) .p-zone {
+    padding-bottom: 36px;
+  }
+}
+
+/* ── President card ── */
+#about .as-card-light .as-card-cat {
+  justify-content: center;
+}
+#about .as-card-light h3 {
+  text-align: center;
+}
+#about .as-pres-photo {
+  width: 96px;
+  height: 96px;
+  border: 3px solid rgba(200, 144, 58, 0.55);
+  box-shadow: 0 8px 22px rgba(200, 144, 58, 0.25);
+  margin: 4px auto 20px;
+}
+#about .as-pres-quote {
+  font-size: 17px;
+  line-height: 1.65;
+  color: #334155;
+  margin: 0 0 20px;
+  padding: 0 4px;
+}
+#about .as-pres-mark {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 48px;
+  line-height: 0.7;
+  color: #c8903a;
+  font-style: normal;
+  margin-bottom: 8px;
+}
+#about .as-pres-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  color: inherit;
+}
+#about .as-pres-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0d2460;
+}
+#about .as-pres-role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(13, 36, 96, 0.55);
+}
+#about .as-pres-link {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b07a2c;
+  text-decoration: none;
+}
+#about .as-pres-link:hover {
+  text-decoration: underline;
+}
+
+/* Smaller screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+  #about .as-pres-photo {
+    width: 76px;
+    height: 76px;
+  }
+  #about .as-pres-quote {
+    font-size: 14px;
+  }
+  #about .as-pres-name {
+    font-size: 15px;
+  }
+}
+@media (max-width: 768px) {
+  #about .as-pres-quote {
+    font-size: 15px;
+  }
+}
+@media (max-width: 480px) {
+  #about .as-pres-photo {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 14px;
+  }
+  #about .as-pres-quote {
+    font-size: 14px;
+  }
+  #about .as-pres-mark {
+    font-size: 40px;
+  }
+  #about .as-pres-name {
+    font-size: 16px;
+  }
+}
