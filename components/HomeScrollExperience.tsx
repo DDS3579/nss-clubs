@@ -43,7 +43,11 @@ const ELECTRON_TARGET_X = 520;
 const ELECTRON_TARGET_Y = 320;
 
 /* ─── Clubs storyline (title out → atom centres → club lines and labels in) ─── */
-const INTRO_DURATION = 2200; // ms for the whole storyline to play
+const INTRO_DURATION = 1500; // ms for the whole storyline to play
+/** Hold the page still at the Clubs section while the storyline plays (set to false to turn off). */
+const INTRO_GATE = true;
+/** Safety: the page is never held longer than this (ms). */
+const GATE_MAX_MS = 3500;
 const INTRO_RESET_DURATION = 500; // ms to rewind it when you scroll back up
 /**
  * How far you can scroll past the Clubs section before the atom starts to leave (0 to 1).
@@ -76,6 +80,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   const atomDisplayRef = useRef({ cx: 0, cy: 0, size: 0 }); // where the atom is drawn right now
   const zoomAnimRef = useRef<ZoomAnimState | null>(null);
   const cardWrapperRef = useRef<HTMLDivElement>(null);
+  const gateRef = useRef({ active: false, held: false, since: 0, lastSy: 0, lastP: 0 });
   const introRef = useRef({
     t: 0, // storyline progress, 0 → 1
     target: 0,
@@ -410,7 +415,8 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         // The labels melt away as you scroll on, and stay hidden while a club is open
         const calloutsVisible = clubOpen
           ? 0
-          : 1 - clamp01((aboutProgressRef.current - 0.08) / 0.1);
+          : (1 - clamp01((aboutProgressRef.current - 0.08) / 0.1)) *
+            clamp01((atomProgressRef.current - 0.8) / 0.12);
         const calloutsText = calloutsVisible.toFixed(2);
         if (w.callouts !== calloutsText) {
           clubsSectionEl.style.setProperty("--callouts", calloutsText);
@@ -454,6 +460,64 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
           cx = lerp(fromCx, restCx, atomProgressRef.current);
           cy = lerp(fromCy, restCy, atomProgressRef.current);
           size = lerp(heroRect.width, clubsRect.width, atomProgressRef.current);
+        }
+      }
+
+      // ── Scroll gate: hold the page still at the Clubs section while the storyline plays ──
+      {
+        const gate = gateRef.current;
+        const scrollNow = window.scrollY;
+        const goingDown = scrollNow > gate.lastSy + 0.5;
+        const arrivedAmount = atomProgressRef.current;
+
+        // Triggers once per trip down from the hero (never when coming up from About)
+        if (
+          INTRO_GATE &&
+          !intro.reduce &&
+          !gate.active &&
+          !clubOpen &&
+          goingDown &&
+          gate.lastP < 0.9 &&
+          arrivedAmount >= 0.9 &&
+          aboutProgressRef.current < 0.35 &&
+          intro.t < 0.05
+        ) {
+          const clubsEl = document.getElementById("clubs");
+          if (clubsEl) {
+            gate.active = true;
+            gate.held = false;
+            gate.since = now;
+
+            const beginHold = () => {
+              if (!gate.active || gate.held) return;
+              gate.held = true;
+              const phaseNow = phaseRef.current;
+              if (phaseNow === "zooming" || phaseNow === "zoomed") return;
+              // Land exactly on the section, then freeze scrolling
+              const alignedY = clubsEl.getBoundingClientRect().top + window.scrollY - HEADER_H;
+              if (Math.abs(window.scrollY - alignedY) > 2) window.scrollTo(0, alignedY);
+              lenisStop();
+            };
+
+            lenisScrollTo(clubsEl, {
+              offset: -HEADER_H,
+              duration: 0.6,
+              lock: true,
+              onComplete: beginHold,
+            });
+            window.setTimeout(beginHold, 900); // in case the glide gets interrupted
+          }
+        }
+        gate.lastSy = scrollNow;
+        gate.lastP = arrivedAmount;
+
+        // Let go once the storyline has played (or after the safety limit)
+        if (gate.active && (intro.t >= 0.999 || now - gate.since > GATE_MAX_MS)) {
+          const wasHeld = gate.held;
+          gate.active = false;
+          gate.held = false;
+          const phaseNow = phaseRef.current;
+          if (wasHeld && phaseNow !== "zooming" && phaseNow !== "zoomed") lenisStart();
         }
       }
 
