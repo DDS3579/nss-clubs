@@ -716,7 +716,7 @@
    The scroll code sets these variables on #clubs while it plays:
    --intro     0 → 1   the whole storyline
    --move      0 → 1   how far the atom has glided to the centre
-   --callouts  0 → 1   fades the labels out as you scroll on / while a club is open
+   --callouts  0 → 1   fades everything out when you scroll on or while a club is open
    --shift-x / --shift-y   how far "the centre" is from the atom's normal spot
    ═══════════════════════════════════════════════════════════ */
 #clubs {
@@ -727,9 +727,9 @@
   --shift-y: 0px;
 }
 
-/* "Our Clubs." blurs and floats away in the first quarter of the storyline */
+/* "Our Clubs." blurs and floats away at the start of the storyline */
 .clubs-intro-title {
-  opacity: clamp(0, calc(1 - var(--intro) * 4), 1);
+  opacity: clamp(0, calc(1 - var(--intro) * 5), 1);
   transform: translateY(calc(var(--intro) * -18px)) scale(calc(1 - var(--intro) * 0.05));
   filter: blur(calc(var(--intro) * 8px));
 }
@@ -743,6 +743,7 @@
   );
 }
 
+/* The glow also disappears whenever the callouts do (scrolling on, club open) */
 .clubs-glow {
   position: absolute;
   inset: -14%;
@@ -755,7 +756,7 @@
     rgba(2, 59, 142, 0.07) 62%,
     transparent 74%
   );
-  opacity: calc(var(--intro) * 0.95);
+  opacity: calc(var(--intro) * var(--callouts) * 0.95);
 }
 
 /* Above the atom (z 25) but below the navbar and menu */
@@ -768,19 +769,22 @@
   transition: opacity 0.35s ease;
 }
 
-/* Lines draw out, one after another (--i is each item's place in the order) */
+/* Lines: hidden until their turn (opacity), then drawn out from the electron (dash).
+   Both are used, so if a browser ignores one the line still stays hidden until its turn. */
 .club-callout-line {
-  stroke-dasharray: 1;
-  stroke-dashoffset: calc(1 - clamp(0, (var(--intro) - 0.5 - var(--i, 0) * 0.04) * 6, 1));
+  --draw: clamp(0, (var(--intro) - 0.3 - var(--i, 0) * 0.035) * 5, 1);
+  opacity: clamp(0, var(--draw) * 20, 1);
+  stroke-dasharray: 100px;
+  stroke-dashoffset: calc((1 - var(--draw)) * 100px);
 }
 
 .club-callout-dot {
-  opacity: clamp(0, (var(--intro) - 0.45 - var(--i, 0) * 0.04) * 8, 1);
+  opacity: clamp(0, (var(--intro) - 0.28 - var(--i, 0) * 0.035) * 8, 1);
 }
 
 /* A ring that keeps gently pulsing around each electron */
 .club-callout-ring {
-  opacity: clamp(0, (var(--intro) - 0.5 - var(--i, 0) * 0.04) * 8, 1);
+  opacity: clamp(0, (var(--intro) - 0.4 - var(--i, 0) * 0.035) * 8, 1);
   transform-box: fill-box;
   transform-origin: center;
   animation: club-callout-ping 2.4s ease-out infinite;
@@ -801,7 +805,7 @@
 
 /* Labels rise and fade in after the lines */
 .club-callout-label {
-  --t: clamp(0, (var(--intro) - 0.6 - var(--i, 0) * 0.04) * 6, 1);
+  --t: clamp(0, (var(--intro) - 0.45 - var(--i, 0) * 0.035) * 5, 1);
   opacity: var(--t);
   transform: translateY(calc((1 - var(--t)) * 10px)) scale(calc(0.94 + var(--t) * 0.06));
   pointer-events: none;
@@ -813,7 +817,7 @@
 }
 
 .club-callout-hint {
-  opacity: clamp(0, (var(--intro) - 0.85) * 8, 1);
+  opacity: clamp(0, (var(--intro) - 0.8) * 8, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
