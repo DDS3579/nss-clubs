@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { PLANET_DOT_MORPHS } from "@/hooks/useMorphCoordinates";
 import { urlFor } from "@/sanity/lib/image";
 import type { HomepageData } from "@/sanity/lib/types";
@@ -7,6 +8,8 @@ import ClubIcon from "./ClubIcon";
 
 interface AboutSectionProps {
   data: HomepageData;
+  /** The current president, taken from "President's Legacy". */
+  president?: AboutPresident | null;
   /** Where the floating atom becomes the sun while you are in this section. */
   aboutAnchorRef: RefObject<HTMLDivElement | null>;
   planetMercuryRef: RefObject<HTMLDivElement | null>;
@@ -20,9 +23,69 @@ interface AboutSectionProps {
   morphGhostRefs: RefObject<(HTMLDivElement | null)[]>;
 }
 
+export interface AboutPresident {
+  name: string;
+  /** e.g. "2082/83" */
+  year: string;
+  photoUrl: string | null;
+}
+
+/** The inside of the President card (used by the desktop and the phone layout). */
+function PresidentBody({
+  data,
+  president,
+}: {
+  data: HomepageData;
+  president?: AboutPresident | null;
+}) {
+  // Prefer the real president's photo; fall back to the one in Homepage Settings
+  const photo =
+    president?.photoUrl ??
+    (data?.presidentPhoto
+      ? urlFor(data.presidentPhoto).width(288).height(288).fit("crop").auto("format").url()
+      : null);
+  const name = president?.name ?? null;
+  const message =
+    (data?.presidentMessage ?? "").trim() ||
+    "Empowering the next generation of leaders through passion, service, and innovation.";
+
+  return (
+    <>
+      <h3 className="font-display">A Message from the President</h3>
+      {photo && (
+        <div className="as-pres-photo">
+          <Image
+            src={photo}
+            alt={name ?? "NSS President"}
+            width={144}
+            height={144}
+            className="object-cover"
+          />
+        </div>
+      )}
+      <p className="as-pres-quote font-body">
+        <span className="as-pres-mark" aria-hidden="true">
+          &ldquo;
+        </span>
+        {message}
+      </p>
+      <div className="as-pres-footer font-body">
+        {name && <span className="as-pres-name font-display">{name}</span>}
+        <span className="as-pres-role">
+          President{president?.year ? ` · ${president.year} BS` : ""}
+        </span>
+        <Link href="/presidents-legacy" className="as-pres-link">
+          See the legacy &rarr;
+        </Link>
+      </div>
+    </>
+  );
+}
+
 /** The "About" solar-system section plus the layer of planet copies that fly to Events. */
 export default function AboutSection({
   data,
+  president,
   aboutAnchorRef,
   planetMercuryRef,
   planetVenusRef,
@@ -111,22 +174,7 @@ export default function AboutSection({
                 <ClubIcon name="Shield" className="as-card-cat-icon" />
                 <span className="as-card-cat-label font-body">Leadership &amp; Vision</span>
               </div>
-              <h3 className="font-display">A Message from the President</h3>
-              {data?.presidentPhoto && (
-                <div className="as-pres-photo">
-                  <Image
-                    src={urlFor(data.presidentPhoto).width(256).height(256).fit("crop").auto("format").url()}
-                    alt="President Photo"
-                    width={144}
-                    height={144}
-                    className="object-cover"
-                  />
-                </div>
-              )}
-              <p className="as-pres-quote font-body">
-                &ldquo;{data?.presidentMessage || "Empowering the next generation of leaders through passion, service, and innovation."}&rdquo;
-              </p>
-              <div className="as-pres-footer font-body">NSS President</div>
+              <PresidentBody data={data} president={president} />
             </div>
           </div>
 
@@ -215,22 +263,7 @@ export default function AboutSection({
               <ClubIcon name="Shield" className="as-card-cat-icon" />
               <span className="as-card-cat-label font-body">Leadership &amp; Vision</span>
             </div>
-            <h3 className="font-display">A Message from the President</h3>
-            {data?.presidentPhoto && (
-              <div className="as-pres-photo">
-                <Image
-                  src={urlFor(data.presidentPhoto).width(256).height(256).fit("crop").auto("format").url()}
-                  alt="President Photo"
-                  width={144}
-                  height={144}
-                  className="object-cover"
-                />
-              </div>
-            )}
-            <p className="as-pres-quote font-body">
-              &ldquo;{data?.presidentMessage || "Empowering the next generation of leaders through passion, service, and innovation."}&rdquo;
-            </p>
-            <div className="as-pres-footer font-body">NSS President</div>
+            <PresidentBody data={data} president={president} />
           </div>
 
           <div className="mob-connector" />
