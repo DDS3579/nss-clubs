@@ -30,12 +30,12 @@ interface Spot {
 }
 
 const SPOTS: readonly Spot[] = [
-  { slug: "stem", short: "STEM", ex: 420, ey: 147, ox: 0.5, oy: -0.866, side: "right", edge: 470 },
+  { slug: "stem", short: "STEM", ex: 420, ey: 147, ox: 0.5, oy: -0.866, side: "right", edge: 500 },
   { slug: "literature", short: "Literature", ex: 520, ey: 320, ox: 1, oy: 0, side: "right", edge: 560 },
-  { slug: "entertainment", short: "Entertainment", ex: 420, ey: 493, ox: 0.5, oy: 0.866, side: "right", edge: 470 },
-  { slug: "social", short: "Social", ex: 220, ey: 147, ox: -0.5, oy: -0.866, side: "left", edge: 170 },
+  { slug: "entertainment", short: "Entertainment", ex: 420, ey: 493, ox: 0.5, oy: 0.866, side: "right", edge: 500 },
+  { slug: "social", short: "Social", ex: 220, ey: 147, ox: -0.5, oy: -0.866, side: "left", edge: 140 },
   { slug: "arts", short: "Arts & Craft", ex: 120, ey: 320, ox: -1, oy: 0, side: "left", edge: 80 },
-  { slug: "sports", short: "Sports", ex: 220, ey: 493, ox: -0.5, oy: 0.866, side: "left", edge: 170 },
+  { slug: "sports", short: "Sports", ex: 220, ey: 493, ox: -0.5, oy: 0.866, side: "left", edge: 140 },
 ];
 
 const CLUB_BY_SLUG = new Map(CLUBS.map((club) => [club.slug, club]));
@@ -68,7 +68,7 @@ export default function ClubCallouts({ onSelect }: { onSelect: (slug: string) =>
               <path
                 className="club-callout-line"
                 d={`M ${spot.ex} ${spot.ey} L ${bendX} ${bendY} L ${spot.edge} ${bendY}`}
-                pathLength={1}
+                pathLength={100}
                 fill="none"
                 stroke={club.color}
                 strokeOpacity={0.75}
@@ -95,7 +95,7 @@ export default function ClubCallouts({ onSelect }: { onSelect: (slug: string) =>
           <path
             className="club-callout-line"
             d="M 320 356 L 320 556"
-            pathLength={1}
+            pathLength={100}
             fill="none"
             stroke={EXECUTIVE_TEAM.color}
             strokeWidth={3}
