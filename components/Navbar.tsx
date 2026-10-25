@@ -45,6 +45,9 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isMobileMenuOpen]);
 
+  // The Studio (/studio) needs the full screen, so the site menu is hidden there
+  if (pathname?.startsWith("/studio")) return null;
+
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prev) => !prev);
   };
