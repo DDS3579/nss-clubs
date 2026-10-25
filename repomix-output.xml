@@ -6499,6 +6499,8 @@ export default function EventsConstellation({
 <file path="app/page.tsx">
 import HomeScrollExperience from "@/components/HomeScrollExperience";
 import { getHomepageData } from "@/sanity/lib/queries";
+import { getLegacyEras } from "@/sanity/lib/presidentLegacy";
+import { sanityCoverUrl } from "@/sanity/lib/imageMeta";
 import type { HomepageData } from "@/sanity/lib/types";
 
 export default async function HomePage() {
@@ -6514,7 +6516,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-bg">
-      <HomeScrollExperience data={data} />
+      <HomeScrollExperience data={data} president={president} />
     </main>
   );
 }
@@ -7772,7 +7774,13 @@ interface ZoomAnimState {
   clubsScale: number;
 }
 
-export default function HomeScrollExperience({ data }: { data: HomepageData }) {
+export default function HomeScrollExperience({
+  data,
+  president,
+}: {
+  data: HomepageData;
+  president?: AboutPresident | null;
+}) {
   /* ── Component-level refs (zoom animation, floating element) ── */
   const floatingRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
