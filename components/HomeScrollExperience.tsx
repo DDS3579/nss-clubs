@@ -42,6 +42,16 @@ const ZOOM_SCALE_FACTOR = 5.5;
 const ELECTRON_TARGET_X = 520;
 const ELECTRON_TARGET_Y = 320;
 
+/* ─── Clubs storyline (title out → atom centres → club lines and labels in) ─── */
+const INTRO_DURATION = 2200; // ms for the whole storyline to play
+const INTRO_RESET_DURATION = 500; // ms to rewind it when you scroll back up
+/**
+ * How far you can scroll past the Clubs section before the atom starts to leave (0 to 1).
+ * Gives the labels time to be seen, even when a finger stops a little past the exact spot.
+ */
+const ABOUT_DEAD_ZONE = 0.22;
+const easeIntro = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
 interface ZoomAnimState {
   direction: "forward" | "reverse";
   startTime: number;
@@ -66,6 +76,18 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
   const atomDisplayRef = useRef({ cx: 0, cy: 0, size: 0 }); // where the atom is drawn right now
   const zoomAnimRef = useRef<ZoomAnimState | null>(null);
   const cardWrapperRef = useRef<HTMLDivElement>(null);
+  const introRef = useRef({
+    t: 0, // storyline progress, 0 → 1
+    target: 0,
+    move: 0, // how far the atom has glided to the centre, 0 → 1
+    shiftX: 0, // distance from the atom's normal spot to the centre (px)
+    shiftY: 0,
+    lastNow: 0,
+    cacheSeen: null as LayoutCache | null,
+    section: null as HTMLElement | null,
+    reduce: false,
+    written: { t: "", move: "", callouts: "", active: "" },
+  });
 
   /* ── Component-level state (discrete, render-triggering) ── */
   const [selectedClub, setSelectedClub] = useState<string | null>(null);
@@ -334,6 +356,73 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       // Compute scroll-derived progress values (writes to refs, not state)
       computeScrollProgress();
 
+      // ── Clubs storyline ──
+      const intro = introRef.current;
+      if (!intro.section) {
+        intro.section = document.getElementById("clubs");
+        intro.reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      }
+      const clubsSectionEl = intro.section;
+      const clubOpen = phaseRef.current === "zooming" || phaseRef.current === "zoomed";
+      const dtMs = intro.lastNow ? Math.min(now - intro.lastNow, 100) : 16;
+      intro.lastNow = now;
+
+      // Frozen while a club is open, so the atom lands exactly where it started when the card closes
+      if (!clubOpen) {
+        const arrived = atomProgressRef.current;
+        if (arrived < 0.85) intro.target = 0; // scrolled back up: rewind
+        else if (arrived >= 0.97) intro.target = 1; // the atom has landed: play
+
+        const step = dtMs / (intro.target === 1 ? INTRO_DURATION : INTRO_RESET_DURATION);
+        if (intro.reduce) intro.t = intro.target;
+        else if (intro.t < intro.target) intro.t = Math.min(intro.target, intro.t + step);
+        else if (intro.t > intro.target) intro.t = Math.max(intro.target, intro.t - step);
+      }
+      // The atom glides after the title has started to leave
+      intro.move = easeIntro(clamp01((intro.t - 0.12) / 0.48));
+
+      // Where is "the centre"? Only re-measured when the page layout was re-measured.
+      if (clubsSectionEl && !clubOpen && cache.clubsAnchor && intro.cacheSeen !== cache) {
+        intro.cacheSeen = cache;
+        const a = cache.clubsAnchor;
+        const viewW = document.documentElement.clientWidth;
+        intro.shiftX = viewW / 2 - (a.pageLeft + a.width / 2);
+        const restY =
+          cache.clubsSectionTop + clubsSectionEl.offsetHeight * (viewW >= 1024 ? 0.48 : 0.46);
+        intro.shiftY = restY - (a.pageTop + a.height / 2);
+        clubsSectionEl.style.setProperty("--shift-x", `${intro.shiftX.toFixed(1)}px`);
+        clubsSectionEl.style.setProperty("--shift-y", `${intro.shiftY.toFixed(1)}px`);
+      }
+
+      // Hand the numbers to the CSS (only writes when something changed)
+      if (clubsSectionEl) {
+        const w = intro.written;
+        const tText = intro.t.toFixed(3);
+        if (w.t !== tText) {
+          clubsSectionEl.style.setProperty("--intro", tText);
+          w.t = tText;
+        }
+        const moveText = intro.move.toFixed(3);
+        if (w.move !== moveText) {
+          clubsSectionEl.style.setProperty("--move", moveText);
+          w.move = moveText;
+        }
+        // The labels melt away as you scroll on, and stay hidden while a club is open
+        const calloutsVisible = clubOpen
+          ? 0
+          : 1 - clamp01((aboutProgressRef.current - 0.08) / 0.1);
+        const calloutsText = calloutsVisible.toFixed(2);
+        if (w.callouts !== calloutsText) {
+          clubsSectionEl.style.setProperty("--callouts", calloutsText);
+          w.callouts = calloutsText;
+        }
+        const active = intro.t > 0.7 && calloutsVisible > 0.4 ? "on" : "off";
+        if (w.active !== active) {
+          clubsSectionEl.dataset.callouts = active;
+          w.active = active;
+        }
+      }
+
       // ── Position the floating atom canvas ──
       let cx = 0,
         cy = 0,
@@ -344,24 +433,26 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
       const aboutAnchor = cache.aboutAnchor;
 
       if (heroRect && clubsRect) {
-        if (aboutProgressRef.current > 0.001 && aboutAnchor) {
+        // How far the atom has travelled from the Clubs spot toward the About section.
+        // The dead zone keeps it parked at first, so the club labels have time to be seen.
+        const aboutEff = clamp01(
+          (aboutProgressRef.current - ABOUT_DEAD_ZONE) / (1 - ABOUT_DEAD_ZONE),
+        );
+        // Where the atom rests in the Clubs section once the storyline has centred it
+        const restCx = clubsRect.pageLeft + clubsRect.width / 2 + intro.shiftX * intro.move;
+        const restCy = clubsRect.pageTop + clubsRect.height / 2 + intro.shiftY * intro.move;
+
+        if (aboutEff > 0.001 && aboutAnchor) {
           const targetX = aboutAnchor.pageLeft + aboutAnchor.width / 2;
           const targetY = aboutAnchor.pageTop + aboutAnchor.height / 2;
-          const targetSize = aboutAnchor.width;
-
-          const fromCx = clubsRect.pageLeft + clubsRect.width / 2;
-          const fromCy = clubsRect.pageTop + clubsRect.height / 2;
-
-          cx = lerp(fromCx, targetX, aboutProgressRef.current);
-          cy = lerp(fromCy, targetY, aboutProgressRef.current);
-          size = lerp(clubsRect.width, targetSize, aboutProgressRef.current);
+          cx = lerp(restCx, targetX, aboutEff);
+          cy = lerp(restCy, targetY, aboutEff);
+          size = lerp(clubsRect.width, aboutAnchor.width, aboutEff);
         } else {
           const fromCx = heroRect.pageLeft + heroRect.width / 2;
           const fromCy = heroRect.pageTop + heroRect.height / 2;
-          const toCx = clubsRect.pageLeft + clubsRect.width / 2;
-          const toCy = clubsRect.pageTop + clubsRect.height / 2;
-          cx = lerp(fromCx, toCx, atomProgressRef.current);
-          cy = lerp(fromCy, toCy, atomProgressRef.current);
+          cx = lerp(fromCx, restCx, atomProgressRef.current);
+          cy = lerp(fromCy, restCy, atomProgressRef.current);
           size = lerp(heroRect.width, clubsRect.width, atomProgressRef.current);
         }
       }
@@ -505,6 +596,7 @@ export default function HomeScrollExperience({ data }: { data: HomepageData }) {
         cardWrapperRef={cardWrapperRef}
         cardRevealVisible={cardRevealVisible}
         handleCloseClub={handleCloseClub}
+        onSelectNode={handleElectronClick}
       />
 
       <AboutSectionMemo
