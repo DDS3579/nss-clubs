@@ -711,3 +711,189 @@
   #about .as-card h3 { font-size: 28px; }
   #about .as-card-body { font-size: 16px; }
 }
+/* ═══════════════════════════════════════════════════════════
+   CLUBS STORYLINE
+   The scroll code sets these variables on #clubs while it plays:
+   --intro     0 → 1   the whole storyline
+   --move      0 → 1   how far the atom has glided to the centre
+   --callouts  0 → 1   fades the labels out as you scroll on / while a club is open
+   --shift-x / --shift-y   how far "the centre" is from the atom's normal spot
+   ═══════════════════════════════════════════════════════════ */
+#clubs {
+  --intro: 0;
+  --move: 0;
+  --callouts: 1;
+  --shift-x: 0px;
+  --shift-y: 0px;
+}
+
+/* "Our Clubs." blurs and floats away in the first quarter of the storyline */
+.clubs-intro-title {
+  opacity: clamp(0, calc(1 - var(--intro) * 4), 1);
+  transform: translateY(calc(var(--intro) * -18px)) scale(calc(1 - var(--intro) * 0.05));
+  filter: blur(calc(var(--intro) * 8px));
+}
+
+/* The golden glow and the callouts both ride along with the atom as it glides to the centre */
+.club-callouts,
+.clubs-glow {
+  transform: translate(
+    calc(var(--shift-x) * var(--move)),
+    calc(var(--shift-y) * var(--move))
+  );
+}
+
+.clubs-glow {
+  position: absolute;
+  inset: -14%;
+  z-index: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(
+    closest-side,
+    rgba(212, 163, 115, 0.3),
+    rgba(2, 59, 142, 0.07) 62%,
+    transparent 74%
+  );
+  opacity: calc(var(--intro) * 0.95);
+}
+
+/* Above the atom (z 25) but below the navbar and menu */
+.club-callouts {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  opacity: var(--callouts);
+  transition: opacity 0.35s ease;
+}
+
+/* Lines draw out, one after another (--i is each item's place in the order) */
+.club-callout-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - clamp(0, (var(--intro) - 0.5 - var(--i, 0) * 0.04) * 6, 1));
+}
+
+.club-callout-dot {
+  opacity: clamp(0, (var(--intro) - 0.45 - var(--i, 0) * 0.04) * 8, 1);
+}
+
+/* A ring that keeps gently pulsing around each electron */
+.club-callout-ring {
+  opacity: clamp(0, (var(--intro) - 0.5 - var(--i, 0) * 0.04) * 8, 1);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: club-callout-ping 2.4s ease-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.3s);
+}
+
+@keyframes club-callout-ping {
+  0% {
+    transform: scale(0.6);
+    stroke-opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(1.5);
+    stroke-opacity: 0;
+  }
+}
+
+/* Labels rise and fade in after the lines */
+.club-callout-label {
+  --t: clamp(0, (var(--intro) - 0.6 - var(--i, 0) * 0.04) * 6, 1);
+  opacity: var(--t);
+  transform: translateY(calc((1 - var(--t)) * 10px)) scale(calc(0.94 + var(--t) * 0.06));
+  pointer-events: none;
+}
+
+/* Labels only react to taps once the storyline has played and while you are in this section */
+#clubs[data-callouts="on"] .club-callout-label {
+  pointer-events: auto;
+}
+
+.club-callout-hint {
+  opacity: clamp(0, (var(--intro) - 0.85) * 8, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .club-callout-ring {
+    animation: none;
+    opacity: 0;
+  }
+  .club-callout-hint .animate-bounce {
+    animation: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CLUB CARD REVEAL
+   The wrapper's data-reveal flips to "in" once the zoom has arrived.
+   Phones: the card rises like a sheet. Desktop: it slides in from the right.
+   It springs (overshoots a little, then settles), and its parts follow one by one.
+   ═══════════════════════════════════════════════════════════ */
+.clubs-card {
+  opacity: 0;
+  transform: translateY(56px) scale(0.94);
+  transition: opacity 0.3s ease-in, transform 0.35s ease-in;
+  will-change: transform, opacity;
+}
+
+@media (min-width: 1024px) {
+  .clubs-card {
+    transform: translateX(64px) scale(0.94);
+  }
+}
+
+.clubs-card-wrap[data-reveal="in"] .clubs-card {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.5s ease-out, transform 0.85s cubic-bezier(0.22, 1.25, 0.36, 1);
+}
+
+/* Each part of the card appears a moment after the one before (--d is set in the markup) */
+.cc-item {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.clubs-card-wrap[data-reveal="in"] .cc-item {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s ease-out var(--d, 0ms),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms);
+}
+
+/* One light sweep across the card as it lands */
+.clubs-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+
+.clubs-card-wrap[data-reveal="in"] .clubs-card::after {
+  animation: clubs-card-shine 1.2s ease 0.4s both;
+}
+
+@keyframes clubs-card-shine {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clubs-card,
+  .cc-item {
+    transition-duration: 0.01s;
+    transition-delay: 0s;
+  }
+  .clubs-card-wrap[data-reveal="in"] .clubs-card::after {
+    animation: none;
+  }
+}
