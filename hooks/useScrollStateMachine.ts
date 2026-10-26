@@ -56,13 +56,17 @@ interface PlanetDotMorph {
 }
 
 export const PLANET_DOT_MORPHS: PlanetDotMorph[] = [
-  { key: "mercury", refKeys: ["mercury"], dotId: 0, fromColor: "#b8c0c9", toColor: "#1a3378", stagger: 0 },
-  { key: "venus", refKeys: ["venus"], dotId: 5, fromColor: "#d9a763", toColor: "#1a3378", stagger: 0.06 },
+  // Each planet becomes one star of the Big Dipper (dotId = the star's id in EventsConstellation).
+  // "stagger" is when that planet's flight starts (0 → 1 along the scroll). Left planets go first.
+  { key: "mercury", refKeys: ["mercury"], dotId: 0, fromColor: "#b8c0c9", toColor: "#1a3378", stagger: 0.06 },
+  { key: "venus", refKeys: ["venus"], dotId: 1, fromColor: "#d9a763", toColor: "#1a3378", stagger: 0.09 },
   { key: "earth", refKeys: ["earth"], dotId: 2, fromColor: "#3e8fb0", toColor: "#1a3378", stagger: 0.12 },
-  { key: "sun", refKeys: ["sun"], dotId: 4, fromColor: "#ffb703", toColor: "#c8903a", stagger: 0.3 },
-  { key: "mars", refKeys: ["mars"], dotId: 1, fromColor: "#cf5a3c", toColor: "#1a3378", stagger: 0.18 },
-  { key: "jupiter", refKeys: ["jupiter"], dotId: 3, fromColor: "#d4924c", toColor: "#1a3378", stagger: 0.24 },
-  { key: "saturn", refKeys: ["saturn-wrap"], dotId: 12, fromColor: "#d0a45f", toColor: "#1a3378", stagger: 0.28 },
+  { key: "sun", refKeys: ["sun"], dotId: 3, fromColor: "#ffb703", toColor: "#1a3378", stagger: 0.15 },
+  { key: "mars", refKeys: ["mars"], dotId: 4, fromColor: "#cf5a3c", toColor: "#1a3378", stagger: 0.18 },
+  { key: "jupiter", refKeys: ["jupiter"], dotId: 5, fromColor: "#d4924c", toColor: "#1a3378", stagger: 0.21 },
+  { key: "saturn", refKeys: ["saturn-wrap"], dotId: 6, fromColor: "#d0a45f", toColor: "#1a3378", stagger: 0.24 },
+  // A spark that splits off the sun and becomes the golden North Star (Polaris)
+  { key: "sun-spark", refKeys: ["sun"], dotId: 7, fromColor: "#ffe08a", toColor: "#d9a441", stagger: 0.34 },
 ];
 
 interface UseScrollStateMachineArgs {
@@ -541,10 +545,16 @@ export default function useScrollStateMachine({
         aboutT = 1;
 
         // 0 → 1 while scrolling through the last stretch before Events (was only ever 0 or 1)
-        const morphStartY = Math.max(
-          aboutScrollY,
-          eventsScrollY - cache.windowHeight * MORPH_SCROLL_FRACTION,
-        );
+        // Tablet and desktop pin the About stage (see .about-stage in the CSS), so the
+        // transition starts a little way into that pinned stretch and runs to the Events section.
+        // Phones scroll normally, so there it plays over the last screenful only.
+        const morphStartY =
+          cache.windowWidth >= 769
+            ? aboutScrollY + (eventsScrollY - aboutScrollY) * 0.2
+            : Math.max(
+                aboutScrollY,
+                eventsScrollY - cache.windowHeight * MORPH_SCROLL_FRACTION,
+              );
         const morphT = Math.min(1, Math.max(0,
           (sy - morphStartY) / Math.max(eventsScrollY - morphStartY, 1),
         ));
