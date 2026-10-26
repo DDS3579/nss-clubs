@@ -5,276 +5,211 @@ import Link from "next/link";
 import { formatEventDate } from "@/lib/dates";
 import { urlFor } from "@/sanity/lib/image";
 import type { FeaturedEvent } from "@/sanity/lib/types";
+import { PLANET_DOT_MORPHS } from "@/hooks/useScrollStateMachine";
 import "./home/events-constellation.css";
 
 /* ═══════════════════════════════════════════════════════════
-   CONSTELLATION DOT DEFINITIONS — 18 total, hardcoded
-   14 background dots, 4 anchor dots, 1 gold dot.
+   THE CONSTELLATION: the Big Dipper (Ursa Major).
 
-   The anchor dots are "planet echoes" — they hold the structure.
-   The gold dot is the "sun echo" — a single warm callback.
-   Background dots are stardust that crystallizes between them.
+   Seven planets become its seven stars; a spark from the sun becomes Polaris, the North Star
+   the Dipper points to. Faint "dust" stars fill the sky around it.
 
-   cx / cy are positions on a 1000 x 600 design grid. The component maps
-   them to the real size of the section, so shapes never get squashed.
-   (useMorphCoordinates also reads this list, so the flying planets land
-   exactly on these dots.)
-   ════════════════════════════════════════════════════════════ */
+   cx / cy are positions on a 1000 × 300 design grid. The component maps them to the real
+   size of the sky strip, and the flying planets (useMorphCoordinates) land on these exact spots.
+   ═══════════════════════════════════════════════════════════ */
+
+export const SKY_W = 1000;
+export const SKY_H = 300;
+
+/** How much of the scroll one planet's flight takes (0 to 1). A star appears when its flight lands. */
+export const FLIGHT_DURATION = 0.46;
+
+const NAVY = "#1a3378";
+const GOLD = "#c8903a";
 
 export interface ConstellationDot {
   id: number;
-  cx: number; // design grid x (0–1000)
-  cy: number; // design grid y (0–600)
+  name: string;
+  cx: number;
+  cy: number;
+  /** Star radius in pixels on a 1000px-wide strip */
   r: number;
-  opacity: number;
+  kind: "dipper" | "polaris" | "dust";
   fill: string;
-  kind: "anchor" | "gold" | "bg"; // for animation variants
-  isMobileVisible: boolean;
+  /** Scroll progress (0 to 1) at which the star is fully lit */
+  arrive: number;
+  mobile: boolean;
 }
+
+const ARRIVE_BY_ID = new Map(
+  PLANET_DOT_MORPHS.map((morph) => [morph.dotId, morph.stagger + FLIGHT_DURATION]),
+);
+const arriveAt = (id: number, fallback: number) => ARRIVE_BY_ID.get(id) ?? fallback;
 
 export const DOTS: ConstellationDot[] = [
-  // ── ANCHOR DOTS (4) — planet echoes near corners ──
-  { id: 0,  cx: 60,  cy: 80,  r: 2.8, opacity: 0.55, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
-  { id: 1,  cx: 920, cy: 60,  r: 2.8, opacity: 0.55, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
-  { id: 2,  cx: 70,  cy: 550, r: 2.8, opacity: 0.55, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
-  { id: 3,  cx: 910, cy: 560, r: 2.8, opacity: 0.55, fill: "#1a3378", kind: "anchor", isMobileVisible: true },
-
-  // ── GOLD DOT (1) — sun echo, upper-right quadrant ──
-  { id: 4,  cx: 840, cy: 150, r: 2.0, opacity: 0.75, fill: "#c8903a", kind: "gold",   isMobileVisible: true },
-
-  // ── BACKGROUND DOTS (13) — stardust ──
-  { id: 5,  cx: 200, cy: 120, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 6,  cx: 730, cy: 100, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 7,  cx: 120, cy: 190, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 8,  cx: 680, cy: 240, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 9,  cx: 50,  cy: 320, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 10, cx: 940, cy: 290, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 11, cx: 190, cy: 400, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 12, cx: 760, cy: 370, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 13, cx: 260, cy: 260, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 14, cx: 110, cy: 460, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: true },
-  { id: 15, cx: 880, cy: 440, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 16, cx: 240, cy: 520, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: false },
-  { id: 17, cx: 700, cy: 510, r: 1.5, opacity: 0.38, fill: "#1a3378", kind: "bg", isMobileVisible: false },
+  // ── The Big Dipper: handle on the left, bowl on the right ──
+  { id: 0, name: "Alkaid", cx: 70, cy: 215, r: 3.6, kind: "dipper", fill: NAVY, arrive: arriveAt(0, 0.52), mobile: true },
+  { id: 1, name: "Mizar", cx: 190, cy: 178, r: 4.2, kind: "dipper", fill: NAVY, arrive: arriveAt(1, 0.55), mobile: true },
+  { id: 2, name: "Alioth", cx: 310, cy: 152, r: 4.6, kind: "dipper", fill: NAVY, arrive: arriveAt(2, 0.58), mobile: true },
+  { id: 3, name: "Megrez", cx: 425, cy: 135, r: 3.4, kind: "dipper", fill: NAVY, arrive: arriveAt(3, 0.61), mobile: true },
+  { id: 4, name: "Phecda", cx: 448, cy: 218, r: 3.8, kind: "dipper", fill: NAVY, arrive: arriveAt(4, 0.64), mobile: true },
+  { id: 5, name: "Merak", cx: 640, cy: 238, r: 4.2, kind: "dipper", fill: NAVY, arrive: arriveAt(5, 0.67), mobile: true },
+  { id: 6, name: "Dubhe", cx: 668, cy: 138, r: 4.8, kind: "dipper", fill: NAVY, arrive: arriveAt(6, 0.7), mobile: true },
+  // ── Polaris: the golden North Star (the spark from the sun) ──
+  { id: 7, name: "Polaris", cx: 735, cy: 42, r: 4.6, kind: "polaris", fill: GOLD, arrive: arriveAt(7, 0.8), mobile: true },
+  // ── Alcor: the tiny companion of Mizar ──
+  { id: 8, name: "Alcor", cx: 214, cy: 158, r: 1.8, kind: "dust", fill: NAVY, arrive: 0.6, mobile: true },
+  // ── Dust: faint stars that fill in the sky ──
+  { id: 9, name: "d1", cx: 150, cy: 70, r: 1.7, kind: "dust", fill: NAVY, arrive: 0.58, mobile: true },
+  { id: 10, name: "d2", cx: 255, cy: 52, r: 1.5, kind: "dust", fill: NAVY, arrive: 0.62, mobile: false },
+  { id: 11, name: "d3", cx: 360, cy: 78, r: 1.9, kind: "dust", fill: NAVY, arrive: 0.66, mobile: true },
+  { id: 12, name: "d4", cx: 525, cy: 62, r: 1.5, kind: "dust", fill: NAVY, arrive: 0.7, mobile: false },
+  { id: 13, name: "d5", cx: 610, cy: 118, r: 1.8, kind: "dust", fill: NAVY, arrive: 0.74, mobile: true },
+  { id: 14, name: "d6", cx: 790, cy: 92, r: 1.6, kind: "dust", fill: NAVY, arrive: 0.78, mobile: false },
+  { id: 15, name: "d7", cx: 870, cy: 52, r: 2.0, kind: "dust", fill: NAVY, arrive: 0.82, mobile: true },
+  { id: 16, name: "d8", cx: 940, cy: 150, r: 1.5, kind: "dust", fill: NAVY, arrive: 0.86, mobile: false },
+  { id: 17, name: "d9", cx: 905, cy: 236, r: 1.8, kind: "dust", fill: NAVY, arrive: 0.9, mobile: true },
+  { id: 18, name: "d10", cx: 800, cy: 270, r: 1.5, kind: "dust", fill: NAVY, arrive: 0.72, mobile: false },
+  { id: 19, name: "d11", cx: 560, cy: 272, r: 1.7, kind: "dust", fill: NAVY, arrive: 0.68, mobile: true },
+  { id: 20, name: "d12", cx: 350, cy: 262, r: 1.8, kind: "dust", fill: NAVY, arrive: 0.64, mobile: true },
+  { id: 21, name: "d13", cx: 120, cy: 120, r: 1.5, kind: "dust", fill: NAVY, arrive: 0.6, mobile: false },
+  { id: 22, name: "d14", cx: 500, cy: 160, r: 1.4, kind: "dust", fill: NAVY, arrive: 0.76, mobile: false },
 ];
 
-/** Dot radius in real pixels (the grid radius above is only used for ordering/emphasis). */
-const DOT_RADIUS_PX: Record<ConstellationDot["kind"], number> = {
-  anchor: 3.4,
-  gold: 3,
-  bg: 2.1,
-};
-const GOLD_HALO_RADIUS_PX = 11;
-
-interface ConstellationLine {
-  from: number;
-  to: number;
-  isMobileVisible: boolean;
-}
-
-const LINES: ConstellationLine[] = [
-  // Left chain
-  { from: 0, to: 5,  isMobileVisible: true },
-  { from: 5, to: 7,  isMobileVisible: true },
-  { from: 7, to: 9,  isMobileVisible: true },
-  { from: 9, to: 13, isMobileVisible: true },
-  { from: 13, to: 11, isMobileVisible: false },
-  { from: 11, to: 14, isMobileVisible: false },
-  { from: 14, to: 16, isMobileVisible: false },
-  { from: 16, to: 2,  isMobileVisible: false },
-  { from: 14, to: 2,  isMobileVisible: true }, // mobile shortcut (16 is hidden on phones)
-
-  // Right chain
-  { from: 1, to: 6,  isMobileVisible: true },
-  { from: 6, to: 4,  isMobileVisible: true },
-  { from: 4, to: 8,  isMobileVisible: true },
-  { from: 8, to: 10, isMobileVisible: true },
-  { from: 10, to: 12, isMobileVisible: true },
-  { from: 12, to: 15, isMobileVisible: false },
-  { from: 15, to: 17, isMobileVisible: false },
-  { from: 17, to: 3,  isMobileVisible: false },
-  { from: 12, to: 3,  isMobileVisible: true }, // mobile shortcut (15, 17 are hidden on phones)
+/** The lines of the Dipper: the handle, the bowl (a closed loop), then the pointer to Polaris. */
+const LINES: { from: number; to: number; gold?: boolean }[] = [
+  { from: 0, to: 1 },
+  { from: 1, to: 2 },
+  { from: 2, to: 3 },
+  { from: 3, to: 6 },
+  { from: 6, to: 5 },
+  { from: 5, to: 4 },
+  { from: 4, to: 3 },
+  { from: 6, to: 7, gold: true },
 ];
 
-/* ── Timing: dots appear top-first, lines start once most dots are in ── */
-const SORTED_INDICES = DOTS.map((d, i) => ({ idx: i, cy: d.cy }))
-  .sort((a, b) => a.cy - b.cy)
-  .map(({ idx }) => idx);
-
-const DOT_DELAYS: number[] = new Array(DOTS.length).fill(0);
-SORTED_INDICES.forEach((dotIdx, pos) => {
-  DOT_DELAYS[dotIdx] = pos * 0.12;
-});
-
-const DOT_MOBILE_DELAYS: number[] = new Array(DOTS.length).fill(0);
-SORTED_INDICES.filter((i) => DOTS[i].isMobileVisible).forEach((dotIdx, pos) => {
-  DOT_MOBILE_DELAYS[dotIdx] = pos * 0.06;
-});
-
-const LINE_START_DESKTOP = 1.2;
-const LINE_START_MOBILE = 0.6;
-const LINE_MOBILE_ORDER: number[] = [];
-{
-  let next = 0;
-  LINES.forEach((line, i) => {
-    LINE_MOBILE_ORDER[i] = line.isMobileVisible ? next++ : 0;
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════
-   COMPONENT
-   ════════════════════════════════════════════════════════════ */
+/** A line starts drawing just before its later star lands, and takes this much of the scroll. */
+const LINE_DRAW = 0.12;
 
 interface EventsConstellationProps {
   events: FeaturedEvent[];
+  /** Not used any more (the stars now follow the scroll); kept so existing code still compiles. */
   morphedDotIds?: number[];
   /** Optional ref to expose the constellation SVG element to a parent */
   svgRef?: RefObject<SVGSVGElement | null>;
 }
 
-export default function EventsConstellation({
-  events,
-  morphedDotIds = [],
-  svgRef,
-}: EventsConstellationProps) {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const [inView, setInView] = useState(false);
-  // Real size of the drawing. Dots and lines are placed in true pixels, so circles stay
-  // round and strokes stay even on every screen shape (they used to be stretched).
-  const [size, setSize] = useState({ w: 1000, h: 600 });
-  const morphedDotSet = new Set(morphedDotIds);
+export default function EventsConstellation({ events, svgRef }: EventsConstellationProps) {
+  const skyRef = useRef<HTMLDivElement>(null);
+  // Real size of the sky strip. Stars and lines are placed in true pixels, so circles stay round.
+  const [size, setSize] = useState({ w: SKY_W, h: SKY_H });
 
-  /* Start the entrance once, and track visibility for the idle shimmer */
   useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    const entrance = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setHasAnimated(true);
-          entrance.disconnect();
-        }
-      },
-      { threshold: 0.15 },
-    );
-    const visibility = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting));
-
-    entrance.observe(section);
-    visibility.observe(section);
-    return () => {
-      entrance.disconnect();
-      visibility.disconnect();
-    };
-  }, []);
-
-  /* Keep the drawing in step with the section's size (the drawing fills the section) */
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
+    const sky = skyRef.current;
+    if (!sky) return;
     const measure = () => {
-      const width = section.clientWidth;
-      const height = section.clientHeight;
+      const width = sky.clientWidth;
+      const height = sky.clientHeight;
       if (width > 0 && height > 0) {
         setSize((prev) => (prev.w === width && prev.h === height ? prev : { w: width, h: height }));
       }
     };
+    measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(section);
+    observer.observe(sky);
     return () => observer.disconnect();
   }, []);
 
-  const px = (cx: number) => (cx / 1000) * size.w;
-  const py = (cy: number) => (cy / 600) * size.h;
+  const px = (cx: number) => (cx / SKY_W) * size.w;
+  const py = (cy: number) => (cy / SKY_H) * size.h;
+  const k = Math.min(1.15, Math.max(0.7, size.w / SKY_W));
 
   const shownEvents = events?.slice(0, 6) ?? [];
 
   return (
-    <section
-      ref={sectionRef}
-      id="events"
-      className={`scroll-mt-16 events-constellation-section${hasAnimated ? " ec-animated" : ""}${inView ? " ec-inview" : ""}`}
-    >
-      {/* Without JavaScript nothing triggers the entrance, so show the cards plainly */}
-      <noscript>
-        <style>{`#events .ec-card{opacity:1!important}`}</style>
-      </noscript>
-
-      {/* ── Constellation background ── */}
-      <svg
-        ref={svgRef}
-        className="ec-constellation-svg"
-        viewBox={`0 0 ${size.w} ${size.h}`}
-        aria-hidden="true"
-      >
-        {LINES.map((line, i) => {
-          const from = DOTS[line.from];
-          const to = DOTS[line.to];
-          const x1 = px(from.cx);
-          const y1 = py(from.cy);
-          const x2 = px(to.cx);
-          const y2 = py(to.cy);
-          const len = Math.hypot(x2 - x1, y2 - y1).toFixed(3);
-
-          return (
-            <line
-              key={`line-${i}`}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#1a3378"
-              strokeWidth={1}
-              strokeDasharray={len}
-              className={`ec-line${!line.isMobileVisible ? " ec-desktop-only" : ""}`}
-              style={
-                {
-                  "--ec-dash-len": len,
-                  "--d": `${LINE_START_DESKTOP + i * 0.07}s`,
-                  "--dm": `${LINE_START_MOBILE + LINE_MOBILE_ORDER[i] * 0.04}s`,
-                } as CSSProperties
-              }
-            />
-          );
-        })}
-
-        {DOTS.map((dot, i) => {
-          const kindClass =
-            dot.kind === "anchor" ? "ec-dot-anchor" : dot.kind === "gold" ? "ec-dot-gold" : "ec-dot-bg";
-          const isMorphed = morphedDotSet.has(dot.id);
-          const delays = {
-            "--d": `${DOT_DELAYS[i]}s`,
-            "--dm": `${DOT_MOBILE_DELAYS[i]}s`,
-            "--ec-target-op": dot.opacity,
-          } as CSSProperties;
-          const visibility = !dot.isMobileVisible ? " ec-desktop-only" : "";
-
-          return (
-            <g key={`dot-${dot.id}`}>
-              {dot.kind === "gold" && !isMorphed && (
-                <circle
-                  cx={px(dot.cx)}
-                  cy={py(dot.cy)}
-                  r={GOLD_HALO_RADIUS_PX}
-                  fill="#c8903a"
-                  className={`ec-halo${visibility}`}
-                  style={delays}
-                />
-              )}
-              <circle
-                data-dot-id={dot.id}
-                cx={px(dot.cx)}
-                cy={py(dot.cy)}
-                r={DOT_RADIUS_PX[dot.kind]}
-                fill={dot.fill}
-                className={`ec-dot ${kindClass}${isMorphed ? " ec-dot-pre-visible" : ""}${visibility}`}
-                style={delays}
+    <section id="events" className="scroll-mt-16 events-constellation-section">
+      {/* ── The night sky: the Big Dipper forms here as you scroll in ── */}
+      <div ref={skyRef} className="ec-sky">
+        <svg
+          ref={svgRef}
+          className="ec-sky-svg"
+          viewBox={`0 0 ${size.w} ${size.h}`}
+          aria-hidden="true"
+        >
+          {LINES.map((line, i) => {
+            const a = DOTS[line.from];
+            const b = DOTS[line.to];
+            const x1 = px(a.cx);
+            const y1 = py(a.cy);
+            const x2 = px(b.cx);
+            const y2 = py(b.cy);
+            const length = Math.hypot(x2 - x1, y2 - y1);
+            const start = Math.max(a.arrive, b.arrive) - 0.03;
+            return (
+              <line
+                key={`line-${i}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={line.gold ? GOLD : NAVY}
+                strokeWidth={1.4}
+                strokeLinecap="round"
+                className="ec-line"
+                style={
+                  {
+                    "--len": length,
+                    "--l0": start,
+                    "--lk": 1 / LINE_DRAW,
+                    "--lo": line.gold ? 0.7 : 0.42,
+                  } as CSSProperties
+                }
               />
-            </g>
-          );
-        })}
-      </svg>
+            );
+          })}
+
+          {DOTS.map((dot, i) => {
+            const radius = dot.r * k;
+            const spark = radius * 3.4;
+            const cx = px(dot.cx);
+            const cy = py(dot.cy);
+            return (
+              <g
+                key={dot.id}
+                className={`ec-star ec-star-${dot.kind}${dot.mobile ? "" : " ec-desktop-only"}`}
+                style={
+                  {
+                    "--a": dot.arrive,
+                    "--i": i,
+                    "--to": dot.kind === "dust" ? 0.5 : 1,
+                  } as CSSProperties
+                }
+              >
+                {dot.kind === "polaris" && (
+                  <circle className="ec-polaris-glow" cx={cx} cy={cy} r={22 * k} fill={GOLD} />
+                )}
+                {dot.kind !== "dust" && (
+                  <g className="ec-star-spark" stroke={dot.fill} strokeWidth={1} strokeLinecap="round">
+                    <line x1={cx - spark} y1={cy} x2={cx + spark} y2={cy} />
+                    <line x1={cx} y1={cy - spark} x2={cx} y2={cy + spark} />
+                  </g>
+                )}
+                <circle
+                  className="ec-star-ring"
+                  cx={cx}
+                  cy={cy}
+                  r={radius * 2.2}
+                  fill="none"
+                  stroke={dot.fill}
+                  strokeWidth={1.4}
+                />
+                <circle className="ec-star-core" cx={cx} cy={cy} r={radius} fill={dot.fill} />
+              </g>
+            );
+          })}
+        </svg>
+        <p className="ec-sky-caption font-body">Every event is a new star</p>
+      </div>
 
       {/* ── Title ── */}
       <div className="ec-title">
