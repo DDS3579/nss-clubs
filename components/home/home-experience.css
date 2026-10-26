@@ -1050,3 +1050,137 @@
     font-size: 16px;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════
+   ABOUT → EVENTS TRANSITION
+   The scroll code sets --m on #about (0 → 1) and adds the class "lifted" when the planets leave.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Tablet and desktop: the About stage pins to the screen for one extra screenful of scrolling ──
+   (the page keeps scrolling, the section holds still). Phones are unchanged. */
+@media (min-width: 769px) {
+  #about.about-solar-section {
+    padding: 0;
+    overflow: clip; /* "clip" (not "hidden") so pinning still works */
+  }
+  #about .about-track {
+    height: calc(200svh - 4rem); /* the pinned stage + one screenful of runway */
+  }
+  #about .about-stage {
+    position: sticky;
+    top: 4rem; /* just under the navbar */
+    height: calc(100svh - 4rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    padding-top: clamp(16px, 7svh, 84px);
+  }
+  #about .as-title {
+    margin: 0 auto 40px;
+  }
+  /* Keep the invisible target (where the canvas atom becomes the sun) over the sun */
+  #about .about-sun-anchor {
+    top: calc(clamp(16px, 7svh, 84px) + 135px);
+  }
+}
+
+/* On short screens, shrink the pinned stage a little so it always fits */
+@media (min-width: 769px) and (max-height: 800px) {
+  #about .about-stage > .as-title,
+  #about .about-stage > .solar-desktop {
+    zoom: 0.94;
+  }
+}
+@media (min-width: 769px) and (max-height: 740px) {
+  #about .about-stage > .as-title,
+  #about .about-stage > .solar-desktop {
+    zoom: 0.86;
+  }
+}
+@media (min-width: 769px) and (max-height: 680px) {
+  #about .about-stage > .as-title,
+  #about .about-stage > .solar-desktop {
+    zoom: 0.78;
+  }
+}
+@media (min-width: 769px) and (max-height: 620px) {
+  #about .about-stage > .as-title,
+  #about .about-stage > .solar-desktop {
+    zoom: 0.7;
+  }
+}
+
+/* ── Lift-off: the real planets vanish the instant their glowing copies take over ── */
+#about.lifted .solar-desktop .p-sphere,
+#about.lifted .solar-desktop .p-saturn-wrap,
+#about.lifted .solar-mobile .mob-sun,
+#about.lifted .solar-mobile .mob-dot {
+  visibility: hidden;
+}
+#about.lifted .solar-desktop .orbit-line-h,
+#about.lifted .solar-mobile .mob-spine {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* ── The cards and title recede (softly, scrubbed by your scroll) so nothing flies over text ── */
+@media (min-width: 769px) {
+  #about .solar-desktop .p-col {
+    --r: clamp(0, (var(--m, 0) - 0.03 - var(--k, 0) * 0.035) * 4.5, 1);
+    opacity: calc(1 - var(--r));
+    translate: 0 calc(var(--r) * -30px);
+    scale: calc(1 - var(--r) * 0.04);
+    filter: blur(calc(var(--r) * 6px));
+  }
+  #about .solar-desktop .p-col[data-node="0"] {
+    --k: 0;
+  }
+  #about .solar-desktop .p-col[data-node="1"] {
+    --k: 1;
+  }
+  #about .solar-desktop .p-col[data-node="2"] {
+    --k: 2;
+  }
+  #about .as-title {
+    --r: clamp(0, (var(--m, 0) - 0.02) * 5, 1);
+    opacity: calc(1 - var(--r));
+    translate: 0 calc(var(--r) * -18px);
+  }
+}
+@media (max-width: 768px) {
+  #about .solar-mobile,
+  #about .as-title {
+    --r: clamp(0, (var(--m, 0) - 0.01) * 8, 1);
+    opacity: calc(1 - var(--r));
+    translate: 0 calc(var(--r) * -24px);
+  }
+}
+
+/* ── The glowing planet copies: they keep the planet's look at takeoff, then turn to starlight ── */
+.morph-ghost {
+  border-radius: 9999px;
+}
+.morph-ghost::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--planet-bg, none);
+  opacity: var(--pb, 0);
+}
+/* A comet tail that follows how fast the copy is moving (length and direction set from the scroll code) */
+.morph-ghost::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--tail, 0px);
+  height: 2px;
+  border-radius: 2px;
+  transform-origin: 0 50%;
+  transform: translateY(-50%) rotate(var(--ang, 0deg));
+  background: linear-gradient(to right, var(--tc, rgba(26, 51, 120, 0.55)), transparent);
+  pointer-events: none;
+}

@@ -114,6 +114,8 @@ export default function AboutSection({
             zIndex: 0,
           }}
         />
+        <div className="about-track">
+        <div className="about-stage">
         {/* ── Title ── */}
         <div className="as-title">
           <h2 className="font-display">
@@ -299,19 +301,18 @@ export default function AboutSection({
           </div>
         </div>
 
+        </div>
+        </div>
       </section>
 
-      <div
-        className="pointer-events-none absolute left-0 top-0 z-[26] h-0 w-full overflow-x-clip"
-        aria-hidden="true"
-      >
+      <div className="pointer-events-none fixed inset-0 z-[26]" aria-hidden="true">
         {PLANET_DOT_MORPHS.map((morph, index) => (
           <div
             key={morph.key}
             ref={(el) => {
               morphGhostRefs.current[index] = el;
             }}
-            className="absolute rounded-full"
+            className="morph-ghost absolute rounded-full"
             style={{
               opacity: 0,
               width: 0,

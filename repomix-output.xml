@@ -9174,6 +9174,8 @@ export default function HomeScrollExperience({
           }
         ` }} />
 
+        <div className="about-track">
+        <div className="about-stage">
         {/* ── Title ── */}
         <div className="as-title">
           <h2 className="font-display">
@@ -9398,7 +9400,7 @@ export default function HomeScrollExperience({
             ref={(el) => {
               morphGhostRefs.current[index] = el;
             }}
-            className="absolute rounded-full"
+            className="morph-ghost absolute rounded-full"
             style={{
               opacity: 0,
               width: 0,
