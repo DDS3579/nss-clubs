@@ -1,119 +1,127 @@
 /* ═══════════════════════════════════════════════════════════
-   EVENTS CONSTELLATION — styles (moved out of the component)
+   EVENTS: the constellation and the cards
    Everything is scoped to #events.
-   Performance notes:
-   - no permanent will-change (it keeps every dot on its own GPU layer)
-   - no SVG filters or backdrop-filter; the gold glow is a plain fading circle
-   - idle twinkle only runs while the section is on screen
-   - reduced-motion users get the final picture with no movement
+
+   The scroll code sets --m on #events (0 → 1 across the About → Events transition).
+   Stars, lines, title and cards all read it, so the whole thing is scrubbed by your scroll:
+   scroll back and it plays in reverse; stop and it holds still.
+   Where --m is missing (no JavaScript, or "reduce motion") it falls back to 1: the finished picture.
    ═══════════════════════════════════════════════════════════ */
 
 #events.events-constellation-section {
   position: relative;
   overflow: hidden;
   background: #f8fafc;
-  padding: 100px 0 80px;
+  padding: 40px 0 80px;
 }
 
-/* ── The constellation drawing ── */
-#events .ec-constellation-svg {
+/* ── The night sky strip ── */
+#events .ec-sky {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  height: clamp(150px, 28vw, 300px);
+  margin: 0 auto 16px;
+}
+#events .ec-sky-svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 0;
+  overflow: visible;
   pointer-events: none;
 }
 
-/* ── Dots ── */
-@keyframes ec-bg-emerge {
-  0%   { opacity: 0; transform: scale(0); }
-  50%  { opacity: calc(var(--ec-target-op) * 0.7); }
-  100% { opacity: var(--ec-target-op); transform: scale(1); }
-}
-@keyframes ec-anchor-emerge {
-  0%   { opacity: 0; transform: scale(0); }
-  35%  { opacity: calc(var(--ec-target-op) * 0.5); transform: scale(0.4); }
-  65%  { opacity: var(--ec-target-op); transform: scale(1.4); }
-  85%  { transform: scale(0.9); }
-  100% { opacity: var(--ec-target-op); transform: scale(1); }
-}
-@keyframes ec-gold-emerge {
-  0%   { opacity: 0; transform: scale(0); }
-  30%  { opacity: 0.2; transform: scale(0.5); }
-  55%  { opacity: var(--ec-target-op); transform: scale(1.6); }
-  80%  { transform: scale(0.85); }
-  100% { opacity: var(--ec-target-op); transform: scale(1); }
-}
-@keyframes ec-halo-pulse {
-  0%   { opacity: 0; transform: scale(0.3); }
-  55%  { opacity: 0.55; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.5); }
-}
-@keyframes ec-twinkle {
-  0%, 100% { opacity: var(--ec-target-op); }
-  50%      { opacity: calc(var(--ec-target-op) * 0.45); }
-}
-
-#events .ec-dot,
-#events .ec-halo {
-  opacity: 0;
-  transform-origin: center;
+/* ── Stars ──
+   --a is the scroll position at which this star lands. It fades and grows in just before. */
+#events .ec-star {
+  --p: clamp(0, (var(--m, 1) - var(--a, 0) + 0.05) * 14, 1);
+  opacity: calc(var(--p) * var(--to, 1));
+  transform: scale(calc(0.3 + var(--p) * 0.7));
   transform-box: fill-box;
-}
-#events .ec-dot-pre-visible {
-  opacity: var(--ec-target-op);
-  transform: scale(1);
-  animation: none !important;
+  transform-origin: center;
 }
 
-#events.ec-animated .ec-dot-bg {
-  animation: ec-bg-emerge 0.55s cubic-bezier(0.16, 1, 0.3, 1) var(--d) forwards;
-}
-#events.ec-animated .ec-dot-anchor {
-  animation: ec-anchor-emerge 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d) forwards;
-}
-#events.ec-animated .ec-dot-gold {
-  animation: ec-gold-emerge 0.85s cubic-bezier(0.16, 1, 0.3, 1) var(--d) forwards;
-}
-#events.ec-animated .ec-halo {
-  animation: ec-halo-pulse 1.1s ease-out var(--d) forwards;
+/* A ring that flashes outward the moment a star lands */
+#events .ec-star-ring {
+  --q: clamp(0, (var(--m, 1) - var(--a, 0)) * 9, 1);
+  opacity: calc(clamp(0, (var(--m, 1) - var(--a, 0) + 0.02) * 40, 1) * (1 - var(--q)) * 0.9);
+  transform: scale(calc(0.6 + var(--q) * 2.6));
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
-/* Quiet idle shimmer on the four anchor dots, only while visible */
-#events.ec-animated.ec-inview .ec-dot-anchor:not(.ec-dot-pre-visible) {
-  animation:
-    ec-anchor-emerge 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d) forwards,
-    ec-twinkle 6s ease-in-out calc(var(--d) + 1.5s) infinite;
+/* The little four-point glint on the brighter stars */
+#events .ec-star-spark {
+  opacity: calc(clamp(0, (var(--m, 1) - var(--a, 0)) * 8, 1) * 0.55);
 }
 
-/* ── Lines ── */
-@keyframes ec-line-draw {
-  from { stroke-dashoffset: var(--ec-dash-len); opacity: 0.22; }
-  to   { stroke-dashoffset: 0; opacity: 0.22; }
+/* Polaris glows warm */
+#events .ec-polaris-glow {
+  opacity: calc(clamp(0, (var(--m, 1) - var(--a, 0)) * 6, 1) * 0.2);
+  transform: scale(calc(0.4 + clamp(0, (var(--m, 1) - var(--a, 0)) * 6, 1) * 0.6));
+  transform-box: fill-box;
+  transform-origin: center;
 }
+
+/* Once the constellation has formed, the stars twinkle gently */
+@keyframes ec-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+#events.ec-formed .ec-star-core {
+  animation: ec-twinkle 4.6s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.7s);
+}
+
+/* ── Lines draw between the stars as they land ── */
 #events .ec-line {
-  opacity: 0;
-}
-#events.ec-animated .ec-line {
-  animation: ec-line-draw 0.65s ease-out var(--d) forwards;
+  --draw: clamp(0, (var(--m, 1) - var(--l0, 0)) * var(--lk, 8), 1);
+  stroke-dasharray: calc(var(--len, 100) * 1px);
+  stroke-dashoffset: calc((1 - var(--draw)) * var(--len, 100) * 1px);
+  opacity: calc(clamp(0, (var(--m, 1) - var(--l0, 0)) * 40, 1) * var(--lo, 0.4));
 }
 
-/* ── Phones: fewer dots, quicker timings ── */
+/* ── The caption under the sky ── */
+#events .ec-sky-caption {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  translate: -50% 0;
+  margin: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #64748b;
+  opacity: clamp(0, (var(--m, 1) - 0.86) * 8, 1);
+}
+
+/* ── Phones: a shorter strip, and fewer faint stars ── */
 @media (max-width: 767px) {
-  #events .ec-desktop-only { display: none; }
-  #events .ec-dot,
-  #events .ec-line,
-  #events .ec-halo { animation-delay: var(--dm); }
-  #events.ec-animated .ec-dot-bg { animation-duration: 0.4s; }
-  #events.ec-animated .ec-dot-anchor { animation-duration: 0.5s; }
-  #events.ec-animated .ec-dot-gold { animation-duration: 0.6s; }
-  #events.ec-animated .ec-line { animation-duration: 0.45s; }
-  #events.events-constellation-section { padding: 60px 0 48px; }
+  #events .ec-desktop-only {
+    display: none;
+  }
+  #events.events-constellation-section {
+    padding: 28px 0 48px;
+  }
+  #events .ec-sky-caption {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+  }
 }
 
 /* ── Title ── */
 #events .ec-title {
+  --t: clamp(0, (var(--m, 1) - 0.52) * 4, 1);
+  opacity: var(--t);
+  translate: 0 calc((1 - var(--t)) * 16px);
   text-align: center;
   margin: 0 auto 48px;
   max-width: 700px;
@@ -152,17 +160,24 @@
   gap: 28px;
 }
 @media (max-width: 1024px) {
-  #events .ec-grid { grid-template-columns: repeat(2, 1fr); gap: 22px; padding: 0 24px; }
+  #events .ec-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px;
+    padding: 0 24px;
+  }
 }
 @media (max-width: 640px) {
-  #events .ec-grid { grid-template-columns: 1fr; gap: 18px; padding: 0 16px; }
+  #events .ec-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 0 16px;
+  }
 }
 
-@keyframes ec-card-in {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
 #events .ec-card {
+  --t: clamp(0, (var(--m, 1) - 0.8 - var(--i, 0) * 0.035) * 6, 1);
+  opacity: var(--t);
+  translate: 0 calc((1 - var(--t)) * 26px);
   display: block;
   color: #0d2460;
   text-decoration: none;
@@ -171,11 +186,9 @@
   overflow: hidden;
   border: 1px solid rgba(13, 36, 96, 0.06);
   box-shadow: 0 2px 12px rgba(13, 36, 96, 0.06);
-  opacity: 0;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-#events.ec-animated .ec-card {
-  animation: ec-card-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(0.25s + var(--i) * 0.09s) forwards;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 #events a.ec-card:hover,
 #events a.ec-card:focus-visible {
@@ -199,7 +212,9 @@
   object-fit: cover;
   display: block;
 }
-#events .ec-card-body { padding: 20px 22px; }
+#events .ec-card-body {
+  padding: 20px 22px;
+}
 #events .ec-card-date {
   font-size: 11px;
   font-weight: 700;
@@ -217,12 +232,18 @@
   letter-spacing: -0.01em;
 }
 @media (max-width: 640px) {
-  #events .ec-card-body { padding: 16px 18px; }
-  #events .ec-card-title { font-size: 16px; }
+  #events .ec-card-body {
+    padding: 16px 18px;
+  }
+  #events .ec-card-title {
+    font-size: 16px;
+  }
 }
 
 /* ── View all ── */
 #events .ec-view-all {
+  --t: clamp(0, (var(--m, 1) - 0.9) * 8, 1);
+  opacity: var(--t);
   display: flex;
   justify-content: center;
   margin-top: 40px;
@@ -242,7 +263,11 @@
   border-radius: 12px;
   border: 1.5px solid rgba(13, 36, 96, 0.15);
   background: #fff;
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
   letter-spacing: 0.02em;
 }
 #events .ec-view-all a:hover,
@@ -252,25 +277,21 @@
   border-color: #0d2460;
   box-shadow: 0 4px 16px rgba(13, 36, 96, 0.18);
 }
-#events .ec-view-all a svg { width: 16px; height: 16px; transition: transform 0.3s ease; }
-#events .ec-view-all a:hover svg { transform: translateX(3px); }
+#events .ec-view-all a svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s ease;
+}
+#events .ec-view-all a:hover svg {
+  transform: translateX(3px);
+}
 
-/* ── Reduced motion: show the finished picture, no movement ── */
+/* ── Reduced motion: no twinkle (the finished picture shows, as --m is never set) ── */
 @media (prefers-reduced-motion: reduce) {
-  #events .ec-dot,
-  #events .ec-line,
-  #events .ec-card,
-  #events .ec-halo,
-  #events.ec-animated .ec-dot,
-  #events.ec-animated .ec-line,
-  #events.ec-animated .ec-card,
-  #events.ec-animated .ec-halo,
-  #events.ec-animated.ec-inview .ec-dot-anchor {
-    animation: none !important;
-    transition: none !important;
+  #events.ec-formed .ec-star-core {
+    animation: none;
   }
-  #events .ec-dot { opacity: var(--ec-target-op); transform: none; }
-  #events .ec-halo { opacity: 0; }
-  #events .ec-line { opacity: 0.22; stroke-dashoffset: 0; }
-  #events .ec-card { opacity: 1; transform: none; }
+  #events .ec-star-ring {
+    opacity: 0;
+  }
 }
