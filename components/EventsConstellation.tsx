@@ -143,7 +143,7 @@ export default function EventsConstellation({ events, svgRef }: EventsConstellat
             const y1 = py(a.cy);
             const x2 = px(b.cx);
             const y2 = py(b.cy);
-            const length = Math.hypot(x2 - x1, y2 - y1);
+            const length = Math.hypot(x2 - x1, y2 - y1).toFixed(8);
             const start = Math.max(a.arrive, b.arrive) - 0.03;
             return (
               <line
@@ -159,9 +159,9 @@ export default function EventsConstellation({ events, svgRef }: EventsConstellat
                 style={
                   {
                     "--len": length,
-                    "--l0": start,
-                    "--lk": 1 / LINE_DRAW,
-                    "--lo": line.gold ? 0.7 : 0.42,
+                    "--l0": String(start),
+                    "--lk": String(1 / LINE_DRAW),
+                    "--lo": String(line.gold ? 0.7 : 0.42),
                   } as CSSProperties
                 }
               />
@@ -179,9 +179,9 @@ export default function EventsConstellation({ events, svgRef }: EventsConstellat
                 className={`ec-star ec-star-${dot.kind}${dot.mobile ? "" : " ec-desktop-only"}`}
                 style={
                   {
-                    "--a": dot.arrive,
-                    "--i": i,
-                    "--to": dot.kind === "dust" ? 0.5 : 1,
+                    "--a": String(dot.arrive),
+                    "--i": String(i),
+                    "--to": String(dot.kind === "dust" ? 0.5 : 1),
                   } as CSSProperties
                 }
               >
@@ -247,7 +247,7 @@ export default function EventsConstellation({ events, svgRef }: EventsConstellat
                   </div>
                 </>
               );
-              const style = { "--i": idx } as CSSProperties;
+              const style = { "--i": String(idx) } as CSSProperties;
 
               return event.slug ? (
                 <Link key={event._id ?? idx} href={`/events/${event.slug}`} className="ec-card" style={style}>
@@ -260,7 +260,7 @@ export default function EventsConstellation({ events, svgRef }: EventsConstellat
               );
             })
           : [1, 2, 3].map((i) => (
-              <div key={i} className="ec-card" style={{ "--i": i - 1 } as CSSProperties}>
+              <div key={i} className="ec-card" style={{ "--i": String(i - 1) } as CSSProperties}>
                 <div
                   className="ec-card-img"
                   style={{ background: "linear-gradient(135deg, #e2e8f0, #f1f5f9)" }}
