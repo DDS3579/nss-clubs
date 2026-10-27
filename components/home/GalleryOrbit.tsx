@@ -61,14 +61,12 @@ const ORBIT_SLOTS: OrbitSlot[] = [
   },
 ];
 
-const BRIDGE_SOURCE_POINTS = [
-  { x: 60, y: 80 },
-  { x: 200, y: 120 },
-  { x: 840, y: 150 },
-  { x: 760, y: 370 },
-  { x: 70, y: 550 },
-  { x: 910, y: 560 },
-];
+/**
+ * Which event card lifts off a star for each orbit spot.
+ * Cards are in reading order (top-left, top-middle, top-right, bottom-left, ...), and each one
+ * feeds the spot on the ring that is closest to where it sits.
+ */
+const CARD_FOR_SLOT = [1, 5, 3, 4, 0, 2];
 
 function classNames(...names: Array<string | false | null | undefined>) {
   return names.filter(Boolean).join(" ");
@@ -125,7 +123,7 @@ export default function GalleryOrbit({
   const bridgeParticleRefs = useRef<Array<HTMLDivElement | null>>([]);
   const scrollRafRef = useRef(0);
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasOpenedRef = useRef(false);
+  const phaseRef = useRef<OrbitPhase>("idle");
   const [phase, setPhase] = useState<OrbitPhase>("idle");
 
   const galleryItems = useMemo(() => {
@@ -137,38 +135,79 @@ export default function GalleryOrbit({
     });
   }, [items]);
 
+  /**
+   * One scroll-driven effect runs the whole Events → Gallery moment:
+   *  - the six stars lift off the event cards and fly to the orbit ring
+   *  - the orbit photos open exactly when the stars land (and fold away when you scroll back)
+   *  - the event cards dip a little while their stars are away
+   */
   useEffect(() => {
     const section = sectionRef.current;
     const stage = stageRef.current;
     const bridge = bridgeRef.current;
     if (!section || !stage || !bridge) return;
 
+    // With "reduce motion" the CSS shows the finished orbit and there is no flight
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (reduceMotion.matches) return;
 
+    const lastPoints: ({ x: number; y: number; tail: number } | null)[] = [];
+    let eventsEl: HTMLElement | null = null;
+    let dimWritten = "";
+
+    const clearExitTimer = () => {
+      if (exitTimerRef.current) {
+        clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = null;
+      }
+    };
+
+    const goTo = (next: OrbitPhase) => {
+      if (phaseRef.current === next) return;
+      phaseRef.current = next;
+      setPhase(next);
+    };
+
+    const setDim = (value: number) => {
+      const text = value.toFixed(3);
+      if (dimWritten === text) return;
+      dimWritten = text;
+      eventsEl?.style.setProperty("--g", text);
+    };
+
     const updateBridge = () => {
       scrollRafRef.current = 0;
-
-      const eventsSection = document.getElementById("events");
-      if (!eventsSection) return;
+      if (!eventsEl) eventsEl = document.getElementById("events");
 
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const eventsRect = eventsSection.getBoundingClientRect();
       const galleryRect = section.getBoundingClientRect();
-      const stageRect = stage.getBoundingClientRect();
-      const progress = clamp(
-        (viewportHeight * 1.08 - galleryRect.top) /
-          (viewportHeight * 0.94),
-      );
-      const bridgeFadeIn = smoothstep(0.01, 0.16, progress);
-      const bridgeFadeOut = 1 - smoothstep(0.9, 1, progress);
-      const bridgeOpacity = bridgeFadeIn * bridgeFadeOut;
+
+      // 0 → 1 while the gallery rises into view
+      const progress = clamp((viewportHeight * 1.08 - galleryRect.top) / (viewportHeight * 0.94));
+
+      // ── The orbit opens and folds away with your scroll (with a gap so it never flickers) ──
+      if (progress >= 0.5) {
+        if (phaseRef.current !== "open") {
+          clearExitTimer();
+          goTo("open");
+        }
+      } else if (progress < 0.34 && phaseRef.current === "open") {
+        goTo("exiting");
+        clearExitTimer();
+        exitTimerRef.current = setTimeout(() => {
+          goTo("idle");
+          exitTimerRef.current = null;
+        }, 1200);
+      }
+
+      // The stars' flight takes the first half of the rise, so they land as the photos appear
+      const flight = clamp(progress / 0.52);
+      const bridgeOpacity = smoothstep(0, 0.08, progress) * (1 - smoothstep(0.5, 0.64, progress));
       const active =
         bridgeOpacity > 0.02 &&
         galleryRect.top < viewportHeight * 1.14 &&
-        galleryRect.top > -viewportHeight * 0.36 &&
-        eventsRect.bottom > -viewportHeight * 0.82;
+        galleryRect.top > -viewportHeight * 0.36;
 
       bridge.classList.toggle(styles.scrollBridgeActive, active);
       bridge.style.opacity = active ? `${bridgeOpacity}` : "0";
@@ -177,34 +216,91 @@ export default function GalleryOrbit({
         `${lerp(30, -14, progress).toFixed(2)}px`,
       );
 
-      if (!active) return;
+      if (!active) {
+        lastPoints.length = 0;
+        setDim(0);
+        return;
+      }
 
+      // The event cards dip a little while their stars are away, then come back
+      setDim(Math.sin(flight * Math.PI));
+
+      const stageRect = stage.getBoundingClientRect();
       const stageCenterX = stageRect.left + stageRect.width / 2;
       const stageCenterY = stageRect.top + stageRect.height / 2;
-      const easedProgress = smoothstep(0, 1, progress);
+      const eventsRect = eventsEl?.getBoundingClientRect() ?? null;
+      const cards = eventsEl ? eventsEl.querySelectorAll<HTMLElement>(".ec-card") : null;
+      const eased = smoothstep(0, 1, flight);
       const linePoints: string[] = [];
 
       ORBIT_SLOTS.forEach((slot, index) => {
-        const source = BRIDGE_SOURCE_POINTS[index];
         const particle = bridgeParticleRefs.current[index];
         if (!particle) return;
 
-        const sourceX = eventsRect.left + eventsRect.width * (source.x / 1000);
-        const sourceY = eventsRect.top + eventsRect.height * (source.y / 600);
+        // Where this star lifts off: the centre of its event card (kept on screen)
+        let fromX: number;
+        let fromY: number;
+        const card =
+          cards && cards.length > 0 ? cards[CARD_FOR_SLOT[index] % cards.length] : null;
+        if (card) {
+          const rect = card.getBoundingClientRect();
+          fromX = rect.left + rect.width / 2;
+          fromY = rect.top + rect.height / 2;
+        } else if (eventsRect) {
+          fromX = eventsRect.left + eventsRect.width * (0.2 + 0.12 * index);
+          fromY = eventsRect.bottom - 140;
+        } else {
+          fromX = viewportWidth * (0.2 + 0.12 * index);
+          fromY = viewportHeight * 0.8;
+        }
+        fromX = clamp(fromX, 24, viewportWidth - 24);
+        fromY = clamp(fromY, viewportHeight * 0.14, viewportHeight * 0.9);
+
+        // Where it lands: its spot on the orbit ring
         const radius = getResponsiveRadius(slot.ring, viewportWidth);
         const radians = (slot.angle * Math.PI) / 180;
-        const targetX = stageCenterX + Math.cos(radians) * radius;
-        const targetY = stageCenterY + Math.sin(radians) * radius;
-        const parallaxOffset = lerp(-42, 24, progress) * (index % 2 === 0 ? 1 : -0.45);
-        const x = lerp(sourceX, targetX, easedProgress);
-        const y = lerp(sourceY, targetY, easedProgress) + parallaxOffset;
-        const size = lerp(slot.ring === "inner" ? 8 : 10, slot.ring === "inner" ? 18 : 22, easedProgress);
-        const scale = lerp(0.86, 1.08, Math.sin(progress * Math.PI));
+        const toX = stageCenterX + Math.cos(radians) * radius;
+        const toY = stageCenterY + Math.sin(radians) * radius;
+
+        // A curved path, bent sideways (alternating left and right)
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const dist = Math.hypot(dx, dy) || 1;
+        const side = index % 2 === 0 ? 1 : -1;
+        const bulge = clamp(dist * 0.2, 30, 140) * side;
+        const controlX = (fromX + toX) / 2 - (dy / dist) * bulge;
+        const controlY = (fromY + toY) / 2 + (dx / dist) * bulge;
+        const u = 1 - eased;
+        const x = u * u * fromX + 2 * u * eased * controlX + eased * eased * toX;
+        const y = u * u * fromY + 2 * u * eased * controlY + eased * eased * toY;
+
+        const startSize = slot.ring === "inner" ? 9 : 11;
+        const endSize = slot.ring === "inner" ? 18 : 22;
+        const size = lerp(startSize, endSize, eased);
+
+        // A little pop as it lands
+        const landing = clamp((flight - 0.8) / 0.2);
+        const scale = 1 + Math.sin(landing * Math.PI) * 0.5;
+
+        // A short comet tail that follows how fast the star is really moving
+        const previous = lastPoints[index];
+        let tail = 0;
+        let angle = 0;
+        if (previous) {
+          const vx = x - previous.x;
+          const vy = y - previous.y;
+          angle = (Math.atan2(vy, vx) * 180) / Math.PI + 180;
+          const wanted = Math.min(90, Math.hypot(vx, vy) * 7) * Math.sin(Math.PI * flight);
+          tail = lerp(previous.tail, wanted, 0.35);
+        }
+        lastPoints[index] = { x, y, tail };
 
         particle.style.width = `${size}px`;
         particle.style.height = `${size}px`;
-        particle.style.opacity = `${lerp(0.5, 0.95, bridgeOpacity)}`;
+        particle.style.opacity = `${lerp(0.55, 0.95, bridgeOpacity)}`;
         particle.style.transform = `translate3d(${(x - size / 2).toFixed(2)}px, ${(y - size / 2).toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
+        particle.style.setProperty("--tail", `${tail.toFixed(1)}px`);
+        particle.style.setProperty("--ang", `${angle.toFixed(1)}deg`);
         linePoints.push(`${x.toFixed(1)},${y.toFixed(1)}`);
       });
 
@@ -228,46 +324,8 @@ export default function GalleryOrbit({
       }
       window.removeEventListener("scroll", requestBridgeUpdate);
       window.removeEventListener("resize", requestBridgeUpdate);
-    };
-  }, []);
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    const clearExitTimer = () => {
-      if (exitTimerRef.current) {
-        clearTimeout(exitTimerRef.current);
-        exitTimerRef.current = null;
-      }
-    };
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          clearExitTimer();
-          hasOpenedRef.current = true;
-          setPhase("open");
-          return;
-        }
-
-        if (!hasOpenedRef.current) return;
-
-        setPhase("exiting");
-        clearExitTimer();
-        exitTimerRef.current = setTimeout(() => {
-          setPhase("idle");
-          exitTimerRef.current = null;
-        }, 1200);
-      },
-      { threshold: 0.26, rootMargin: "-8% 0px -16% 0px" },
-    );
-
-    observer.observe(section);
-
-    return () => {
       clearExitTimer();
-      observer.disconnect();
+      eventsEl?.style.removeProperty("--g");
     };
   }, []);
 
@@ -309,7 +367,8 @@ export default function GalleryOrbit({
             Memories Return to <em>Orbit</em>
           </h2>
           <p className={`${styles.subtitle} font-body`}>
-            Six featured moments collapse from scattered stars into a quiet atom of shared experience.
+            Every event becomes a memory: each one lifts off as a star and settles into orbit around
+            a quiet atom of shared experience.
           </p>
         </div>
 
