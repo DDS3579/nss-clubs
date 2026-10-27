@@ -37,28 +37,28 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
         <div className="flex flex-col items-center text-center gap-5 lg:hidden">
 
           {/* Atom */}
-          <div ref={mobileOriginRef} className="hero-atom-origin relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
+          <div ref={mobileOriginRef} className="hero-atom-origin relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] md:w-[380px] md:h-[380px] flex items-center justify-center overflow-hidden rounded-full bg-slate-50/10" />
 
           {/* Heading */}
           <h1 className="font-display font-black leading-[0.92] tracking-tight text-text w-full">
-            <span className="block text-primary text-[clamp(2.5rem,15vw,3.5rem)] animate-in fade-in slide-in-from-bottom duration-500">
+            <span className="block text-primary text-[clamp(2.5rem,15vw,3.5rem)] sm:text-[4.5rem] md:text-[5.5rem] animate-in fade-in slide-in-from-bottom duration-500">
               Discover.
             </span>
-            <span className="block text-[#b07a2c] text-[clamp(2.5rem,15vw,3.5rem)] animate-in fade-in slide-in-from-bottom duration-700 delay-100">
+            <span className="block text-[#b07a2c] text-[clamp(2.5rem,15vw,3.5rem)] sm:text-[4.5rem] md:text-[5.5rem] animate-in fade-in slide-in-from-bottom duration-700 delay-100">
               Create.
             </span>
-            <span className="block text-primary text-[clamp(2.5rem,15vw,3.5rem)] animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
+            <span className="block text-primary text-[clamp(2.5rem,15vw,3.5rem)] sm:text-[4.5rem] md:text-[5.5rem] animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
               Lead.
             </span>
           </h1>
 
           {/* Short description */}
-          <p className="font-body text-sm text-gray-500 font-medium leading-relaxed max-w-[260px] animate-in fade-in slide-in-from-bottom duration-1000 delay-300">
+          <p className="font-body text-sm md:text-base text-gray-500 font-medium leading-relaxed max-w-[260px] md:max-w-sm animate-in fade-in slide-in-from-bottom duration-1000 delay-300">
             Welcome to NSS Clubs.
           </p>
 
           {/* CTAs — stacked, auto width, centered */}
-          <div className="flex flex-col items-center gap-3 w-full max-w-[280px] font-body animate-in fade-in slide-in-from-bottom duration-1000 delay-400">
+          <div className="flex flex-col items-center gap-3 w-full max-w-[280px] md:max-w-[340px] font-body animate-in fade-in slide-in-from-bottom duration-1000 delay-400">
             {/* Primary */}
             <Link
               href="/#clubs"
