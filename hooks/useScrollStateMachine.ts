@@ -549,7 +549,8 @@ export default function useScrollStateMachine({
         // transition starts a little way into that pinned stretch and runs to the Events section.
         // Phones scroll normally, so there it plays over the last screenful only.
         const morphStartY =
-          cache.windowWidth >= 769
+          (cache.windowWidth >= 1025 && cache.windowHeight >= 700) ||
+          (cache.windowWidth >= 769 && cache.windowHeight >= 900)
             ? aboutScrollY + (eventsScrollY - aboutScrollY) * 0.2
             : Math.max(
                 aboutScrollY,
