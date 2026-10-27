@@ -52,6 +52,14 @@
   /* Keep the layout the same width whether or not the scrollbar is showing */
   html {
     scrollbar-gutter: stable;
+    /* iPhones in landscape otherwise blow text up on their own */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Safety net: nothing can ever make the page scroll sideways ("clip" keeps sticky sections working) */
+  body {
+    overflow-x: clip;
   }
 
   body {
