@@ -141,7 +141,7 @@ export default function Navbar() {
           />
 
           {/* Drawer content */}
-          <div id="mobile-menu" className="fixed right-0 top-0 bottom-0 w-[280px] max-w-sm bg-white p-6 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ease-out border-l border-gray-100">
+          <div id="mobile-menu" className="fixed right-0 top-0 bottom-0 w-[min(320px,86vw)] overflow-y-auto overscroll-contain bg-white p-6 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300 ease-out border-l border-gray-100">
             <div className="flex flex-col gap-8 mt-16">
               
               {/* Mobile links list */}
