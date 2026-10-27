@@ -175,7 +175,8 @@
 }
 
 #events .ec-card {
-  --t: clamp(0, (var(--m, 1) - 0.8 - var(--i, 0) * 0.035) * 6, 1);
+  /* --g dips a little while this card's star lifts off toward the gallery, then comes back */
+  --t: calc(clamp(0, (var(--m, 1) - 0.8 - var(--i, 0) * 0.035) * 6, 1) * (1 - var(--g, 0) * 0.45));
   opacity: var(--t);
   translate: 0 calc((1 - var(--t)) * 26px);
   display: block;
