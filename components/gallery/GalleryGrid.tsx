@@ -31,6 +31,7 @@ export default function GalleryGrid({ photos }: { photos: GalleryPhoto[] }) {
   const [club, setClub] = useState<string>("all");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const swipeStartX = useRef<number | null>(null);
 
   const clubs = useMemo(() => {
     const seen = new Map<string, string>();
@@ -137,6 +138,16 @@ export default function GalleryGrid({ photos }: { photos: GalleryPhoto[] }) {
         onKeyDown={(e) => {
           if (e.key === "ArrowRight") step(1);
           if (e.key === "ArrowLeft") step(-1);
+        }}
+        onTouchStart={(e) => {
+          swipeStartX.current = e.touches[0].clientX;
+        }}
+        onTouchEnd={(e) => {
+          const startX = swipeStartX.current;
+          swipeStartX.current = null;
+          if (startX === null) return;
+          const distance = e.changedTouches[0].clientX - startX;
+          if (Math.abs(distance) > 50) step(distance < 0 ? 1 : -1);
         }}
         className="m-auto h-dvh max-h-dvh w-screen max-w-none bg-black/90 p-0 text-white backdrop:bg-black/80"
       >
