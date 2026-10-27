@@ -57,111 +57,124 @@ function ClubCard({ club, onClose }: { club: ClubNode; onClose: () => void }) {
         cta: "bg-white text-primary hover:bg-slate-100 shadow-[0_4px_12px_rgba(255,255,255,0.15)]",
       };
 
+  const cardStyle = {
+    "--club": club.color,
+    ...(gold
+      ? {}
+      : {
+          boxShadow: `inset 0 1.5px 0.5px rgba(255, 255, 255, 0.22), inset 0 -1.5px 1px rgba(0, 0, 0, 0.3), 0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 15px 35px -5px ${club.color}25`,
+        }),
+  } as CSSProperties;
+
   return (
-    <div
-      data-club-card
-      className={`clubs-card metallic-card ${tone.card} relative flex min-h-0 w-full max-w-lg flex-col justify-between overflow-hidden rounded-3xl px-6 pb-5 pt-8 sm:min-h-[460px] sm:px-12 sm:pb-8 sm:pt-12`}
-      style={
-        gold
-          ? undefined
-          : {
-              boxShadow: `inset 0 1.5px 0.5px rgba(255, 255, 255, 0.22), inset 0 -1.5px 1px rgba(0, 0, 0, 0.3), 0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 15px 35px -5px ${club.color}25`,
-            }
-      }
-    >
-      {/* Left accent bar */}
+    // The "screen frame": four corner brackets in the club's color around the projected card
+    <div className="cc-frame relative w-full max-w-lg" style={{ "--club": club.color } as CSSProperties}>
+      <span aria-hidden="true" className="cc-corner cc-tl" />
+      <span aria-hidden="true" className="cc-corner cc-tr" />
+      <span aria-hidden="true" className="cc-corner cc-bl" />
+      <span aria-hidden="true" className="cc-corner cc-br" />
+
       <div
-        className={`absolute bottom-0 left-0 top-0 w-[4px] ${gold ? "bg-primary/20" : ""}`}
-        style={gold ? undefined : { backgroundColor: club.color }}
-      />
-
-      {/* Little sheet handle (phones only) */}
-      <span
-        aria-hidden="true"
-        className="absolute left-1/2 top-2.5 h-1 w-10 -translate-x-1/2 rounded-full bg-current opacity-25 lg:hidden"
-      />
-
-      <button
-        type="button"
-        onClick={onClose}
-        className={`absolute right-4 top-4 z-20 rounded-full p-3 transition-all duration-200 sm:right-6 sm:top-6 ${tone.close}`}
-        aria-label="Back to clubs"
+        data-club-card
+        className={`clubs-card metallic-card ${tone.card} relative flex min-h-0 w-full flex-col justify-between overflow-hidden rounded-3xl px-6 pb-5 pt-8 sm:min-h-[460px] sm:px-12 sm:pb-8 sm:pt-12`}
+        style={cardStyle}
       >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          viewBox="0 0 24 24"
+        {/* Left accent bar */}
+        <div
+          className={`absolute bottom-0 left-0 top-0 w-[4px] ${gold ? "bg-primary/20" : ""}`}
+          style={gold ? undefined : { backgroundColor: club.color }}
+        />
+
+        {/* Little sheet handle (phones only) */}
+        <span
+          aria-hidden="true"
+          className="absolute left-1/2 top-2.5 h-1 w-10 -translate-x-1/2 rounded-full bg-current opacity-25 lg:hidden"
+        />
+
+        <button
+          type="button"
+          onClick={onClose}
+          className={`absolute right-4 top-4 z-20 rounded-full p-3 transition-all duration-200 sm:right-6 sm:top-6 ${tone.close}`}
+          aria-label="Back to clubs"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-      <div className="flex h-full flex-col justify-between gap-4 sm:gap-6">
-        <div>
-          <div className="cc-item mb-2.5 flex items-center gap-2" style={delay(120)}>
-            <ClubIcon name={club.iconName} className={`h-4 w-4 ${tone.icon}`} />
-            <span
-              className={`font-body text-[11px] font-bold uppercase tracking-[0.2em] ${tone.category}`}
-            >
-              {club.category}
-            </span>
-          </div>
-          <h3
-            className={`cc-item mb-4 font-display text-3xl font-black tracking-tight sm:mb-6 sm:text-5xl ${tone.title}`}
-            style={delay(200)}
-          >
-            {club.name}
-          </h3>
-          <div
-            className={`cc-item flex flex-wrap gap-x-2 gap-y-1 font-body text-xs ${tone.themes}`}
-            style={delay(300)}
-          >
-            {club.themes.map((theme, i) => (
-              <span key={theme} className="flex items-center">
-                {theme}
-                {i < club.themes.length - 1 && (
-                  <span className="ml-2 mr-0.5 opacity-60">•</span>
-                )}
+        <div className="flex h-full flex-col justify-between gap-4 sm:gap-6">
+          <div>
+            <div className="cc-item mb-2.5 flex items-center gap-2" style={delay(120)}>
+              {/* The electron this card was projected from */}
+              <span aria-hidden="true" className="cc-electron" />
+              <ClubIcon name={club.iconName} className={`h-4 w-4 ${tone.icon}`} />
+              <span
+                className={`font-body text-[11px] font-bold uppercase tracking-[0.2em] ${tone.category}`}
+              >
+                {club.category}
               </span>
-            ))}
+            </div>
+            <h3
+              className={`cc-item mb-4 font-display text-3xl font-black tracking-tight sm:mb-6 sm:text-5xl ${tone.title}`}
+              style={delay(200)}
+            >
+              {club.name}
+            </h3>
+            <div
+              className={`cc-item flex flex-wrap gap-x-2 gap-y-1 font-body text-xs ${tone.themes}`}
+              style={delay(300)}
+            >
+              {club.themes.map((theme, i) => (
+                <span key={theme} className="flex items-center">
+                  {theme}
+                  {i < club.themes.length - 1 && (
+                    <span className="ml-2 mr-0.5 opacity-60">•</span>
+                  )}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-grow items-center">
-          <p
-            className={`cc-item max-w-md font-body text-sm leading-relaxed sm:text-base ${tone.tagline}`}
-            style={delay(380)}
-          >
-            {club.tagline}
-          </p>
-        </div>
-
-        <div className={`cc-item mt-auto border-t pt-5 ${tone.divider}`} style={delay(460)}>
-          <div className="grid grid-cols-3 gap-4">
-            {club.stats.map((item) => (
-              <div key={item.label}>
-                <div
-                  className={`font-body text-[10px] font-semibold uppercase tracking-wider ${tone.statLabel}`}
-                >
-                  {item.label}
-                </div>
-                <div className={`mt-0.5 font-display text-sm sm:text-base ${tone.statValue}`}>
-                  {item.value}
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-grow items-center">
+            <p
+              className={`cc-item max-w-md font-body text-sm leading-relaxed sm:text-base ${tone.tagline}`}
+              style={delay(380)}
+            >
+              {club.tagline}
+            </p>
           </div>
-        </div>
 
-        <div className="cc-item w-full" style={delay(540)}>
-          <Link
-            href={gold ? "/executive-team" : `/clubs/${club.slug}`}
-            className={`inline-flex w-full items-center justify-center rounded-xl px-8 py-3.5 font-body text-sm font-bold tracking-wide transition-all duration-300 active:scale-95 ${tone.cta}`}
-          >
-            {gold ? "Meet the Executive Team" : "Explore Club Profile"}
-          </Link>
+          <div className={`cc-item mt-auto border-t pt-5 ${tone.divider}`} style={delay(460)}>
+            <div className="grid grid-cols-3 gap-4">
+              {club.stats.map((item) => (
+                <div key={item.label}>
+                  <div
+                    className={`font-body text-[10px] font-semibold uppercase tracking-wider ${tone.statLabel}`}
+                  >
+                    {item.label}
+                  </div>
+                  <div className={`mt-0.5 font-display text-sm sm:text-base ${tone.statValue}`}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="cc-item w-full" style={delay(540)}>
+            <Link
+              href={gold ? "/executive-team" : `/clubs/${club.slug}`}
+              className={`inline-flex w-full items-center justify-center rounded-xl px-8 py-3.5 font-body text-sm font-bold tracking-wide transition-all duration-300 active:scale-95 ${tone.cta}`}
+            >
+              {gold ? "Meet the Executive Team" : "Explore Club Profile"}
+            </Link>
+          </div>
         </div>
       </div>
     </div>

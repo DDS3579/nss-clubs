@@ -831,74 +831,399 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CLUB CARD REVEAL
-   The wrapper's data-reveal flips to "in" once the zoom has arrived.
-   Phones: the card rises like a sheet. Desktop: it slides in from the right.
-   It springs (overshoots a little, then settles), and its parts follow one by one.
+   CLUB PROJECTION + CARD REVEAL
+   The open club's electron projects its card onto the screen:
+   flare → beam → the club's icon rides down the beam → the card is "scanned" into view
+   inside four corner brackets. Everything is triggered by data-state / data-reveal turning "in".
    ═══════════════════════════════════════════════════════════ */
-.clubs-card {
+
+/* ── The beam, flare and traveling emblem (see ClubProjection.tsx) ── */
+.proj {
   opacity: 0;
-  transform: translateY(56px) scale(0.94);
-  transition: opacity 0.3s ease-in, transform 0.35s ease-in;
-  will-change: transform, opacity;
+  transition: opacity 0.3s ease;
+}
+.proj[data-state="in"] {
+  opacity: 1;
 }
 
-@media (min-width: 1024px) {
-  .clubs-card {
-    transform: translateX(64px) scale(0.94);
+.proj-beam {
+  transform: scale(0.02);
+}
+.proj[data-state="in"] .proj-beam {
+  animation:
+    proj-beam-grow 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+    proj-breathe 3.2s ease-in-out 0.6s infinite;
+}
+@keyframes proj-beam-grow {
+  from {
+    transform: scale(0.02);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes proj-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
   }
 }
 
-.clubs-card-wrap[data-reveal="in"] .clubs-card {
-  opacity: 1;
-  transform: none;
-  transition: opacity 0.5s ease-out, transform 0.85s cubic-bezier(0.22, 1.25, 0.36, 1);
+.proj-edge {
+  opacity: 0;
+}
+.proj[data-state="in"] .proj-edge {
+  animation: proj-edge-in 0.5s ease 0.4s forwards;
+}
+@keyframes proj-edge-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.9;
+  }
 }
 
-/* Each part of the card appears a moment after the one before (--d is set in the markup) */
+/* The flare at the electron */
+.proj-glow,
+.proj-apex,
+.proj-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.proj-glow,
+.proj-ring {
+  opacity: 0;
+}
+.proj[data-state="in"] .proj-glow {
+  animation: proj-glow 1s ease-out forwards;
+}
+.proj[data-state="in"] .proj-apex {
+  animation: proj-flare 0.7s ease-out both;
+}
+.proj[data-state="in"] .proj-ring {
+  animation: proj-ring 1.4s ease-out infinite;
+}
+@keyframes proj-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  30% {
+    opacity: 0.9;
+    transform: scale(2.2);
+  }
+  100% {
+    opacity: 0.45;
+    transform: scale(1.4);
+  }
+}
+@keyframes proj-flare {
+  0% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(2.6);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes proj-ring {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.4);
+  }
+}
+
+/* The club's icon rides down the beam to the card, then dissolves into it */
+.proj-emblem {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: var(--c);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent),
+    0 0 28px color-mix(in srgb, var(--c) 60%, transparent);
+  opacity: 0;
+}
+.proj[data-state="in"] .proj-emblem {
+  animation: proj-emblem 1.05s cubic-bezier(0.45, 0, 0.2, 1) 0.12s forwards;
+}
+@keyframes proj-emblem {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.06), calc(var(--dy) * 0.06)) scale(0.7);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.88), calc(var(--dy) * 0.88)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1.9);
+  }
+}
+
+/* ── The card: "developed" by a scan line, as if projected ── */
+.clubs-card {
+  opacity: 0;
+  clip-path: inset(0 0 100% 0 round 24px);
+  transition: opacity 0.25s ease-in;
+  will-change: clip-path, opacity, transform;
+}
+
+.clubs-card-wrap[data-reveal="in"] .clubs-card {
+  animation: clubs-project 1.15s linear 0.35s both;
+}
+
+/* Wipes down the card at an even speed, with a few film flickers on the way */
+@keyframes clubs-project {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0 round 24px);
+    transform: perspective(900px) rotateY(-12deg) scale(0.96);
+    filter: brightness(2.6) saturate(0.2);
+  }
+  8% {
+    opacity: 1;
+  }
+  22% {
+    filter: brightness(1.5) saturate(0.5);
+  }
+  30% {
+    filter: brightness(2.1) saturate(0.35);
+  }
+  44% {
+    filter: brightness(1.3) saturate(0.7);
+  }
+  58% {
+    filter: brightness(1.7) saturate(0.55);
+  }
+  78% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0 round 24px);
+    filter: brightness(1.1) saturate(0.95);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0 round 24px);
+    transform: perspective(900px) rotateY(0deg) scale(1);
+    filter: brightness(1) saturate(1);
+  }
+}
+
+/* On phones the card rises as a sheet, so it tilts back from the bottom instead */
+@media (max-width: 1023px) {
+  @keyframes clubs-project {
+    0% {
+      opacity: 0;
+      clip-path: inset(0 0 100% 0 round 24px);
+      transform: perspective(900px) rotateX(10deg) translateY(24px) scale(0.97);
+      filter: brightness(2.6) saturate(0.2);
+    }
+    8% {
+      opacity: 1;
+    }
+    22% {
+      filter: brightness(1.5) saturate(0.5);
+    }
+    30% {
+      filter: brightness(2.1) saturate(0.35);
+    }
+    44% {
+      filter: brightness(1.3) saturate(0.7);
+    }
+    58% {
+      filter: brightness(1.7) saturate(0.55);
+    }
+    78% {
+      opacity: 1;
+      clip-path: inset(0 0 0 0 round 24px);
+      filter: brightness(1.1) saturate(0.95);
+    }
+    100% {
+      opacity: 1;
+      clip-path: inset(0 0 0 0 round 24px);
+      transform: perspective(900px) rotateX(0deg) translateY(0) scale(1);
+      filter: brightness(1) saturate(1);
+    }
+  }
+}
+
+/* The glowing scan line that does the wiping (same speed and timing as the wipe above) */
+.clubs-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  z-index: 12;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--club, #ffffff) 20%,
+    #ffffff 50%,
+    var(--club, #ffffff) 80%,
+    transparent
+  );
+  box-shadow: 0 0 18px 4px color-mix(in srgb, var(--club, #ffffff) 70%, transparent);
+  opacity: 0;
+}
+.clubs-card-wrap[data-reveal="in"] .clubs-card::after {
+  animation: clubs-scan 0.9s linear 0.35s both;
+}
+@keyframes clubs-scan {
+  0% {
+    opacity: 1;
+    top: 0;
+  }
+  92% {
+    opacity: 1;
+    top: calc(100% - 3px);
+  }
+  100% {
+    opacity: 0;
+    top: calc(100% - 3px);
+  }
+}
+
+/* ── Each part of the card prints in once the scan passes (--d is set in the markup) ── */
 .cc-item {
   opacity: 0;
   transform: translateY(14px);
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
-
 .clubs-card-wrap[data-reveal="in"] .cc-item {
   opacity: 1;
   transform: none;
   transition:
-    opacity 0.5s ease-out var(--d, 0ms),
-    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms);
+    opacity 0.5s ease-out calc(0.35s + var(--d, 0ms)),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) calc(0.35s + var(--d, 0ms));
 }
 
-/* One light sweep across the card as it lands */
-.clubs-card::after {
+/* ── The screen frame: four corner brackets in the club's color ── */
+.cc-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  z-index: 2;
+  pointer-events: none;
+  border: 0 solid var(--club, #023b8e);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.cc-tl {
+  top: -10px;
+  left: -10px;
+  border-top-width: 3px;
+  border-left-width: 3px;
+  border-top-left-radius: 6px;
+  transform: translate(12px, 12px);
+}
+.cc-tr {
+  top: -10px;
+  right: -10px;
+  border-top-width: 3px;
+  border-right-width: 3px;
+  border-top-right-radius: 6px;
+  transform: translate(-12px, 12px);
+}
+.cc-bl {
+  bottom: -10px;
+  left: -10px;
+  border-bottom-width: 3px;
+  border-left-width: 3px;
+  border-bottom-left-radius: 6px;
+  transform: translate(12px, -12px);
+}
+.cc-br {
+  bottom: -10px;
+  right: -10px;
+  border-bottom-width: 3px;
+  border-right-width: 3px;
+  border-bottom-right-radius: 6px;
+  transform: translate(-12px, -12px);
+}
+.clubs-card-wrap[data-reveal="in"] .cc-corner {
+  opacity: 0.9;
+  transform: none;
+  transition:
+    opacity 0.5s ease 0.5s,
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.5s;
+}
+
+/* ── The little glowing dot in the card: the electron this card was projected from ── */
+.cc-electron {
+  position: relative;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: var(--club, #ffffff);
+  box-shadow: 0 0 10px var(--club, #ffffff);
+}
+.cc-electron::after {
   content: "";
   position: absolute;
-  inset: 0;
-  z-index: 11;
-  pointer-events: none;
-  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
-  transform: translateX(-120%);
+  inset: -4px;
+  border-radius: inherit;
+  border: 1.5px solid var(--club, #ffffff);
+  opacity: 0;
+  animation: cc-electron-ping 2s ease-out infinite;
 }
-
-.clubs-card-wrap[data-reveal="in"] .clubs-card::after {
-  animation: clubs-card-shine 1.2s ease 0.4s both;
-}
-
-@keyframes clubs-card-shine {
-  to {
-    transform: translateX(120%);
+@keyframes cc-electron-ping {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
   }
 }
 
+/* ── Reduced motion: the card and beam simply appear ── */
 @media (prefers-reduced-motion: reduce) {
-  .clubs-card,
-  .cc-item {
+  .clubs-card-wrap[data-reveal="in"] .clubs-card {
+    animation: none;
+    opacity: 1;
+    clip-path: none;
+  }
+  .clubs-card::after,
+  .proj-speck,
+  .proj-ring,
+  .proj-emblem,
+  .cc-electron::after {
+    display: none;
+  }
+  .proj[data-state="in"] .proj-beam {
+    animation: none;
+    transform: none;
+  }
+  .clubs-card-wrap[data-reveal="in"] .cc-item,
+  .clubs-card-wrap[data-reveal="in"] .cc-corner {
     transition-duration: 0.01s;
     transition-delay: 0s;
-  }
-  .clubs-card-wrap[data-reveal="in"] .clubs-card::after {
-    animation: none;
   }
 }
 

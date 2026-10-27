@@ -30,12 +30,14 @@ interface Spot {
 }
 
 const SPOTS: readonly Spot[] = [
-  { slug: "stem", short: "STEM", ex: 420, ey: 147, ox: 0.5, oy: -0.866, side: "right", edge: 500 },
-  { slug: "literature", short: "Literature", ex: 520, ey: 320, ox: 1, oy: 0, side: "right", edge: 560 },
-  { slug: "entertainment", short: "Entertainment", ex: 420, ey: 493, ox: 0.5, oy: 0.866, side: "right", edge: 500 },
-  { slug: "social", short: "Social", ex: 220, ey: 147, ox: -0.5, oy: -0.866, side: "left", edge: 140 },
-  { slug: "arts", short: "Arts & Craft", ex: 120, ey: 320, ox: -1, oy: 0, side: "left", edge: 80 },
-  { slug: "sports", short: "Sports", ex: 220, ey: 493, ox: -0.5, oy: 0.866, side: "left", edge: 140 },
+  // Right column: every label starts at the same x (556)
+  { slug: "stem", short: "STEM", ex: 420, ey: 147, ox: 0.5, oy: -0.866, side: "right", edge: 556 },
+  { slug: "literature", short: "Literature", ex: 520, ey: 320, ox: 1, oy: 0, side: "right", edge: 556 },
+  { slug: "entertainment", short: "Entertainment", ex: 420, ey: 493, ox: 0.5, oy: 0.866, side: "right", edge: 556 },
+  // Left column: every label ends at the same x (84)
+  { slug: "social", short: "Social", ex: 220, ey: 147, ox: -0.5, oy: -0.866, side: "left", edge: 84 },
+  { slug: "arts", short: "Arts & Craft", ex: 120, ey: 320, ox: -1, oy: 0, side: "left", edge: 84 },
+  { slug: "sports", short: "Sports", ex: 220, ey: 493, ox: -0.5, oy: 0.866, side: "left", edge: 84 },
 ];
 
 const CLUB_BY_SLUG = new Map(CLUBS.map((club) => [club.slug, club]));
@@ -45,7 +47,7 @@ const pct = (value: number) => `${(value / BOX) * 100}%`;
 const order = (i: number) => ({ "--i": i }) as CSSProperties;
 
 const LABEL_BASE =
-  "club-callout-label inline-flex min-h-11 items-center gap-2 rounded-full border bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold leading-tight text-primary shadow-md transition-colors duration-200 hover:bg-primary hover:text-white focus-visible:bg-primary focus-visible:text-white focus-visible:outline-none sm:gap-2.5 sm:px-4 sm:text-sm";
+  "club-callout-label inline-flex min-h-11 items-center gap-2 rounded-full border bg-white/95 px-2 py-1.5 text-[10px] font-semibold min-[380px]:px-2.5 min-[380px]:text-[11px] leading-tight text-primary shadow-md transition-colors duration-200 hover:bg-primary hover:text-white focus-visible:bg-primary focus-visible:text-white focus-visible:outline-none sm:gap-2.5 sm:px-4 sm:text-sm";
 
 export default function ClubCallouts({ onSelect }: { onSelect: (slug: string) => void }) {
   const nucleusIndex = SPOTS.length;
