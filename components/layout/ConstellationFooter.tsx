@@ -106,6 +106,12 @@ export default function ConstellationFooter() {
               border-radius: 4px;
             }
 
+            #constellation-footer nav a {
+              display: inline-flex;
+              align-items: center;
+              min-height: 44px;
+            }
+
             #constellation-footer .cf-bottom {
               position: relative;
               z-index: 1;
@@ -157,7 +163,7 @@ export default function ConstellationFooter() {
       />
 
       <div className="cf-field" aria-hidden="true">
-        <svg viewBox="0 0 1000 320" preserveAspectRatio="none">
+        <svg viewBox="0 0 1000 320" preserveAspectRatio="xMidYMid slice">
           <line className="cf-line" x1="90" y1="76" x2="246" y2="134" />
           <line className="cf-line" x1="246" y1="134" x2="392" y2="78" />
           <line className="cf-line" x1="702" y1="86" x2="842" y2="148" />
