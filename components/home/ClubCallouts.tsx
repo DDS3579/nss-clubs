@@ -47,7 +47,7 @@ const pct = (value: number) => `${(value / BOX) * 100}%`;
 const order = (i: number) => ({ "--i": i }) as CSSProperties;
 
 const LABEL_BASE =
-  "club-callout-label inline-flex min-h-11 items-center gap-2 rounded-full border bg-white/95 px-2 py-1.5 text-[10px] font-semibold min-[380px]:px-2.5 min-[380px]:text-[11px] leading-tight text-primary shadow-md transition-colors duration-200 hover:bg-primary hover:text-white focus-visible:bg-primary focus-visible:text-white focus-visible:outline-none sm:gap-2.5 sm:px-4 sm:text-sm";
+  "club-callout-label inline-flex min-h-11 whitespace-nowrap items-center gap-2 rounded-full border bg-white/95 px-2 py-1.5 text-[10px] font-semibold min-[380px]:px-2.5 min-[380px]:text-[11px] leading-tight text-primary shadow-md transition-colors duration-200 hover:bg-primary hover:text-white focus-visible:bg-primary focus-visible:text-white focus-visible:outline-none sm:gap-2.5 sm:px-4 sm:text-sm";
 
 export default function ClubCallouts({ onSelect }: { onSelect: (slug: string) => void }) {
   const nucleusIndex = SPOTS.length;
@@ -155,7 +155,7 @@ export default function ClubCallouts({ onSelect }: { onSelect: (slug: string) =>
           type="button"
           onClick={() => onSelect(EXECUTIVE_TEAM.slug)}
           aria-label={`Open ${EXECUTIVE_TEAM.name}`}
-          className="club-callout-label inline-flex min-h-11 items-center gap-2 rounded-full border border-accent bg-accent px-3.5 py-1.5 text-[11px] font-bold leading-tight text-primary shadow-md transition-colors duration-200 hover:bg-primary hover:text-accent focus-visible:bg-primary focus-visible:text-accent focus-visible:outline-none sm:px-5 sm:text-sm"
+          className="club-callout-label inline-flex min-h-11 whitespace-nowrap items-center gap-2 rounded-full border border-accent bg-accent px-3.5 py-1.5 text-[11px] font-bold leading-tight text-primary shadow-md transition-colors duration-200 hover:bg-primary hover:text-accent focus-visible:bg-primary focus-visible:text-accent focus-visible:outline-none sm:px-5 sm:text-sm"
           style={order(nucleusIndex)}
         >
           {EXECUTIVE_TEAM.name}
