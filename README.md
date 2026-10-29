@@ -133,3 +133,6 @@ The president changes every year, so do not let any account live only in one per
 - New content types go in `sanity/schemaTypes` and must be registered in `sanity/schemaTypes/index.ts`.
 - They only show in the sidebar once added to `sanity/structure.ts`. For example **Photo Albums** is `S.documentTypeListItem('album').title('Photo Albums')` inside the "Clubs & Events" list.
 - After adding a type, add its tag to the revalidation list in `app/api/revalidate/route.ts` and use it in `tags` when querying, so instant updates keep working.
+
+
+The end
