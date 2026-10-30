@@ -135,4 +135,4 @@ The president changes every year, so do not let any account live only in one per
 - After adding a type, add its tag to the revalidation list in `app/api/revalidate/route.ts` and use it in `tags` when querying, so instant updates keep working.
 
 
-The end
+The end!
