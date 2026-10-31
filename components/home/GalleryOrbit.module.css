@@ -1,5 +1,16 @@
+/* ═══════════════════════════════════════════════════════════
+   Featured Gallery: "stars become memories"
+
+   Everything here reads one scroll variable, --g (0 → 1), which GalleryOrbit.tsx writes.
+   Each photo spot also has --a: the moment its star lands and the photo blooms.
+   --spin-in / --spin-out: how far each ring has turned.
+   Where --g is never written (no JavaScript, or "reduce motion") it stays at 1: the finished orbit.
+   ═══════════════════════════════════════════════════════════ */
+
 .section {
-  --parallax-shift: 0px;
+  --g: 1;
+  --spin-in: 0;
+  --spin-out: 0;
   position: relative;
   overflow: visible;
   background:
@@ -26,14 +37,16 @@
   z-index: 1;
   width: min(100%, 1120px);
   margin: 0 auto;
-  transform: translate3d(0, var(--parallax-shift), 0);
-  will-change: transform;
 }
 
+/* ── Heading: rises in as the section arrives ── */
 .heading {
+  --h: clamp(0, (var(--g) - 0.02) * 5, 1);
   max-width: 680px;
   margin: 0 auto 34px;
   text-align: center;
+  opacity: var(--h);
+  translate: 0 calc((1 - var(--h)) * 24px);
 }
 
 .eyebrow {
@@ -66,6 +79,7 @@
   line-height: 1.7;
 }
 
+/* ── The orbit stage ── */
 .orbitStage {
   --inner-radius: clamp(92px, 17vw, 168px);
   --outer-radius: clamp(154px, 28vw, 282px);
@@ -75,58 +89,33 @@
   margin: 0 auto;
 }
 
-.constellationLines {
-  position: absolute;
-  inset: 8% 5%;
-  width: 90%;
-  height: 84%;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.isVisible .constellationLines {
-  animation: linesCollapse 1.15s ease-out forwards;
-}
-
-.isExiting .constellationLines {
-  animation: linesExpand 1s ease-out forwards;
-}
-
-.line {
-  stroke: rgba(26, 51, 120, 0.16);
-  stroke-width: 1;
-  stroke-dasharray: 7 10;
-}
-
+/* The two orbit rings fade in as the stars approach, so the stars have something to land on */
 .ringGuide {
+  --r: clamp(0, (var(--g) - 0.12 - var(--ri, 0) * 0.07) * 4.5, 1);
   position: absolute;
   top: 50%;
   left: 50%;
   border: 1px solid rgba(26, 51, 120, 0.12);
   border-radius: 999px;
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.86);
+  opacity: var(--r);
+  transform: translate(-50%, -50%) scale(calc(0.7 + var(--r) * 0.3));
 }
 
 .innerGuide {
+  --ri: 0;
   width: calc(var(--inner-radius) * 2);
   height: calc(var(--inner-radius) * 2);
 }
 
 .outerGuide {
+  --ri: 1;
   width: calc(var(--outer-radius) * 2);
   height: calc(var(--outer-radius) * 2);
 }
 
-.isVisible .ringGuide {
-  animation: guideReveal 0.9s ease-out 1.05s forwards;
-}
-
-.isExiting .ringGuide {
-  animation: guideHide 0.65s ease-in forwards;
-}
-
+/* The golden nucleus ignites just before the stars land */
 .nucleus {
+  --n: clamp(0, (var(--g) - 0.1) * 4, 1);
   position: absolute;
   top: 50%;
   left: 50%;
@@ -142,9 +131,10 @@
   box-shadow:
     0 18px 38px rgba(13, 36, 96, 0.11),
     inset 0 -14px 24px rgba(60, 30, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.78);
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 calc(var(--n) * 54px) calc(var(--n) * 8px) rgba(255, 190, 70, calc(var(--n) * 0.42));
+  opacity: var(--n);
+  transform: translate(-50%, -50%) scale(calc(0.5 + var(--n) * 0.5));
 }
 
 .nucleus::before {
@@ -165,46 +155,41 @@
   box-shadow: inset 0 0 16px rgba(60, 30, 0, 0.18);
 }
 
-.isVisible .nucleus {
-  animation: nucleusReveal 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
-}
-
-.isExiting .nucleus {
-  animation: nucleusHide 0.65s ease-in forwards;
-}
-
+/* ── The two rings. They turn by --spin-in / --spin-out (the page keeps those updated). ── */
 .orbitRing {
   position: absolute;
   inset: 0;
-  opacity: 0;
   transform-origin: 50% 50%;
 }
 
-.isVisible .orbitRing {
-  opacity: 1;
-  animation: orbitClockwise var(--orbit-duration) linear 2s infinite;
+.innerRing {
+  --ring-spin: calc(var(--spin-in, 0) * 1deg);
+  transform: rotate(var(--ring-spin));
 }
 
-.isVisible .outerRing {
-  animation-name: orbitCounterClockwise;
+.outerRing {
+  --ring-spin: calc(var(--spin-out, 0) * -1deg);
+  transform: rotate(var(--ring-spin));
 }
 
-.isExiting .orbitRing {
-  opacity: 1;
-  animation: none;
-}
-
+/* ── A photo spot: the star lands at --a, then blooms into the photo right there ── */
 .orbitSlot {
+  --b: clamp(0, (var(--g) - var(--a, 0)) * 8, 1); /* bloom: 0 → 1 */
+  --e: calc(1 - (1 - var(--b)) * (1 - var(--b))); /* the same, eased out */
   position: absolute;
   top: 50%;
   left: 50%;
   width: clamp(74px, 10vw, 112px);
   height: clamp(74px, 10vw, 112px);
-  opacity: 0;
+  opacity: clamp(0, (var(--g) - var(--a, 0) + 0.005) * 60, 1);
+  /* Sits on the ring, and stays upright however far the ring has turned */
   transform:
     translate(-50%, -50%)
-    translate(var(--collapse-x), var(--collapse-y))
-    scale(0.2);
+    rotate(var(--orbit-angle))
+    translateX(var(--orbit-radius))
+    rotate(var(--counter-angle))
+    rotate(calc(var(--ring-spin) * -1))
+    scale(calc(0.06 + var(--e) * 0.94));
   transform-origin: center;
   will-change: transform, opacity;
 }
@@ -214,14 +199,16 @@
   height: clamp(82px, 12vw, 132px);
 }
 
-.isVisible .orbitSlot {
-  animation: collapseToOrbit 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: var(--delay);
-}
-
-.isExiting .orbitSlot {
-  animation: orbitToCollapse 1s ease-in forwards;
-  animation-delay: var(--exit-delay);
+/* The ripple that spreads out when the star lands */
+.landRing {
+  --q: clamp(0, (var(--g) - var(--a, 0)) * 9, 1);
+  position: absolute;
+  inset: -22%;
+  border: 2px solid rgba(200, 144, 58, 0.9);
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: calc(clamp(0, (var(--g) - var(--a, 0) + 0.02) * 40, 1) * (1 - var(--q)) * 0.85);
+  transform: scale(calc(0.5 + var(--q) * 1.7));
 }
 
 .photoFrame {
@@ -234,11 +221,29 @@
   background: linear-gradient(135deg, #eef2f7, #ffffff);
   box-shadow:
     0 16px 34px rgba(13, 36, 96, 0.16),
-    0 0 0 1px rgba(13, 36, 96, 0.08);
+    0 0 0 1px rgba(13, 36, 96, 0.08),
+    0 0 calc((1 - var(--b)) * 40px) calc((1 - var(--b)) * 10px) rgba(255, 244, 214, calc((1 - var(--b)) * 0.95));
+}
+
+/* The bright flash the photo "develops" out of */
+.photoFrame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle,
+    #ffffff 0%,
+    rgba(255, 255, 255, 0.9) 55%,
+    rgba(255, 246, 220, 0.55) 100%
+  );
+  opacity: clamp(0, 1 - var(--b) * 1.6, 1);
+  pointer-events: none;
 }
 
 .photoFrame img {
   object-fit: cover;
+  filter: blur(calc((1 - var(--b)) * 5px));
 }
 
 .placeholder {
@@ -274,6 +279,14 @@
   transition: opacity 250ms ease;
 }
 
+.orbitSlot:hover .caption,
+.orbitSlot:focus-within .caption {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   The flying stars (a layer fixed to the screen, so they can cross from the event cards to the orbit)
+   ═══════════════════════════════════════════════════════════ */
 .scrollBridge {
   position: fixed;
   inset: 0;
@@ -294,174 +307,81 @@
   height: 100%;
 }
 
-.bridgeLine {
-  fill: none;
-  stroke: rgba(26, 51, 120, 0.16);
-  stroke-width: 1;
-  stroke-dasharray: 8 10;
+/* A thin golden thread from the card to its rising star */
+.bridgeThread {
+  stroke: rgba(200, 144, 58, 0.9);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+/* The constellation the six stars briefly form when the last one lands */
+.bridgeOutline {
+  fill: rgba(200, 144, 58, 0.05);
+  stroke: rgba(26, 51, 120, 0.35);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  stroke-dasharray: 6 8;
+  opacity: 0;
 }
 
 .bridgeParticle {
+  --spark: rgba(26, 51, 120, 0.55);
   position: absolute;
   left: 0;
   top: 0;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
-  background: #1a3378;
-  box-shadow: 0 0 0 8px rgba(26, 51, 120, 0.05);
+  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #b9c7ee 45%, #1a3378 100%);
+  box-shadow: 0 0 16px 4px rgba(26, 51, 120, 0.28);
   opacity: 0;
   transform: translate3d(-999px, -999px, 0);
   will-change: transform, opacity, width, height;
 }
 
+/* The four-point sparkle */
+.bridgeParticle::before {
+  content: "";
+  position: absolute;
+  inset: -170%;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, var(--spark), transparent) center / 100% 1.5px no-repeat,
+    linear-gradient(0deg, transparent, var(--spark), transparent) center / 1.5px 100% no-repeat;
+}
+
+/* A short comet tail (length and direction come from the scroll code) */
+.bridgeParticle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--tail, 0px);
+  height: 2px;
+  border-radius: 2px;
+  transform-origin: 0 50%;
+  transform: translateY(-50%) rotate(var(--ang, 0deg));
+  background: linear-gradient(to right, rgba(26, 51, 120, 0.5), transparent);
+  pointer-events: none;
+}
+
 .bridgeParticleGold {
+  --spark: rgba(200, 144, 58, 0.85);
   background:
     radial-gradient(circle at 30% 30%, rgba(255, 255, 220, 0.92), rgba(255, 255, 255, 0) 42%),
     radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 58%, rgba(60, 30, 0, 0.48) 100%),
     linear-gradient(135deg, #fff8c0 0%, #f5d84a 20%, #d4a373 50%, #e8c050 80%, #a06800 100%),
     #7a5000;
   box-shadow:
-    0 0 0 1px rgba(122, 80, 0, 0.16),
+    0 0 18px 5px rgba(212, 163, 115, 0.45),
     inset 0 -4px 8px rgba(60, 30, 0, 0.22);
 }
 
-.orbitSlot:hover .caption,
-.orbitSlot:focus-within .caption {
-  opacity: 1;
+.bridgeParticleGold::after {
+  background: linear-gradient(to right, rgba(200, 144, 58, 0.65), transparent);
 }
 
-@keyframes collapseToOrbit {
-  0% {
-    opacity: 0;
-    transform:
-      translate(-50%, -50%)
-      translate(var(--collapse-x), var(--collapse-y))
-      scale(0.2);
-  }
-  36% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform:
-      translate(-50%, -50%)
-      rotate(var(--orbit-angle))
-      translateX(var(--orbit-radius))
-      rotate(var(--counter-angle))
-      scale(1);
-  }
-}
-
-@keyframes orbitToCollapse {
-  0% {
-    opacity: 1;
-    transform:
-      translate(-50%, -50%)
-      rotate(var(--orbit-angle))
-      translateX(var(--orbit-radius))
-      rotate(var(--counter-angle))
-      scale(1);
-  }
-  72% {
-    opacity: 0.92;
-  }
-  100% {
-    opacity: 0;
-    transform:
-      translate(-50%, -50%)
-      translate(var(--collapse-x), var(--collapse-y))
-      scale(0.2);
-  }
-}
-
-@keyframes nucleusReveal {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.78);
-  }
-  68% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.06);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes nucleusHide {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.78);
-  }
-}
-
-@keyframes guideReveal {
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes guideHide {
-  from {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.86);
-  }
-}
-
-@keyframes linesCollapse {
-  0% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-  72% {
-    opacity: 0.35;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.22);
-  }
-}
-
-@keyframes linesExpand {
-  0% {
-    opacity: 0;
-    transform: scale(0.22);
-  }
-  100% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-}
-
-@keyframes orbitClockwise {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes orbitCounterClockwise {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(-360deg);
-  }
-}
-
+/* ── Phones ── */
 @media (max-width: 640px) {
   .section {
     padding-inline: 14px;
@@ -490,69 +410,9 @@
   }
 }
 
+/* ── Reduced motion: the finished orbit simply shows, and nothing flies ── */
 @media (prefers-reduced-motion: reduce) {
-  .constellationLines,
-  .isVisible .constellationLines,
-  .ringGuide,
-  .isVisible .ringGuide,
-  .nucleus,
-  .isVisible .nucleus,
-  .orbitRing,
-  .isVisible .orbitRing,
-  .orbitSlot,
-  .isVisible .orbitSlot {
-    animation: none !important;
-  }
-
-  .constellationLines {
-    opacity: 0;
-  }
-
-  .ringGuide,
-  .nucleus {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-
-  .orbitRing {
-    opacity: 1;
-  }
-
-  .orbitSlot {
-    opacity: 1;
-    transform:
-      translate(-50%, -50%)
-      rotate(var(--orbit-angle))
-      translateX(var(--orbit-radius))
-      rotate(var(--counter-angle))
-      scale(1);
-  }
-
-  .inner {
-    transform: none;
-  }
-
   .scrollBridge {
     display: none;
   }
-}
-
-
-/* A short comet tail behind each flying star (length and direction come from the scroll code) */
-.bridgeParticle::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--tail, 0px);
-  height: 2px;
-  border-radius: 2px;
-  transform-origin: 0 50%;
-  transform: translateY(-50%) rotate(var(--ang, 0deg));
-  background: linear-gradient(to right, rgba(26, 51, 120, 0.5), transparent);
-  pointer-events: none;
-}
-
-.bridgeParticleGold::after {
-  background: linear-gradient(to right, rgba(200, 144, 58, 0.65), transparent);
 }

@@ -1,64 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import Image from "next/image";
 import { urlFor } from "@/sanity/lib/image";
 import type { FeaturedGalleryItem } from "@/sanity/lib/types";
 import styles from "./GalleryOrbit.module.css";
 
-type OrbitPhase = "idle" | "open" | "exiting";
-
 type OrbitSlot = {
   ring: "inner" | "outer";
+  /** Angle on the ring, in degrees (270 = straight up, 90 = straight down) */
   angle: number;
-  collapseX: string;
-  collapseY: string;
-  delay: number;
 };
 
 const ORBIT_SLOTS: OrbitSlot[] = [
-  {
-    ring: "inner",
-    angle: 270,
-    collapseX: "clamp(-42px, -7vw, -26px)",
-    collapseY: "clamp(-222px, -30vw, -156px)",
-    delay: 0.12,
-  },
-  {
-    ring: "inner",
-    angle: 30,
-    collapseX: "clamp(160px, 28vw, 260px)",
-    collapseY: "clamp(-112px, -18vw, -70px)",
-    delay: 0.22,
-  },
-  {
-    ring: "inner",
-    angle: 150,
-    collapseX: "clamp(-260px, -28vw, -160px)",
-    collapseY: "clamp(-92px, -14vw, -56px)",
-    delay: 0.32,
-  },
-  {
-    ring: "outer",
-    angle: 90,
-    collapseX: "clamp(24px, 5vw, 52px)",
-    collapseY: "clamp(164px, 27vw, 246px)",
-    delay: 0.42,
-  },
-  {
-    ring: "outer",
-    angle: 210,
-    collapseX: "clamp(-244px, -30vw, -166px)",
-    collapseY: "clamp(78px, 15vw, 124px)",
-    delay: 0.52,
-  },
-  {
-    ring: "outer",
-    angle: 330,
-    collapseX: "clamp(166px, 30vw, 270px)",
-    collapseY: "clamp(96px, 16vw, 148px)",
-    delay: 0.62,
-  },
+  { ring: "inner", angle: 270 },
+  { ring: "inner", angle: 30 },
+  { ring: "inner", angle: 150 },
+  { ring: "outer", angle: 90 },
+  { ring: "outer", angle: 210 },
+  { ring: "outer", angle: 330 },
 ];
 
 /**
@@ -67,6 +27,27 @@ const ORBIT_SLOTS: OrbitSlot[] = [
  * feeds the spot on the ring that is closest to where it sits.
  */
 const CARD_FOR_SLOT = [1, 5, 3, 4, 0, 2];
+
+/**
+ * The order the stars leave in: the top of the ring first, then clockwise, the bottom last.
+ * ORDER[slot] is that slot's place in the line (0 = first).
+ */
+const ORDER = [0, 3, 4, 5, 2, 1];
+
+/** The same slots in order around the ring, used to draw the constellation outline. */
+const OUTLINE_ORDER = [0, 5, 1, 3, 2, 4];
+
+/* ── The timeline (0 → 1 over the scroll). The CSS uses the same numbers through --a. ── */
+const DEPART_START = 0.08; // when the first star leaves
+const DEPART_GAP = 0.04; // gap between stars leaving
+const FLIGHT = 0.3; // how long one star's flight takes
+const departAt = (slot: number) => DEPART_START + ORDER[slot] * DEPART_GAP;
+const arriveAt = (slot: number) => departAt(slot) + FLIGHT;
+const LAST_ARRIVAL = DEPART_START + (ORDER.length - 1) * DEPART_GAP + FLIGHT;
+
+/** The orbit starts turning once everything has formed (and stops again below this). */
+const SPIN_ON = 0.74;
+const SPIN_OFF = 0.66;
 
 function classNames(...names: Array<string | false | null | undefined>) {
   return names.filter(Boolean).join(" ");
@@ -104,10 +85,8 @@ function getSlotStyle(slot: OrbitSlot, index: number): CSSProperties {
     "--orbit-angle": angle,
     "--counter-angle": `-${angle}`,
     "--orbit-radius": slot.ring === "inner" ? "var(--inner-radius)" : "var(--outer-radius)",
-    "--collapse-x": slot.collapseX,
-    "--collapse-y": slot.collapseY,
-    "--delay": `${slot.delay}s`,
-    "--exit-delay": `${(ORBIT_SLOTS.length - index - 1) * 0.06}s`,
+    // The scroll position at which this slot's star lands and blooms into its photo
+    "--a": arriveAt(index).toFixed(3),
   } as CSSProperties;
 }
 
@@ -119,12 +98,9 @@ export default function GalleryOrbit({
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const bridgeRef = useRef<HTMLDivElement>(null);
-  const bridgeLineRef = useRef<SVGPolylineElement>(null);
+  const bridgeOutlineRef = useRef<SVGPolygonElement>(null);
+  const bridgeThreadRefs = useRef<Array<SVGLineElement | null>>([]);
   const bridgeParticleRefs = useRef<Array<HTMLDivElement | null>>([]);
-  const scrollRafRef = useRef(0);
-  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const phaseRef = useRef<OrbitPhase>("idle");
-  const [phase, setPhase] = useState<OrbitPhase>("idle");
 
   const galleryItems = useMemo(() => {
     const validItems = (items || []).filter((item) => item?.image);
@@ -136,10 +112,11 @@ export default function GalleryOrbit({
   }, [items]);
 
   /**
-   * One scroll-driven effect runs the whole Events → Gallery moment:
-   *  - the six stars lift off the event cards and fly to the orbit ring
-   *  - the orbit photos open exactly when the stars land (and fold away when you scroll back)
-   *  - the event cards dip a little while their stars are away
+   * One scroll timeline runs the whole Events → Gallery moment. It is written straight to the page
+   * (a few CSS variables and some element styles), so React never re-renders during it:
+   *   --g           0 → 1   the overall progress (the CSS reads it for the rings, nucleus and photos)
+   *   --spin-in/out         how far each ring has turned (so the photos can stay upright)
+   *   --lift        per event card: a warm glow just before its star leaves
    */
   useEffect(() => {
     const section = sectionRef.current;
@@ -147,171 +124,254 @@ export default function GalleryOrbit({
     const bridge = bridgeRef.current;
     if (!section || !stage || !bridge) return;
 
-    // With "reduce motion" the CSS shows the finished orbit and there is no flight
+    // With "reduce motion" the CSS shows the finished orbit (--g defaults to 1) and nothing flies
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (reduceMotion.matches) return;
 
-    const lastPoints: ({ x: number; y: number; tail: number } | null)[] = [];
     let eventsEl: HTMLElement | null = null;
-    let dimWritten = "";
+    let scrollRaf = 0;
+    let spinRaf = 0;
 
-    const clearExitTimer = () => {
-      if (exitTimerRef.current) {
-        clearTimeout(exitTimerRef.current);
-        exitTimerRef.current = null;
+    // What was last written, so we only touch the page when something changed
+    let gWritten = "";
+    let spinInWritten = "";
+    let spinOutWritten = "";
+    let liftWritten: string[] = [];
+    const lastPoints: ({ x: number; y: number; tail: number } | null)[] = [];
+
+    /* ── Orbit spin ── */
+    let spinOn = false;
+    let hovering = false;
+    let spinIn = 0;
+    let spinOut = 0;
+    let spinSpeed = 1;
+    let spinLast = 0;
+
+    const writeSpin = () => {
+      const a = spinIn.toFixed(2);
+      const b = spinOut.toFixed(2);
+      if (a !== spinInWritten) {
+        section.style.setProperty("--spin-in", a);
+        spinInWritten = a;
+      }
+      if (b !== spinOutWritten) {
+        section.style.setProperty("--spin-out", b);
+        spinOutWritten = b;
       }
     };
 
-    const goTo = (next: OrbitPhase) => {
-      if (phaseRef.current === next) return;
-      phaseRef.current = next;
-      setPhase(next);
+    const spinLoop = (now: number) => {
+      spinRaf = 0;
+      const dt = spinLast ? Math.min(now - spinLast, 64) : 16;
+      spinLast = now;
+      let settled = false;
+
+      if (spinOn) {
+        // Slows to a crawl while you hover, so you can look at the photos
+        const wanted = hovering ? 0.12 : 1;
+        spinSpeed += (wanted - spinSpeed) * (1 - Math.exp(-dt / 260));
+        spinIn += (dt / 1000) * (360 / 34) * spinSpeed;
+        spinOut += (dt / 1000) * (360 / 48) * spinSpeed;
+      } else {
+        // Ease to the nearest full turn (looks identical to "not turned"), then rest
+        const targetIn = Math.round(spinIn / 360) * 360;
+        const targetOut = Math.round(spinOut / 360) * 360;
+        const ease = 1 - Math.exp(-dt / 200);
+        spinIn += (targetIn - spinIn) * ease;
+        spinOut += (targetOut - spinOut) * ease;
+        if (Math.abs(targetIn - spinIn) < 0.05 && Math.abs(targetOut - spinOut) < 0.05) {
+          spinIn = 0;
+          spinOut = 0;
+          settled = true;
+        }
+      }
+
+      writeSpin();
+      if (spinOn || !settled) {
+        spinRaf = window.requestAnimationFrame(spinLoop);
+      } else {
+        spinLast = 0;
+      }
     };
 
-    const setDim = (value: number) => {
-      const text = value.toFixed(3);
-      if (dimWritten === text) return;
-      dimWritten = text;
-      eventsEl?.style.setProperty("--g", text);
+    const ensureSpinLoop = () => {
+      if (spinRaf) return;
+      spinLast = 0;
+      spinRaf = window.requestAnimationFrame(spinLoop);
     };
 
+    const onPointerEnter = () => {
+      hovering = true;
+    };
+    const onPointerLeave = () => {
+      hovering = false;
+    };
+    stage.addEventListener("pointerenter", onPointerEnter);
+    stage.addEventListener("pointerleave", onPointerLeave);
+
+    /* ── The scroll timeline ── */
     const updateBridge = () => {
-      scrollRafRef.current = 0;
+      scrollRaf = 0;
       if (!eventsEl) eventsEl = document.getElementById("events");
 
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const galleryRect = section.getBoundingClientRect();
-
-      // 0 → 1 while the gallery rises into view
-      const progress = clamp((viewportHeight * 1.08 - galleryRect.top) / (viewportHeight * 0.94));
-
-      // ── The orbit opens and folds away with your scroll (with a gap so it never flickers) ──
-      if (progress >= 0.5) {
-        if (phaseRef.current !== "open") {
-          clearExitTimer();
-          goTo("open");
-        }
-      } else if (progress < 0.34 && phaseRef.current === "open") {
-        goTo("exiting");
-        clearExitTimer();
-        exitTimerRef.current = setTimeout(() => {
-          goTo("idle");
-          exitTimerRef.current = null;
-        }, 1200);
-      }
-
-      // The stars' flight takes the first half of the rise, so they land as the photos appear
-      const flight = clamp(progress / 0.52);
-      const bridgeOpacity = smoothstep(0, 0.08, progress) * (1 - smoothstep(0.5, 0.64, progress));
-      const active =
-        bridgeOpacity > 0.02 &&
-        galleryRect.top < viewportHeight * 1.14 &&
-        galleryRect.top > -viewportHeight * 0.36;
-
-      bridge.classList.toggle(styles.scrollBridgeActive, active);
-      bridge.style.opacity = active ? `${bridgeOpacity}` : "0";
-      section.style.setProperty(
-        "--parallax-shift",
-        `${lerp(30, -14, progress).toFixed(2)}px`,
-      );
-
-      if (!active) {
-        lastPoints.length = 0;
-        setDim(0);
-        return;
-      }
-
-      // The event cards dip a little while their stars are away, then come back
-      setDim(Math.sin(flight * Math.PI));
-
       const stageRect = stage.getBoundingClientRect();
       const stageCenterX = stageRect.left + stageRect.width / 2;
       const stageCenterY = stageRect.top + stageRect.height / 2;
-      const eventsRect = eventsEl?.getBoundingClientRect() ?? null;
+
+      // Progress is timed to the LOWEST photo spot: every landing happens while it is on screen.
+      // 0.58 (the last landing) is reached when the lowest spot is 70px above the bottom edge.
+      const lowestSpot = stageCenterY + getResponsiveRadius("outer", viewportWidth);
+      const progress = clamp((1.452 * viewportHeight - 70 - lowestSpot) / (0.78 * viewportHeight));
+
+      const gText = progress.toFixed(4);
+      if (gText !== gWritten) {
+        section.style.setProperty("--g", gText);
+        gWritten = gText;
+      }
+
+      // The orbit turns once everything has formed (with a gap so it never flickers)
+      if (progress >= SPIN_ON) spinOn = true;
+      else if (progress < SPIN_OFF) spinOn = false;
+      if (spinOn || spinIn !== 0 || spinOut !== 0) ensureSpinLoop();
+
+      const flying = progress > 0.005 && progress < LAST_ARRIVAL + 0.14;
+      bridge.classList.toggle(styles.scrollBridgeActive, flying);
+
       const cards = eventsEl ? eventsEl.querySelectorAll<HTMLElement>(".ec-card") : null;
-      const eased = smoothstep(0, 1, flight);
-      const linePoints: string[] = [];
+      const lifts: number[] = [];
 
-      ORBIT_SLOTS.forEach((slot, index) => {
-        const particle = bridgeParticleRefs.current[index];
-        if (!particle) return;
+      if (!flying) {
+        lastPoints.length = 0;
+      } else {
+        const eventsRect = eventsEl?.getBoundingClientRect() ?? null;
+        const targets: { x: number; y: number }[] = [];
 
-        // Where this star lifts off: the centre of its event card (kept on screen)
-        let fromX: number;
-        let fromY: number;
-        const card =
-          cards && cards.length > 0 ? cards[CARD_FOR_SLOT[index] % cards.length] : null;
-        if (card) {
-          const rect = card.getBoundingClientRect();
-          fromX = rect.left + rect.width / 2;
-          fromY = rect.top + rect.height / 2;
-        } else if (eventsRect) {
-          fromX = eventsRect.left + eventsRect.width * (0.2 + 0.12 * index);
-          fromY = eventsRect.bottom - 140;
-        } else {
-          fromX = viewportWidth * (0.2 + 0.12 * index);
-          fromY = viewportHeight * 0.8;
+        ORBIT_SLOTS.forEach((slot, index) => {
+          const depart = departAt(index);
+          const local = clamp((progress - depart) / FLIGHT); // 0 = waiting on its card, 1 = landed
+          const charge = clamp((progress - (depart - 0.05)) / 0.05); // the star appears just before leaving
+
+          // Where this star lands: its spot on the ring
+          const radius = getResponsiveRadius(slot.ring, viewportWidth);
+          const radians = (slot.angle * Math.PI) / 180;
+          const toX = stageCenterX + Math.cos(radians) * radius;
+          const toY = stageCenterY + Math.sin(radians) * radius;
+          targets[index] = { x: toX, y: toY };
+
+          // Where it leaves from: the centre of its event card (kept on screen)
+          let fromX: number;
+          let fromY: number;
+          const cardIndex =
+            cards && cards.length > 0 ? CARD_FOR_SLOT[index] % cards.length : -1;
+          if (cards && cardIndex >= 0) {
+            const rect = cards[cardIndex].getBoundingClientRect();
+            fromX = rect.left + rect.width / 2;
+            fromY = rect.top + rect.height / 2;
+          } else if (eventsRect) {
+            fromX = eventsRect.left + eventsRect.width * (0.2 + 0.12 * index);
+            fromY = eventsRect.bottom - 140;
+          } else {
+            fromX = viewportWidth * (0.2 + 0.12 * index);
+            fromY = viewportHeight * 0.8;
+          }
+          fromX = clamp(fromX, 24, viewportWidth - 24);
+          fromY = clamp(fromY, viewportHeight * 0.14, viewportHeight * 0.9);
+
+          // The card glows warm while its star charges up and leaves
+          if (cardIndex >= 0) {
+            const liftT = clamp((progress - (depart - 0.05)) / 0.17);
+            lifts[cardIndex] = Math.max(lifts[cardIndex] ?? 0, Math.sin(Math.PI * liftT));
+          }
+
+          const particle = bridgeParticleRefs.current[index];
+          const thread = bridgeThreadRefs.current[index];
+          if (!particle) return;
+
+          if (charge <= 0 || local >= 1) {
+            particle.style.opacity = "0";
+            thread?.setAttribute("opacity", "0");
+            lastPoints[index] = null;
+            return;
+          }
+
+          // A curved path, bent sideways (alternating left and right)
+          const eased = smoothstep(0, 1, local);
+          const dx = toX - fromX;
+          const dy = toY - fromY;
+          const dist = Math.hypot(dx, dy) || 1;
+          const side = index % 2 === 0 ? 1 : -1;
+          const bulge = clamp(dist * 0.2, 30, 150) * side;
+          const controlX = (fromX + toX) / 2 - (dy / dist) * bulge;
+          const controlY = (fromY + toY) / 2 + (dx / dist) * bulge;
+          const u = 1 - eased;
+          const x = u * u * fromX + 2 * u * eased * controlX + eased * eased * toX;
+          const y = u * u * fromY + 2 * u * eased * controlY + eased * eased * toY;
+
+          const endSize = slot.ring === "inner" ? 20 : 24;
+          const size = lerp(10, endSize, eased) * (0.6 + 0.4 * charge);
+          const fadeOut = local > 0.86 ? clamp((1 - local) / 0.14) : 1;
+
+          // A comet tail that follows how fast the star is really moving (none when you stop)
+          const previous = lastPoints[index];
+          let tail = 0;
+          let angle = 0;
+          if (previous) {
+            const vx = x - previous.x;
+            const vy = y - previous.y;
+            angle = (Math.atan2(vy, vx) * 180) / Math.PI + 180;
+            const wanted = Math.min(100, Math.hypot(vx, vy) * 7) * Math.sin(Math.PI * local);
+            tail = lerp(previous.tail, wanted, 0.35);
+          }
+          lastPoints[index] = { x, y, tail };
+
+          particle.style.width = `${size}px`;
+          particle.style.height = `${size}px`;
+          particle.style.opacity = `${(charge * fadeOut * 0.95).toFixed(3)}`;
+          particle.style.transform = `translate3d(${(x - size / 2).toFixed(2)}px, ${(y - size / 2).toFixed(2)}px, 0)`;
+          particle.style.setProperty("--tail", `${tail.toFixed(1)}px`);
+          particle.style.setProperty("--ang", `${angle.toFixed(1)}deg`);
+
+          // A thin golden thread from the card to the star while it rises
+          if (thread) {
+            thread.setAttribute("x1", fromX.toFixed(1));
+            thread.setAttribute("y1", fromY.toFixed(1));
+            thread.setAttribute("x2", x.toFixed(1));
+            thread.setAttribute("y2", y.toFixed(1));
+            thread.setAttribute("opacity", (0.55 * Math.sin(Math.PI * local) * charge).toFixed(3));
+          }
+        });
+
+        // When the last star lands, the six stars briefly connect into a constellation outline
+        const outline = bridgeOutlineRef.current;
+        if (outline) {
+          outline.setAttribute(
+            "points",
+            OUTLINE_ORDER.map((i) => `${targets[i].x.toFixed(1)},${targets[i].y.toFixed(1)}`).join(" "),
+          );
+          const outlineOpacity =
+            smoothstep(LAST_ARRIVAL - 0.06, LAST_ARRIVAL, progress) *
+            (1 - smoothstep(LAST_ARRIVAL + 0.02, LAST_ARRIVAL + 0.14, progress));
+          outline.style.opacity = outlineOpacity.toFixed(3);
         }
-        fromX = clamp(fromX, 24, viewportWidth - 24);
-        fromY = clamp(fromY, viewportHeight * 0.14, viewportHeight * 0.9);
+      }
 
-        // Where it lands: its spot on the orbit ring
-        const radius = getResponsiveRadius(slot.ring, viewportWidth);
-        const radians = (slot.angle * Math.PI) / 180;
-        const toX = stageCenterX + Math.cos(radians) * radius;
-        const toY = stageCenterY + Math.sin(radians) * radius;
-
-        // A curved path, bent sideways (alternating left and right)
-        const dx = toX - fromX;
-        const dy = toY - fromY;
-        const dist = Math.hypot(dx, dy) || 1;
-        const side = index % 2 === 0 ? 1 : -1;
-        const bulge = clamp(dist * 0.2, 30, 140) * side;
-        const controlX = (fromX + toX) / 2 - (dy / dist) * bulge;
-        const controlY = (fromY + toY) / 2 + (dx / dist) * bulge;
-        const u = 1 - eased;
-        const x = u * u * fromX + 2 * u * eased * controlX + eased * eased * toX;
-        const y = u * u * fromY + 2 * u * eased * controlY + eased * eased * toY;
-
-        const startSize = slot.ring === "inner" ? 9 : 11;
-        const endSize = slot.ring === "inner" ? 18 : 22;
-        const size = lerp(startSize, endSize, eased);
-
-        // A little pop as it lands
-        const landing = clamp((flight - 0.8) / 0.2);
-        const scale = 1 + Math.sin(landing * Math.PI) * 0.5;
-
-        // A short comet tail that follows how fast the star is really moving
-        const previous = lastPoints[index];
-        let tail = 0;
-        let angle = 0;
-        if (previous) {
-          const vx = x - previous.x;
-          const vy = y - previous.y;
-          angle = (Math.atan2(vy, vx) * 180) / Math.PI + 180;
-          const wanted = Math.min(90, Math.hypot(vx, vy) * 7) * Math.sin(Math.PI * flight);
-          tail = lerp(previous.tail, wanted, 0.35);
-        }
-        lastPoints[index] = { x, y, tail };
-
-        particle.style.width = `${size}px`;
-        particle.style.height = `${size}px`;
-        particle.style.opacity = `${lerp(0.55, 0.95, bridgeOpacity)}`;
-        particle.style.transform = `translate3d(${(x - size / 2).toFixed(2)}px, ${(y - size / 2).toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
-        particle.style.setProperty("--tail", `${tail.toFixed(1)}px`);
-        particle.style.setProperty("--ang", `${angle.toFixed(1)}deg`);
-        linePoints.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-      });
-
-      if (bridgeLineRef.current) {
-        bridgeLineRef.current.setAttribute("points", linePoints.join(" "));
+      // Hand the card glow to the page (only for cards whose value changed)
+      if (cards) {
+        cards.forEach((card, i) => {
+          const text = (lifts[i] ?? 0).toFixed(3);
+          if (liftWritten[i] !== text) {
+            card.style.setProperty("--lift", text);
+            liftWritten[i] = text;
+          }
+        });
       }
     };
 
     const requestBridgeUpdate = () => {
-      if (scrollRafRef.current) return;
-      scrollRafRef.current = window.requestAnimationFrame(updateBridge);
+      if (scrollRaf) return;
+      scrollRaf = window.requestAnimationFrame(updateBridge);
     };
 
     updateBridge();
@@ -319,13 +379,16 @@ export default function GalleryOrbit({
     window.addEventListener("resize", requestBridgeUpdate);
 
     return () => {
-      if (scrollRafRef.current) {
-        window.cancelAnimationFrame(scrollRafRef.current);
-      }
+      if (scrollRaf) window.cancelAnimationFrame(scrollRaf);
+      if (spinRaf) window.cancelAnimationFrame(spinRaf);
       window.removeEventListener("scroll", requestBridgeUpdate);
       window.removeEventListener("resize", requestBridgeUpdate);
-      clearExitTimer();
-      eventsEl?.style.removeProperty("--g");
+      stage.removeEventListener("pointerenter", onPointerEnter);
+      stage.removeEventListener("pointerleave", onPointerLeave);
+      eventsEl?.querySelectorAll<HTMLElement>(".ec-card").forEach((card) => {
+        card.style.removeProperty("--lift");
+      });
+      liftWritten = [];
     };
   }, []);
 
@@ -334,17 +397,26 @@ export default function GalleryOrbit({
       ref={sectionRef}
       id="gallery"
       aria-labelledby="gallery-orbit-title"
-      className={classNames(
-        styles.section,
-        "snap-start",
-        "scroll-mt-16",
-        phase === "open" && styles.isVisible,
-        phase === "exiting" && styles.isExiting,
-      )}
+      className={classNames(styles.section, "snap-start", "scroll-mt-16")}
     >
+      {/* The flying stars: drawn on a layer fixed to the screen, so they can cross from the event cards to the orbit */}
       <div ref={bridgeRef} className={styles.scrollBridge} aria-hidden="true">
         <svg className={styles.bridgeSvg}>
-          <polyline ref={bridgeLineRef} className={styles.bridgeLine} points="" />
+          <polygon ref={bridgeOutlineRef} className={styles.bridgeOutline} points="" />
+          {ORBIT_SLOTS.map((slot, index) => (
+            <line
+              key={`thread-${slot.angle}`}
+              ref={(element) => {
+                bridgeThreadRefs.current[index] = element;
+              }}
+              className={styles.bridgeThread}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="0"
+              opacity="0"
+            />
+          ))}
         </svg>
         {ORBIT_SLOTS.map((slot, index) => (
           <div
@@ -354,7 +426,7 @@ export default function GalleryOrbit({
             }}
             className={classNames(
               styles.bridgeParticle,
-              index === 2 && styles.bridgeParticleGold,
+              index % 2 === 1 && styles.bridgeParticleGold,
             )}
           />
         ))}
@@ -367,38 +439,17 @@ export default function GalleryOrbit({
             Memories Return to <em>Orbit</em>
           </h2>
           <p className={`${styles.subtitle} font-body`}>
-            Every event becomes a memory: each one lifts off as a star and settles into orbit around
-            a quiet atom of shared experience.
+            Every event becomes a memory: each one lifts off as a star, settles into orbit around a
+            quiet atom of shared experience, and blooms into the moments we kept.
           </p>
         </div>
 
         <div ref={stageRef} className={styles.orbitStage} aria-label="Featured gallery orbit">
-          <svg
-            className={styles.constellationLines}
-            viewBox="0 0 1000 620"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <polyline
-              className={styles.line}
-              points="120,78 804,116 314,214 862,390 498,536 164,420"
-              fill="none"
-            />
-            <polyline
-              className={styles.line}
-              points="314,214 120,78 164,420 862,390"
-              fill="none"
-            />
-          </svg>
-
           <div className={`${styles.ringGuide} ${styles.innerGuide}`} aria-hidden="true" />
           <div className={`${styles.ringGuide} ${styles.outerGuide}`} aria-hidden="true" />
           <div className={styles.nucleus} aria-hidden="true" />
 
-          <div
-            className={`${styles.orbitRing} ${styles.innerRing}`}
-            style={{ "--orbit-duration": "34s" } as CSSProperties}
-          >
+          <div className={`${styles.orbitRing} ${styles.innerRing}`}>
             {ORBIT_SLOTS.slice(0, 3).map((slot, index) => {
               const item = galleryItems[index];
 
@@ -408,6 +459,7 @@ export default function GalleryOrbit({
                   className={styles.orbitSlot}
                   style={getSlotStyle(slot, index)}
                 >
+                  <span className={styles.landRing} aria-hidden="true" />
                   <div className={styles.photoFrame}>
                     {item?.image ? (
                       <Image
@@ -426,10 +478,7 @@ export default function GalleryOrbit({
             })}
           </div>
 
-          <div
-            className={`${styles.orbitRing} ${styles.outerRing}`}
-            style={{ "--orbit-duration": "48s" } as CSSProperties}
-          >
+          <div className={`${styles.orbitRing} ${styles.outerRing}`}>
             {ORBIT_SLOTS.slice(3).map((slot, localIndex) => {
               const index = localIndex + 3;
               const item = galleryItems[index];
@@ -440,6 +489,7 @@ export default function GalleryOrbit({
                   className={styles.orbitSlot}
                   style={getSlotStyle(slot, index)}
                 >
+                  <span className={styles.landRing} aria-hidden="true" />
                   <div className={styles.photoFrame}>
                     {item?.image ? (
                       <Image

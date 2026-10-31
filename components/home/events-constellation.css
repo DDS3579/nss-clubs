@@ -296,3 +296,10 @@
     opacity: 0;
   }
 }
+
+/* Each event card glows warm gold for a moment just before its star lifts off toward the gallery */
+#events .ec-card {
+  box-shadow:
+    0 2px 12px rgba(13, 36, 96, 0.06),
+    0 0 calc(var(--lift, 0) * 40px) calc(var(--lift, 0) * 6px) rgba(200, 144, 58, calc(var(--lift, 0) * 0.5));
+}
